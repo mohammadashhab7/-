@@ -1,7 +1,7 @@
 import { Router, type IRouter } from "express";
 import { eq } from "drizzle-orm";
 import { db, settings } from "@workspace/db";
-import { requireStaff } from "../lib/auth";
+import { requireStaff, requirePermission } from "../lib/auth";
 
 const router: IRouter = Router();
 
@@ -36,7 +36,7 @@ router.get("/settings", async (_req, res) => {
   res.json(serialize(s));
 });
 
-router.patch("/settings", requireStaff(), async (req, res) => {
+router.patch("/settings", requirePermission("settings", "write"), async (req, res) => {
   await getOrCreate();
   const b = req.body ?? {};
   const updates: Partial<typeof settings.$inferInsert> = { updatedAt: new Date() };

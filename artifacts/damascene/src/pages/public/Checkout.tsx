@@ -33,7 +33,8 @@ export default function CheckoutPage() {
   const [email, setEmail] = useState(user?.primaryEmailAddress?.emailAddress || "");
   const [address, setAddress] = useState("");
   const [notes, setNotes] = useState("");
-  const [paymentMethod, setPaymentMethod] = useState<"cod" | "card" | "online">("cod");
+  type PaymentMethod = "cod" | "stripe" | "paypal";
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("cod");
 
   if (!cart || cart.items.length === 0) {
     return (
@@ -113,18 +114,22 @@ export default function CheckoutPage() {
           <Card>
             <CardHeader><CardTitle>طريقة الدفع</CardTitle></CardHeader>
             <CardContent>
-              <RadioGroup value={paymentMethod} onValueChange={(v) => setPaymentMethod(v as any)} className="space-y-3">
+              <RadioGroup
+                value={paymentMethod}
+                onValueChange={(v) => setPaymentMethod(v as PaymentMethod)}
+                className="space-y-3"
+              >
                 <label className="flex items-center gap-3 border rounded-md p-3 cursor-pointer hover:bg-accent">
                   <RadioGroupItem value="cod" data-testid="radio-cod" />
                   <span>الدفع عند الاستلام</span>
                 </label>
                 <label className="flex items-center gap-3 border rounded-md p-3 cursor-pointer opacity-50">
-                  <RadioGroupItem value="card" disabled />
-                  <span>بطاقة ائتمان (قريبًا)</span>
+                  <RadioGroupItem value="stripe" disabled data-testid="radio-stripe" />
+                  <span>بطاقة ائتمان عبر Stripe (قريبًا)</span>
                 </label>
                 <label className="flex items-center gap-3 border rounded-md p-3 cursor-pointer opacity-50">
-                  <RadioGroupItem value="online" disabled />
-                  <span>الدفع الإلكتروني (قريبًا)</span>
+                  <RadioGroupItem value="paypal" disabled data-testid="radio-paypal" />
+                  <span>PayPal (قريبًا)</span>
                 </label>
               </RadioGroup>
             </CardContent>

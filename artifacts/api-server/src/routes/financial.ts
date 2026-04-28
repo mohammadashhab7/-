@@ -1,7 +1,7 @@
 import { Router, type IRouter } from "express";
 import { and, desc, eq, gte, lte, sql } from "drizzle-orm";
 import { db, financialEntries } from "@workspace/db";
-import { requireStaff } from "../lib/auth";
+import { requireStaff, requirePermission } from "../lib/auth";
 import { logActivity } from "../lib/activity";
 
 const router: IRouter = Router();
@@ -22,7 +22,7 @@ function serialize(e: typeof financialEntries.$inferSelect) {
   };
 }
 
-router.get("/financial-entries", requireStaff(), async (req, res) => {
+router.get("/financial-entries", requirePermission("financial", "read"), async (req, res) => {
   const { module, type, fromDate, toDate, limit } = req.query;
   const filters = [];
   if (typeof module === "string")
@@ -41,7 +41,7 @@ router.get("/financial-entries", requireStaff(), async (req, res) => {
   res.json(rows.map(serialize));
 });
 
-router.post("/financial-entries", requireStaff(), async (req, res) => {
+router.post("/financial-entries", requirePermission("financial", "write"), async (req, res) => {
   const b = req.body ?? {};
   if (!b.module || !b.type || !b.category || typeof b.amountMinor !== "number") {
     res.status(400).json({ error: "VALIDATION" });

@@ -1,7 +1,7 @@
 import { Router, type IRouter } from "express";
 import { and, asc, desc, eq, ilike, or, sql } from "drizzle-orm";
 import { db, products, categories } from "@workspace/db";
-import { requireStaff } from "../lib/auth";
+import { requireStaff, requirePermission } from "../lib/auth";
 
 const router: IRouter = Router();
 
@@ -69,7 +69,7 @@ router.get("/products", async (req, res) => {
   res.json(rows.map((r) => serialize(r.p, r.catName)));
 });
 
-router.post("/products", requireStaff(), async (req, res) => {
+router.post("/products", requirePermission("products", "write"), async (req, res) => {
   const b = req.body ?? {};
   if (!b.nameAr) {
     res.status(400).json({ error: "VALIDATION", details: "nameAr required" });
@@ -117,7 +117,7 @@ router.get("/products/:id", async (req, res) => {
   res.json(serialize(rows[0].p, rows[0].catName));
 });
 
-router.patch("/products/:id", requireStaff(), async (req, res) => {
+router.patch("/products/:id", requirePermission("products", "write"), async (req, res) => {
   const b = req.body ?? {};
   const updates: Partial<typeof products.$inferInsert> = {
     updatedAt: new Date(),
@@ -155,7 +155,7 @@ router.patch("/products/:id", requireStaff(), async (req, res) => {
   res.json(serialize(updated[0]));
 });
 
-router.delete("/products/:id", requireStaff(), async (req, res) => {
+router.delete("/products/:id", requirePermission("products", "write"), async (req, res) => {
   await db.delete(products).where(eq(products.id, req.params.id));
   res.status(204).send();
 });

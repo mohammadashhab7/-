@@ -1,7 +1,7 @@
 import { Router, type IRouter } from "express";
 import { asc, eq } from "drizzle-orm";
 import { db, rawMaterials } from "@workspace/db";
-import { requireStaff } from "../lib/auth";
+import { requireStaff, requirePermission } from "../lib/auth";
 
 const router: IRouter = Router();
 
@@ -22,7 +22,7 @@ function serialize(m: typeof rawMaterials.$inferSelect) {
   };
 }
 
-router.get("/raw-materials", requireStaff(), async (_req, res) => {
+router.get("/raw-materials", requirePermission("raw_materials", "read"), async (_req, res) => {
   const rows = await db
     .select()
     .from(rawMaterials)
@@ -30,7 +30,7 @@ router.get("/raw-materials", requireStaff(), async (_req, res) => {
   res.json(rows.map(serialize));
 });
 
-router.post("/raw-materials", requireStaff(), async (req, res) => {
+router.post("/raw-materials", requirePermission("raw_materials", "write"), async (req, res) => {
   const b = req.body ?? {};
   if (!b.nameAr) {
     res.status(400).json({ error: "VALIDATION" });
@@ -55,7 +55,7 @@ router.post("/raw-materials", requireStaff(), async (req, res) => {
   res.status(201).json(serialize(inserted[0]!));
 });
 
-router.patch("/raw-materials/:id", requireStaff(), async (req, res) => {
+router.patch("/raw-materials/:id", requirePermission("raw_materials", "write"), async (req, res) => {
   const b = req.body ?? {};
   const updates: Partial<typeof rawMaterials.$inferInsert> = {
     updatedAt: new Date(),
@@ -86,7 +86,7 @@ router.patch("/raw-materials/:id", requireStaff(), async (req, res) => {
   res.json(serialize(updated[0]));
 });
 
-router.delete("/raw-materials/:id", requireStaff(), async (req, res) => {
+router.delete("/raw-materials/:id", requirePermission("raw_materials", "write"), async (req, res) => {
   await db.delete(rawMaterials).where(eq(rawMaterials.id, req.params.id));
   res.status(204).send();
 });

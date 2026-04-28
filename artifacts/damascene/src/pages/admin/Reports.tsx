@@ -48,7 +48,11 @@ export default function AdminReportsPage() {
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis dataKey="date" tickFormatter={(v) => v.slice(5)} />
               <YAxis />
-              <Tooltip formatter={(v: any, key) => key === "sales" ? formatSyp(Number(v) * 100) : v} />
+              <Tooltip
+                formatter={(v: number | string, key: string) =>
+                  key === "sales" ? formatSyp(Number(v) * 100) : String(v)
+                }
+              />
               <Bar dataKey="sales" fill="hsl(var(--primary))" name="المبيعات" />
             </BarChart>
           </ResponsiveContainer>

@@ -9,7 +9,7 @@ import {
   rawMaterials,
   products,
 } from "@workspace/db";
-import { requireStaff } from "../lib/auth";
+import { requireStaff, requirePermission } from "../lib/auth";
 import {
   applyLedgerEntry,
   getLocationByCode,
@@ -40,7 +40,7 @@ function serialize(o: typeof productionOrders.$inferSelect, productNameAr?: stri
   };
 }
 
-router.get("/production-orders", requireStaff(), async (req, res) => {
+router.get("/production-orders", requirePermission("production", "read"), async (req, res) => {
   const { status, limit } = req.query;
   const lim = Math.min(typeof limit === "string" ? parseInt(limit, 10) || 50 : 50, 200);
   const filters = [];
@@ -56,7 +56,7 @@ router.get("/production-orders", requireStaff(), async (req, res) => {
   res.json(rows.map((r) => serialize(r.o, r.name)));
 });
 
-router.post("/production-orders", requireStaff(), async (req, res) => {
+router.post("/production-orders", requirePermission("production", "write"), async (req, res) => {
   const b = req.body ?? {};
   if (!b.recipeId || typeof b.batchCount !== "number" || b.batchCount <= 0) {
     res.status(400).json({ error: "VALIDATION" });
@@ -194,7 +194,7 @@ router.post("/production-orders", requireStaff(), async (req, res) => {
   }
 });
 
-router.get("/production-orders/:id", requireStaff(), async (req, res) => {
+router.get("/production-orders/:id", requirePermission("production", "read"), async (req, res) => {
   const rows = await db
     .select({ o: productionOrders, name: products.nameAr })
     .from(productionOrders)

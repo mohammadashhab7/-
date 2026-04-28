@@ -1,7 +1,7 @@
 import { Router, type IRouter } from "express";
 import { and, eq, gte, lt, sum, sql } from "drizzle-orm";
 import { db, salesOrders, dailyClosings, financialEntries } from "@workspace/db";
-import { requireStaff } from "../lib/auth";
+import { requireStaff, requirePermission } from "../lib/auth";
 
 const router: IRouter = Router();
 
@@ -12,7 +12,7 @@ function dayBounds(dateStr: string): { from: Date; to: Date } {
   return { from, to };
 }
 
-router.get("/pos/daily-closing/:date", requireStaff(), async (req, res) => {
+router.get("/pos/daily-closing/:date", requirePermission("pos", "read"), async (req, res) => {
   const date = req.params.date;
   const { from, to } = dayBounds(date);
   const existing = await db
@@ -51,7 +51,7 @@ router.get("/pos/daily-closing/:date", requireStaff(), async (req, res) => {
   });
 });
 
-router.post("/pos/daily-closing/:date", requireStaff(), async (req, res) => {
+router.post("/pos/daily-closing/:date", requirePermission("pos", "write"), async (req, res) => {
   const date = req.params.date;
   const { countedCashMinor, notesAr } = req.body ?? {};
   const { from, to } = dayBounds(date);

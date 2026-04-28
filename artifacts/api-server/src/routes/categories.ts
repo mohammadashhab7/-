@@ -1,7 +1,7 @@
 import { Router, type IRouter } from "express";
 import { asc, eq } from "drizzle-orm";
 import { db, categories } from "@workspace/db";
-import { requireStaff } from "../lib/auth";
+import { requireStaff, requirePermission } from "../lib/auth";
 
 const router: IRouter = Router();
 
@@ -36,7 +36,7 @@ router.get("/categories", async (_req, res) => {
   res.json(rows.map(serialize));
 });
 
-router.post("/categories", requireStaff(), async (req, res) => {
+router.post("/categories", requirePermission("categories", "write"), async (req, res) => {
   const { nameAr, nameEn, descriptionAr, imageUrl, sortOrder, isActive, slug } =
     req.body ?? {};
   if (!nameAr) {
@@ -58,7 +58,7 @@ router.post("/categories", requireStaff(), async (req, res) => {
   res.status(201).json(serialize(inserted[0]!));
 });
 
-router.patch("/categories/:id", requireStaff(), async (req, res) => {
+router.patch("/categories/:id", requirePermission("categories", "write"), async (req, res) => {
   const id = req.params.id;
   const { nameAr, nameEn, descriptionAr, imageUrl, sortOrder, isActive, slug } =
     req.body ?? {};
@@ -84,7 +84,7 @@ router.patch("/categories/:id", requireStaff(), async (req, res) => {
   res.json(serialize(updated[0]));
 });
 
-router.delete("/categories/:id", requireStaff(), async (req, res) => {
+router.delete("/categories/:id", requirePermission("categories", "write"), async (req, res) => {
   await db.delete(categories).where(eq(categories.id, req.params.id));
   res.status(204).send();
 });

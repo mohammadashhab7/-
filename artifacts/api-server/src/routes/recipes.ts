@@ -7,7 +7,7 @@ import {
   rawMaterials,
   products,
 } from "@workspace/db";
-import { requireStaff } from "../lib/auth";
+import { requireStaff, requirePermission } from "../lib/auth";
 
 const router: IRouter = Router();
 
@@ -71,7 +71,7 @@ async function loadFull(recipeId: string) {
   };
 }
 
-router.get("/recipes", requireStaff(), async (_req, res) => {
+router.get("/recipes", requirePermission("recipes", "read"), async (_req, res) => {
   const rows = await db
     .select({
       r: recipes,
@@ -93,7 +93,7 @@ router.get("/recipes", requireStaff(), async (_req, res) => {
   );
 });
 
-router.post("/recipes", requireStaff(), async (req, res) => {
+router.post("/recipes", requirePermission("recipes", "write"), async (req, res) => {
   const b = req.body ?? {};
   if (!b.productId || !Array.isArray(b.items) || b.items.length === 0) {
     res.status(400).json({ error: "VALIDATION" });
@@ -122,7 +122,7 @@ router.post("/recipes", requireStaff(), async (req, res) => {
   res.status(201).json(full);
 });
 
-router.get("/recipes/:id", requireStaff(), async (req, res) => {
+router.get("/recipes/:id", requirePermission("recipes", "read"), async (req, res) => {
   const f = await loadFull(req.params.id);
   if (!f) {
     res.status(404).json({ error: "NOT_FOUND" });
@@ -131,7 +131,7 @@ router.get("/recipes/:id", requireStaff(), async (req, res) => {
   res.json(f);
 });
 
-router.patch("/recipes/:id", requireStaff(), async (req, res) => {
+router.patch("/recipes/:id", requirePermission("recipes", "write"), async (req, res) => {
   const b = req.body ?? {};
   const updates: Partial<typeof recipes.$inferInsert> = { updatedAt: new Date() };
   if (b.yieldQuantity !== undefined) updates.yieldQuantity = b.yieldQuantity;
@@ -157,7 +157,7 @@ router.patch("/recipes/:id", requireStaff(), async (req, res) => {
   res.json(full);
 });
 
-router.delete("/recipes/:id", requireStaff(), async (req, res) => {
+router.delete("/recipes/:id", requirePermission("recipes", "write"), async (req, res) => {
   await db.delete(recipes).where(eq(recipes.id, req.params.id));
   res.status(204).send();
 });

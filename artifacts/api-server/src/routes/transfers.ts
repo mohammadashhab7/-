@@ -7,7 +7,7 @@ import {
   inventoryLocations,
   products,
 } from "@workspace/db";
-import { requireStaff } from "../lib/auth";
+import { requireStaff, requirePermission } from "../lib/auth";
 import {
   applyLedgerEntry,
   getStockQuantity,
@@ -18,7 +18,7 @@ import { logActivity } from "../lib/activity";
 
 const router: IRouter = Router();
 
-router.get("/transfers", requireStaff(), async (_req, res) => {
+router.get("/transfers", requirePermission("transfers", "read"), async (_req, res) => {
   const rows = await db
     .select({
       t: transfers,
@@ -62,7 +62,7 @@ router.get("/transfers", requireStaff(), async (_req, res) => {
   res.json(all);
 });
 
-router.post("/transfers", requireStaff(), async (req, res) => {
+router.post("/transfers", requirePermission("transfers", "write"), async (req, res) => {
   const b = req.body ?? {};
   if (
     !b.fromLocationId ||

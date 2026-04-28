@@ -1,7 +1,7 @@
 import { Router, type IRouter } from "express";
 import { desc, eq } from "drizzle-orm";
 import { db, mediaAssets } from "@workspace/db";
-import { requireStaff } from "../lib/auth";
+import { requireStaff, requirePermission } from "../lib/auth";
 import { ObjectStorageService } from "../lib/objectStorage";
 
 const router: IRouter = Router();
@@ -20,7 +20,7 @@ function serialize(m: typeof mediaAssets.$inferSelect) {
   };
 }
 
-router.get("/media", requireStaff(), async (_req, res) => {
+router.get("/media", requirePermission("media", "read"), async (_req, res) => {
   const rows = await db
     .select()
     .from(mediaAssets)
@@ -29,7 +29,7 @@ router.get("/media", requireStaff(), async (_req, res) => {
   res.json(rows.map(serialize));
 });
 
-router.post("/media", requireStaff(), async (req, res) => {
+router.post("/media", requirePermission("media", "write"), async (req, res) => {
   const b = req.body ?? {};
   if (!b.url) {
     res.status(400).json({ error: "VALIDATION" });
@@ -53,12 +53,12 @@ router.post("/media", requireStaff(), async (req, res) => {
   res.status(201).json(serialize(inserted[0]!));
 });
 
-router.delete("/media/:id", requireStaff(), async (req, res) => {
+router.delete("/media/:id", requirePermission("media", "write"), async (req, res) => {
   await db.delete(mediaAssets).where(eq(mediaAssets.id, req.params.id));
   res.status(204).send();
 });
 
-router.post("/media/upload-url", requireStaff(), async (_req, res) => {
+router.post("/media/upload-url", requirePermission("media", "write"), async (_req, res) => {
   const uploadURL = await objectStorage.getObjectEntityUploadURL();
   const objectPath = objectStorage.normalizeObjectEntityPath(uploadURL);
   res.json({ uploadURL, objectPath });

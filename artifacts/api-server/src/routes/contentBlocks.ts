@@ -1,7 +1,7 @@
 import { Router, type IRouter } from "express";
 import { asc, eq } from "drizzle-orm";
 import { db, contentBlocks } from "@workspace/db";
-import { requireStaff } from "../lib/auth";
+import { requireStaff, requirePermission } from "../lib/auth";
 
 const router: IRouter = Router();
 
@@ -42,7 +42,7 @@ router.get("/content-blocks/:key", async (req, res) => {
   res.json(serialize(rows[0]));
 });
 
-router.put("/content-blocks/:key", requireStaff(), async (req, res) => {
+router.put("/content-blocks/:key", requirePermission("cms", "write"), async (req, res) => {
   const b = req.body ?? {};
   const existing = await db
     .select()

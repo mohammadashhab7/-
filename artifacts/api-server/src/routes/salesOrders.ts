@@ -6,8 +6,9 @@ import {
   salesOrderItems,
   products,
   financialEntries,
+  dailyClosings,
 } from "@workspace/db";
-import { requireStaff } from "../lib/auth";
+import { requireStaff, requirePermission } from "../lib/auth";
 import {
   applyLedgerEntry,
   getLocationByCode,
@@ -19,16 +20,23 @@ import { logActivity } from "../lib/activity";
 
 type OrderStatus = typeof salesOrders.$inferSelect.status;
 
-// Allowed forward transitions. Terminal states (completed, cancelled) cannot
+// Allowed forward transitions. Terminal states (cancelled, refunded) cannot
 // transition further. POS sales are created already in "completed" state.
+// Online flow:
+//   stripe/paypal: pending_payment → paid → confirmed → preparing → ready → ...
+//   cod          : pending → confirmed → preparing → ready → ...
+// Refunds reverse a completed order and write reversing financial entries.
 const STATUS_TRANSITIONS: Record<OrderStatus, OrderStatus[]> = {
+  pending_payment: ["paid", "cancelled"],
+  paid: ["confirmed", "preparing", "ready", "out_for_delivery", "completed", "cancelled"],
   pending: ["confirmed", "preparing", "ready", "out_for_delivery", "completed", "cancelled"],
   confirmed: ["preparing", "ready", "out_for_delivery", "completed", "cancelled"],
   preparing: ["ready", "out_for_delivery", "completed", "cancelled"],
   ready: ["out_for_delivery", "completed", "cancelled"],
   out_for_delivery: ["completed", "cancelled"],
-  completed: [],
+  completed: ["refunded"],
   cancelled: [],
+  refunded: [],
 };
 
 const router: IRouter = Router();
@@ -56,7 +64,7 @@ function serialize(o: typeof salesOrders.$inferSelect) {
   };
 }
 
-router.get("/sales-orders", requireStaff(), async (req, res) => {
+router.get("/sales-orders", requirePermission("orders", "read"), async (req, res) => {
   const { channel, status, fromDate, toDate, limit } = req.query;
   const filters = [];
   if (typeof channel === "string")
@@ -95,6 +103,23 @@ export async function createSalesOrderInternal(args: {
   // Sales (POS + online) always reduce STORE stock per architecture.
   const sourceLoc = await getLocationByCode("STORE");
   if (!sourceLoc) throw new Error("LOCATIONS_NOT_SEEDED");
+
+  // POS closing lock: once a day has been closed, no further POS sales for
+  // that day can be created.  Online sales are unaffected.
+  if (args.channel === "pos") {
+    const today = new Date();
+    const dateStr = today.toISOString().slice(0, 10);
+    const closed = await db
+      .select()
+      .from(dailyClosings)
+      .where(eq(dailyClosings.closingDate, dateStr))
+      .limit(1);
+    if (closed[0]) {
+      const e = new Error("POS_DAY_CLOSED");
+      (e as Error & { code?: string }).code = "POS_DAY_CLOSED";
+      throw e;
+    }
+  }
 
   const order = await db.transaction(async (tx) => {
     // Load products and stock inside the transaction; pre-check availability.
@@ -137,7 +162,18 @@ export async function createSalesOrderInternal(args: {
       .values({
         orderNumber,
         channel: args.channel,
-        status: args.channel === "pos" ? "completed" : "pending",
+        status:
+          args.channel === "pos"
+            ? "completed"
+            : args.paymentMethod === "stripe" || args.paymentMethod === "paypal"
+              ? "pending_payment"
+              : "pending",
+        paymentStatus:
+          args.channel === "pos"
+            ? "succeeded"
+            : args.paymentMethod === "stripe" || args.paymentMethod === "paypal"
+              ? "pending"
+              : "not_required",
         customerUserId: args.customerUserId ?? null,
         customerName: args.customerName ?? null,
         customerPhone: args.customerPhone ?? null,
@@ -214,7 +250,7 @@ export async function createSalesOrderInternal(args: {
   return order;
 }
 
-router.post("/sales-orders", requireStaff(), async (req, res) => {
+router.post("/sales-orders", requirePermission("orders", "write"), async (req, res) => {
   const b = req.body ?? {};
   try {
     const order = await createSalesOrderInternal({
@@ -238,12 +274,16 @@ router.post("/sales-orders", requireStaff(), async (req, res) => {
       res.status(409).json({ error: "INSUFFICIENT_STOCK", detail: err.message });
       return;
     }
+    if ((err as Error & { code?: string }).code === "POS_DAY_CLOSED") {
+      res.status(409).json({ error: "POS_DAY_CLOSED" });
+      return;
+    }
     req.log.error({ err }, "createSalesOrder failed");
     res.status(400).json({ error: (err as Error).message });
   }
 });
 
-router.get("/sales-orders/:id", requireStaff(), async (req, res) => {
+router.get("/sales-orders/:id", requirePermission("orders", "read"), async (req, res) => {
   const rows = await db
     .select()
     .from(salesOrders)
@@ -269,9 +309,11 @@ router.get("/sales-orders/:id", requireStaff(), async (req, res) => {
   });
 });
 
-router.patch("/sales-orders/:id/status", requireStaff(), async (req, res) => {
+router.patch("/sales-orders/:id/status", requirePermission("orders", "write"), async (req, res) => {
   const { status, notesAr } = req.body ?? {};
   const ALL_STATUSES: OrderStatus[] = [
+    "pending_payment",
+    "paid",
     "pending",
     "confirmed",
     "preparing",
@@ -279,6 +321,7 @@ router.patch("/sales-orders/:id/status", requireStaff(), async (req, res) => {
     "out_for_delivery",
     "completed",
     "cancelled",
+    "refunded",
   ];
   if (!ALL_STATUSES.includes(status)) {
     res.status(400).json({ error: "INVALID_STATUS" });
@@ -305,16 +348,18 @@ router.patch("/sales-orders/:id/status", requireStaff(), async (req, res) => {
         throw e;
       }
 
-      // On cancellation: append reversing inventory entries (re-stock STORE) and
-      // reversing financial entry. Skip if order was already in a state where
-      // no inventory/finance was committed (currently all states already had it).
-      if (status === "cancelled") {
+      // On cancellation or refund: append reversing inventory entries
+      // (re-stock STORE) and reversing financial entry. Inventory is deducted
+      // at order creation regardless of payment state, so all transitions to
+      // cancelled/refunded must reverse it.
+      if (status === "cancelled" || status === "refunded") {
         const sourceLoc = await getLocationByCode("STORE");
         if (!sourceLoc) throw new Error("LOCATIONS_NOT_SEEDED");
         const items = await tx
           .select()
           .from(salesOrderItems)
           .where(eq(salesOrderItems.orderId, cur.id));
+        const refType = status === "refunded" ? "sales_order_refund" : "sales_order_cancel";
         for (const it of items) {
           await applyLedgerEntry(
             {
@@ -324,20 +369,27 @@ router.patch("/sales-orders/:id/status", requireStaff(), async (req, res) => {
               quantityDelta: it.quantity,
               unitCostMinor: it.unitCostMinor,
               reason: "return",
-              referenceType: "sales_order_cancel",
+              referenceType: refType,
               referenceId: cur.id,
               createdByUserId: req.appUser?.id ?? null,
             },
             tx,
           );
         }
+        const categoryAr =
+          status === "refunded"
+            ? "استرداد طلب"
+            : cur.channel === "pos"
+              ? "إلغاء بيع نقطة البيع"
+              : "إلغاء طلب أونلاين";
+        const titleAr = status === "refunded" ? `استرداد طلب ${cur.orderNumber}` : `إلغاء طلب ${cur.orderNumber}`;
         await tx.insert(financialEntries).values({
           module: "store",
           type: "expense",
-          category: cur.channel === "pos" ? "إلغاء بيع نقطة البيع" : "إلغاء طلب أونلاين",
-          descriptionAr: `إلغاء طلب ${cur.orderNumber}`,
+          category: categoryAr,
+          descriptionAr: titleAr,
           amountMinor: cur.totalMinor,
-          referenceType: "sales_order_cancel",
+          referenceType: refType,
           referenceId: cur.id,
           createdByUserId: req.appUser?.id ?? null,
         });

@@ -60,6 +60,8 @@ export const productionOrderStatusEnum = pgEnum("production_order_status", [
 ]);
 
 export const orderStatusEnum = pgEnum("order_status", [
+  "pending_payment",
+  "paid",
   "pending",
   "confirmed",
   "preparing",
@@ -79,6 +81,25 @@ export const paymentMethodEnum = pgEnum("payment_method", [
   "bank_transfer",
   "stripe",
   "paypal",
+]);
+
+export const paymentStatusEnum = pgEnum("payment_status", [
+  "pending",
+  "authorized",
+  "succeeded",
+  "failed",
+  "refunded",
+  "cancelled",
+  "not_required",
+]);
+
+export const paymentProviderEnum = pgEnum("payment_provider", [
+  "cash",
+  "cod",
+  "stripe",
+  "paypal",
+  "bank_transfer",
+  "card_terminal",
 ]);
 
 export const financialModuleEnum = pgEnum("financial_module", [
@@ -407,6 +428,7 @@ export const salesOrders = pgTable(
     customerEmail: text("customer_email"),
     deliveryAddress: text("delivery_address"),
     paymentMethod: paymentMethodEnum("payment_method").notNull(),
+    paymentStatus: paymentStatusEnum("payment_status").notNull().default("pending"),
     paymentReference: text("payment_reference"),
     subtotalMinor: bigint("subtotal_minor", { mode: "number" })
       .notNull()
@@ -485,6 +507,31 @@ export const dailyClosings = pgTable("daily_closings", {
     .defaultNow()
     .notNull(),
 });
+
+export const payments = pgTable(
+  "payments",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    orderId: uuid("order_id")
+      .notNull()
+      .references(() => salesOrders.id, { onDelete: "cascade" }),
+    provider: paymentProviderEnum("provider").notNull(),
+    status: paymentStatusEnum("status").notNull().default("pending"),
+    amountMinor: bigint("amount_minor", { mode: "number" }).notNull().default(0),
+    currency: varchar("currency", { length: 8 }).notNull().default("SYP"),
+    providerIntentId: text("provider_intent_id"),
+    providerClientSecret: text("provider_client_secret"),
+    providerPayload: jsonb("provider_payload").$type<Record<string, unknown>>(),
+    failureReasonAr: text("failure_reason_ar"),
+    createdByUserId: uuid("created_by_user_id").references(() => users.id),
+    createdAt,
+    updatedAt,
+  },
+  (t) => [
+    index("payments_order_idx").on(t.orderId),
+    index("payments_status_idx").on(t.status),
+  ],
+);
 
 export const financialEntries = pgTable(
   "financial_entries",

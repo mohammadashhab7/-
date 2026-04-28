@@ -7,7 +7,7 @@ import {
   salaryRecords,
   financialEntries,
 } from "@workspace/db";
-import { requireStaff } from "../lib/auth";
+import { requireStaff, requirePermission } from "../lib/auth";
 import { nextEmployeeNumber } from "../lib/sequences";
 
 const router: IRouter = Router();
@@ -29,12 +29,12 @@ function serialize(e: typeof employees.$inferSelect) {
   };
 }
 
-router.get("/employees", requireStaff(), async (_req, res) => {
+router.get("/employees", requirePermission("employees", "read"), async (_req, res) => {
   const rows = await db.select().from(employees).orderBy(asc(employees.nameAr));
   res.json(rows.map(serialize));
 });
 
-router.post("/employees", requireStaff(), async (req, res) => {
+router.post("/employees", requirePermission("employees", "write"), async (req, res) => {
   const b = req.body ?? {};
   if (!b.nameAr || !b.positionAr) {
     res.status(400).json({ error: "VALIDATION" });
@@ -61,7 +61,7 @@ router.post("/employees", requireStaff(), async (req, res) => {
   res.status(201).json(serialize(inserted[0]!));
 });
 
-router.get("/employees/salaries", requireStaff(), async (req, res) => {
+router.get("/employees/salaries", requirePermission("employees", "read"), async (req, res) => {
   const { employeeId, periodMonth, limit } = req.query;
   const filters = [];
   if (typeof employeeId === "string") filters.push(eq(salaryRecords.employeeId, employeeId));
@@ -90,7 +90,7 @@ router.get("/employees/salaries", requireStaff(), async (req, res) => {
   );
 });
 
-router.post("/employees/salaries", requireStaff(), async (req, res) => {
+router.post("/employees/salaries", requirePermission("employees", "write"), async (req, res) => {
   const b = req.body ?? {};
   if (!b.employeeId || !b.periodMonth) {
     res.status(400).json({ error: "VALIDATION" });
@@ -143,7 +143,7 @@ router.post("/employees/salaries", requireStaff(), async (req, res) => {
   });
 });
 
-router.get("/employees/:id", requireStaff(), async (req, res) => {
+router.get("/employees/:id", requirePermission("employees", "read"), async (req, res) => {
   const rows = await db.select().from(employees).where(eq(employees.id, req.params.id)).limit(1);
   if (!rows[0]) {
     res.status(404).json({ error: "NOT_FOUND" });
@@ -152,7 +152,7 @@ router.get("/employees/:id", requireStaff(), async (req, res) => {
   res.json(serialize(rows[0]));
 });
 
-router.patch("/employees/:id", requireStaff(), async (req, res) => {
+router.patch("/employees/:id", requirePermission("employees", "write"), async (req, res) => {
   const b = req.body ?? {};
   const updates: Partial<typeof employees.$inferInsert> = { updatedAt: new Date() };
   for (const k of [
@@ -181,7 +181,7 @@ router.patch("/employees/:id", requireStaff(), async (req, res) => {
   res.json(serialize(updated[0]));
 });
 
-router.get("/employees/:id/attendance", requireStaff(), async (req, res) => {
+router.get("/employees/:id/attendance", requirePermission("employees", "read"), async (req, res) => {
   const { fromDate, toDate } = req.query;
   const filters = [eq(attendanceRecords.employeeId, req.params.id)];
   if (typeof fromDate === "string") filters.push(gte(attendanceRecords.workDate, fromDate));
@@ -203,7 +203,7 @@ router.get("/employees/:id/attendance", requireStaff(), async (req, res) => {
   );
 });
 
-router.post("/employees/:id/attendance", requireStaff(), async (req, res) => {
+router.post("/employees/:id/attendance", requirePermission("employees", "write"), async (req, res) => {
   const b = req.body ?? {};
   if (!b.workDate || !b.status) {
     res.status(400).json({ error: "VALIDATION" });

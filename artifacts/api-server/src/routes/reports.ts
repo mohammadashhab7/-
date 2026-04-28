@@ -1,7 +1,7 @@
 import { Router, type IRouter } from "express";
 import { sql } from "drizzle-orm";
 import { db, financialEntries } from "@workspace/db";
-import { requireStaff } from "../lib/auth";
+import { requireStaff, requirePermission } from "../lib/auth";
 
 const router: IRouter = Router();
 
@@ -49,7 +49,7 @@ async function bookSummary(
   };
 }
 
-router.get("/reports/financial", requireStaff(), async (req, res) => {
+router.get("/reports/financial", requirePermission("reports", "read"), async (req, res) => {
   const { module, fromDate, toDate } = req.query;
   const m =
     module === "production" || module === "store" || module === "all"
@@ -63,7 +63,7 @@ router.get("/reports/financial", requireStaff(), async (req, res) => {
   res.json(summary);
 });
 
-router.get("/reports/sales-trend", requireStaff(), async (req, res) => {
+router.get("/reports/sales-trend", requirePermission("reports", "read"), async (req, res) => {
   const days = Math.min(
     Math.max(typeof req.query.days === "string" ? parseInt(req.query.days, 10) : 14, 1),
     180,
@@ -100,7 +100,7 @@ router.get("/reports/sales-trend", requireStaff(), async (req, res) => {
   );
 });
 
-router.get("/reports/top-products", requireStaff(), async (req, res) => {
+router.get("/reports/top-products", requirePermission("reports", "read"), async (req, res) => {
   const limit = Math.min(
     typeof req.query.limit === "string" ? parseInt(req.query.limit, 10) : 10,
     50,

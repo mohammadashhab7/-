@@ -1,11 +1,11 @@
 import { Router, type IRouter } from "express";
 import { desc, eq, sql } from "drizzle-orm";
 import { db, activityLog } from "@workspace/db";
-import { requireStaff } from "../lib/auth";
+import { requireStaff, requirePermission } from "../lib/auth";
 
 const router: IRouter = Router();
 
-router.get("/dashboard/kpis", requireStaff(), async (_req, res) => {
+router.get("/dashboard/kpis", requirePermission("reports", "read"), async (_req, res) => {
   const today = await db.execute<{
     total: string;
     count: string;
@@ -46,7 +46,7 @@ router.get("/dashboard/kpis", requireStaff(), async (_req, res) => {
   });
 });
 
-router.get("/dashboard/recent-activity", requireStaff(), async (_req, res) => {
+router.get("/dashboard/recent-activity", requirePermission("reports", "read"), async (_req, res) => {
   const rows = await db
     .select()
     .from(activityLog)

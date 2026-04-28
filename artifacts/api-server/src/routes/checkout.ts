@@ -3,6 +3,7 @@ import { eq } from "drizzle-orm";
 import { db, carts, cartItems, settings } from "@workspace/db";
 import { loadAppUser } from "../lib/auth";
 import { createSalesOrderInternal } from "./salesOrders";
+import { recordPayment } from "./payments";
 import { randomUUID } from "crypto";
 
 const router: IRouter = Router();
@@ -44,6 +45,13 @@ router.post("/checkout", async (req, res) => {
   const tax = Math.round((subtotal * taxPercent) / 10000);
 
   try {
+    const paymentMethod = (b.paymentMethod || "cod") as
+      | "cod"
+      | "stripe"
+      | "paypal"
+      | "bank_transfer"
+      | "cash"
+      | "card_terminal";
     const order = await createSalesOrderInternal({
       channel: "online",
       customerUserId: user?.id ?? null,
@@ -51,18 +59,37 @@ router.post("/checkout", async (req, res) => {
       customerPhone: b.customerPhone,
       customerEmail: b.customerEmail ?? user?.email ?? null,
       deliveryAddress: b.deliveryAddress,
-      paymentMethod: b.paymentMethod || "cod",
+      paymentMethod,
       items: items.map((it) => ({ productId: it.productId, quantity: it.quantity })),
       deliveryFeeMinor: delivery,
       taxMinor: tax,
       notesAr: b.notesAr ?? null,
     });
     await db.delete(cartItems).where(eq(cartItems.cartId, cart.id));
+    const provider =
+      paymentMethod === "stripe" || paymentMethod === "paypal" || paymentMethod === "cod"
+        ? paymentMethod
+        : "cod";
+    const payment = await recordPayment({
+      orderId: order.id,
+      provider,
+      amountMinor: order.totalMinor,
+      currency: "SYP",
+      createdByUserId: user?.id ?? null,
+    });
     res.status(201).json({
       orderId: order.id,
       orderNumber: order.orderNumber,
       totalMinor: order.totalMinor,
       paymentMethod: order.paymentMethod,
+      paymentId: payment.id,
+      paymentStatus: payment.status,
+      providerActive:
+        provider === "cod"
+          ? true
+          : provider === "stripe"
+            ? Boolean(process.env.STRIPE_SECRET_KEY)
+            : Boolean(process.env.PAYPAL_CLIENT_ID && process.env.PAYPAL_SECRET),
     });
   } catch (err) {
     const msg = (err as Error).message || "";

@@ -8,12 +8,12 @@ import {
   rawMaterials,
   products,
 } from "@workspace/db";
-import { requireStaff } from "../lib/auth";
+import { requireStaff, requirePermission } from "../lib/auth";
 import { applyLedgerEntry } from "../lib/inventory";
 
 const router: IRouter = Router();
 
-router.get("/inventory/locations", requireStaff(), async (_req, res) => {
+router.get("/inventory/locations", requirePermission("inventory", "read"), async (_req, res) => {
   const rows = await db
     .select()
     .from(inventoryLocations)
@@ -29,7 +29,7 @@ router.get("/inventory/locations", requireStaff(), async (_req, res) => {
   );
 });
 
-router.get("/inventory/stock", requireStaff(), async (req, res) => {
+router.get("/inventory/stock", requirePermission("inventory", "read"), async (req, res) => {
   const { locationId, itemType } = req.query;
   const filters = [];
   if (typeof locationId === "string") filters.push(eq(stockLevels.locationId, locationId));
@@ -64,7 +64,7 @@ router.get("/inventory/stock", requireStaff(), async (req, res) => {
   );
 });
 
-router.get("/inventory/ledger", requireStaff(), async (req, res) => {
+router.get("/inventory/ledger", requirePermission("inventory", "read"), async (req, res) => {
   const { locationId, itemType, itemId, limit } = req.query;
   const filters = [];
   if (typeof locationId === "string") filters.push(eq(inventoryLedger.locationId, locationId));
@@ -109,7 +109,7 @@ router.get("/inventory/ledger", requireStaff(), async (req, res) => {
   );
 });
 
-router.post("/inventory/adjustments", requireStaff(), async (req, res) => {
+router.post("/inventory/adjustments", requirePermission("inventory", "write"), async (req, res) => {
   const b = req.body ?? {};
   if (!b.locationId || !b.itemType || typeof b.quantityDelta !== "number") {
     res.status(400).json({ error: "VALIDATION" });
@@ -138,7 +138,7 @@ router.post("/inventory/adjustments", requireStaff(), async (req, res) => {
   });
 });
 
-router.get("/inventory/low-stock", requireStaff(), async (_req, res) => {
+router.get("/inventory/low-stock", requirePermission("inventory", "read"), async (_req, res) => {
   // products with stock_levels.quantity < products.reorderThreshold
   const lowProducts = await db.execute<{
     item_id: string;
