@@ -9,6 +9,8 @@
 export type OrderStatus = (typeof OrderStatus)[keyof typeof OrderStatus];
 
 export const OrderStatus = {
+  pending_payment: "pending_payment",
+  paid: "paid",
   pending: "pending",
   confirmed: "confirmed",
   preparing: "preparing",
@@ -16,4 +18,5 @@ export const OrderStatus = {
   out_for_delivery: "out_for_delivery",
   completed: "completed",
   cancelled: "cancelled",
+  refunded: "refunded",
 } as const;

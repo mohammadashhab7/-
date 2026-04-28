@@ -139,55 +139,59 @@ router.post("/inventory/adjustments", requirePermission("inventory", "write"), a
 });
 
 router.get("/inventory/low-stock", requirePermission("inventory", "read"), async (_req, res) => {
-  // products with stock_levels.quantity < products.reorderThreshold
+  // Aggregate stock per item across all locations; flag items at/below reorder threshold.
   const lowProducts = await db.execute<{
     item_id: string;
     item_name_ar: string;
-    quantity: number;
+    total_quantity: string;
     reorder: number;
-    location_id: string;
-    location_name_ar: string;
+    unit: string;
   }>(sql`
-    select p.id as item_id, p.name_ar as item_name_ar, sl.quantity_thousandths as quantity,
-           p.reorder_threshold as reorder, l.id as location_id, l.name_ar as location_name_ar
-    from stock_levels sl
-    join products p on p.id = sl.product_id
-    join inventory_locations l on l.id = sl.location_id
-    where sl.item_type = 'product' and p.reorder_threshold > 0 and sl.quantity_thousandths < p.reorder_threshold
+    select p.id as item_id,
+           p.name_ar as item_name_ar,
+           coalesce(sum(sl.quantity_thousandths), 0)::text as total_quantity,
+           p.reorder_threshold as reorder,
+           p.unit as unit
+    from products p
+    left join stock_levels sl on sl.product_id = p.id and sl.item_type = 'product'
+    where p.reorder_threshold > 0
+    group by p.id, p.name_ar, p.reorder_threshold, p.unit
+    having coalesce(sum(sl.quantity_thousandths), 0) <= p.reorder_threshold
   `);
   const lowMaterials = await db.execute<{
     item_id: string;
     item_name_ar: string;
-    quantity: number;
+    total_quantity: string;
     reorder: number;
-    location_id: string;
-    location_name_ar: string;
+    unit: string;
   }>(sql`
-    select rm.id as item_id, rm.name_ar as item_name_ar, sl.quantity_thousandths as quantity,
-           rm.reorder_threshold as reorder, l.id as location_id, l.name_ar as location_name_ar
-    from stock_levels sl
-    join raw_materials rm on rm.id = sl.material_id
-    join inventory_locations l on l.id = sl.location_id
-    where sl.item_type = 'raw_material' and rm.reorder_threshold > 0 and sl.quantity_thousandths < rm.reorder_threshold
+    select rm.id as item_id,
+           rm.name_ar as item_name_ar,
+           coalesce(sum(sl.quantity_thousandths), 0)::text as total_quantity,
+           rm.reorder_threshold as reorder,
+           rm.unit as unit
+    from raw_materials rm
+    left join stock_levels sl on sl.material_id = rm.id and sl.item_type = 'raw_material'
+    where rm.reorder_threshold > 0
+    group by rm.id, rm.name_ar, rm.reorder_threshold, rm.unit
+    having coalesce(sum(sl.quantity_thousandths), 0) <= rm.reorder_threshold
   `);
   const out = [
     ...lowProducts.rows.map((r) => ({
       itemType: "product" as const,
       itemId: r.item_id,
       itemNameAr: r.item_name_ar,
-      quantity: Number(r.quantity),
+      totalQuantity: Number(r.total_quantity),
       reorderThreshold: Number(r.reorder),
-      locationId: r.location_id,
-      locationNameAr: r.location_name_ar,
+      unit: r.unit,
     })),
     ...lowMaterials.rows.map((r) => ({
-      itemType: "raw_material" as const,
+      itemType: "material" as const,
       itemId: r.item_id,
       itemNameAr: r.item_name_ar,
-      quantity: Number(r.quantity),
+      totalQuantity: Number(r.total_quantity),
       reorderThreshold: Number(r.reorder),
-      locationId: r.location_id,
-      locationNameAr: r.location_name_ar,
+      unit: r.unit,
     })),
   ];
   res.json(out);

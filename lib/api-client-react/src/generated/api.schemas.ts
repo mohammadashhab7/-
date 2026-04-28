@@ -341,6 +341,8 @@ export interface TransferInput {
 export type OrderStatus = (typeof OrderStatus)[keyof typeof OrderStatus];
 
 export const OrderStatus = {
+  pending_payment: "pending_payment",
+  paid: "paid",
   pending: "pending",
   confirmed: "confirmed",
   preparing: "preparing",
@@ -348,6 +350,7 @@ export const OrderStatus = {
   out_for_delivery: "out_for_delivery",
   completed: "completed",
   cancelled: "cancelled",
+  refunded: "refunded",
 } as const;
 
 export type SalesOrderChannel =
@@ -365,7 +368,9 @@ export const SalesOrderPaymentMethod = {
   cash: "cash",
   card: "card",
   cod: "cod",
-  online: "online",
+  bank_transfer: "bank_transfer",
+  stripe: "stripe",
+  paypal: "paypal",
 } as const;
 
 export interface SalesOrderItem {

@@ -1547,7 +1547,7 @@ components:
 
     OrderStatus:
       type: string
-      enum: [pending, confirmed, preparing, ready, out_for_delivery, completed, cancelled]
+      enum: [pending_payment, paid, pending, confirmed, preparing, ready, out_for_delivery, completed, cancelled, refunded]
 
     SalesOrder:
       type: object
@@ -1563,7 +1563,7 @@ components:
         customerEmail: { type: string }
         deliveryAddress: { type: string }
         deliveryNotes: { type: string }
-        paymentMethod: { type: string, enum: [cash, card, cod, online] }
+        paymentMethod: { type: string, enum: [cash, card, cod, bank_transfer, stripe, paypal] }
         subtotalMinor: { type: integer }
         discountMinor: { type: integer }
         deliveryFeeMinor: { type: integer }

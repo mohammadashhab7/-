@@ -1,7 +1,8 @@
 import { useState } from "react";
 import {
   useListSalesOrders, useUpdateSalesOrderStatus, useGetSalesOrder,
-  getListSalesOrdersQueryKey,
+  getListSalesOrdersQueryKey, getGetSalesOrderQueryKey,
+  type OrderStatus,
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -14,7 +15,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { useToast } from "@/hooks/use-toast";
 import { formatSyp, formatDateTime, ORDER_STATUS_AR, CHANNEL_AR, PAYMENT_METHOD_AR } from "@/lib/format";
 
-const statusOptions = ["pending", "confirmed", "preparing", "ready", "out_for_delivery", "completed", "cancelled", "refunded"];
+const statusOptions: OrderStatus[] = ["pending", "confirmed", "preparing", "ready", "out_for_delivery", "completed", "cancelled", "refunded"];
 
 function OrderTable({ channel }: { channel: "online" | "pos" }) {
   const { data: orders, isLoading } = useListSalesOrders({ channel });
@@ -23,13 +24,14 @@ function OrderTable({ channel }: { channel: "online" | "pos" }) {
   const { toast } = useToast();
   const [openId, setOpenId] = useState<string | null>(null);
   const { data: detail } = useGetSalesOrder(openId || "", {
-    // codegen requires full UseQueryOptions; queryKey is overridden internally,
-    // we only care about toggling `enabled`.
-    query: { enabled: !!openId } as Parameters<typeof useGetSalesOrder>[1] extends { query?: infer Q } ? Q : never,
+    query: {
+      enabled: !!openId,
+      queryKey: getGetSalesOrderQueryKey(openId || ""),
+    },
   });
 
-  const handleStatus = (id: string, status: string) => {
-    updateStatus.mutate({ id, data: { status: status as any } }, {
+  const handleStatus = (id: string, status: OrderStatus) => {
+    updateStatus.mutate({ id, data: { status } }, {
       onSuccess: () => {
         qc.invalidateQueries({ queryKey: getListSalesOrdersQueryKey({ channel }) });
         toast({ title: "تم التحديث" });
@@ -56,7 +58,7 @@ function OrderTable({ channel }: { channel: "online" | "pos" }) {
                     <TableCell>{o.customerName || "-"}</TableCell>
                     <TableCell className="font-medium">{formatSyp(o.totalMinor)}</TableCell>
                     <TableCell>
-                      <Select value={o.status} onValueChange={(v) => handleStatus(o.id, v)}>
+                      <Select value={o.status} onValueChange={(v) => handleStatus(o.id, v as OrderStatus)}>
                         <SelectTrigger className="w-36"><SelectValue /></SelectTrigger>
                         <SelectContent>{statusOptions.map((s) => <SelectItem key={s} value={s}>{ORDER_STATUS_AR[s]}</SelectItem>)}</SelectContent>
                       </Select>
@@ -85,8 +87,8 @@ function OrderTable({ channel }: { channel: "online" | "pos" }) {
               <Table>
                 <TableHeader><TableRow><TableHead>المنتج</TableHead><TableHead>الكمية</TableHead><TableHead>السعر</TableHead><TableHead>الإجمالي</TableHead></TableRow></TableHeader>
                 <TableBody>
-                  {detail.items.map((it: any, i: number) => (
-                    <TableRow key={i}>
+                  {detail.items.map((it) => (
+                    <TableRow key={it.id}>
                       <TableCell>{it.productNameAr}</TableCell>
                       <TableCell>{it.quantity}</TableCell>
                       <TableCell>{formatSyp(it.unitPriceMinor)}</TableCell>

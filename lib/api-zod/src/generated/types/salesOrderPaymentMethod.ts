@@ -13,5 +13,7 @@ export const SalesOrderPaymentMethod = {
   cash: "cash",
   card: "card",
   cod: "cod",
-  online: "online",
+  bank_transfer: "bank_transfer",
+  stripe: "stripe",
+  paypal: "paypal",
 } as const;

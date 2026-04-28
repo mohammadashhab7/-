@@ -691,6 +691,8 @@ export const ListSalesOrdersResponseItem = zod.object({
   orderNumber: zod.string(),
   channel: zod.enum(["pos", "online"]),
   status: zod.enum([
+    "pending_payment",
+    "paid",
     "pending",
     "confirmed",
     "preparing",
@@ -698,6 +700,7 @@ export const ListSalesOrdersResponseItem = zod.object({
     "out_for_delivery",
     "completed",
     "cancelled",
+    "refunded",
   ]),
   customerId: zod.string().optional(),
   customerName: zod.string().optional(),
@@ -705,7 +708,9 @@ export const ListSalesOrdersResponseItem = zod.object({
   customerEmail: zod.string().optional(),
   deliveryAddress: zod.string().optional(),
   deliveryNotes: zod.string().optional(),
-  paymentMethod: zod.enum(["cash", "card", "cod", "online"]).optional(),
+  paymentMethod: zod
+    .enum(["cash", "card", "cod", "bank_transfer", "stripe", "paypal"])
+    .optional(),
   subtotalMinor: zod.number(),
   discountMinor: zod.number().optional(),
   deliveryFeeMinor: zod.number().optional(),
@@ -752,6 +757,8 @@ export const GetSalesOrderResponse = zod.object({
   orderNumber: zod.string(),
   channel: zod.enum(["pos", "online"]),
   status: zod.enum([
+    "pending_payment",
+    "paid",
     "pending",
     "confirmed",
     "preparing",
@@ -759,6 +766,7 @@ export const GetSalesOrderResponse = zod.object({
     "out_for_delivery",
     "completed",
     "cancelled",
+    "refunded",
   ]),
   customerId: zod.string().optional(),
   customerName: zod.string().optional(),
@@ -766,7 +774,9 @@ export const GetSalesOrderResponse = zod.object({
   customerEmail: zod.string().optional(),
   deliveryAddress: zod.string().optional(),
   deliveryNotes: zod.string().optional(),
-  paymentMethod: zod.enum(["cash", "card", "cod", "online"]).optional(),
+  paymentMethod: zod
+    .enum(["cash", "card", "cod", "bank_transfer", "stripe", "paypal"])
+    .optional(),
   subtotalMinor: zod.number(),
   discountMinor: zod.number().optional(),
   deliveryFeeMinor: zod.number().optional(),
@@ -792,6 +802,8 @@ export const UpdateSalesOrderStatusParams = zod.object({
 
 export const UpdateSalesOrderStatusBody = zod.object({
   status: zod.enum([
+    "pending_payment",
+    "paid",
     "pending",
     "confirmed",
     "preparing",
@@ -799,6 +811,7 @@ export const UpdateSalesOrderStatusBody = zod.object({
     "out_for_delivery",
     "completed",
     "cancelled",
+    "refunded",
   ]),
   note: zod.string().optional(),
 });
@@ -808,6 +821,8 @@ export const UpdateSalesOrderStatusResponse = zod.object({
   orderNumber: zod.string(),
   channel: zod.enum(["pos", "online"]),
   status: zod.enum([
+    "pending_payment",
+    "paid",
     "pending",
     "confirmed",
     "preparing",
@@ -815,6 +830,7 @@ export const UpdateSalesOrderStatusResponse = zod.object({
     "out_for_delivery",
     "completed",
     "cancelled",
+    "refunded",
   ]),
   customerId: zod.string().optional(),
   customerName: zod.string().optional(),
@@ -822,7 +838,9 @@ export const UpdateSalesOrderStatusResponse = zod.object({
   customerEmail: zod.string().optional(),
   deliveryAddress: zod.string().optional(),
   deliveryNotes: zod.string().optional(),
-  paymentMethod: zod.enum(["cash", "card", "cod", "online"]).optional(),
+  paymentMethod: zod
+    .enum(["cash", "card", "cod", "bank_transfer", "stripe", "paypal"])
+    .optional(),
   subtotalMinor: zod.number(),
   discountMinor: zod.number().optional(),
   deliveryFeeMinor: zod.number().optional(),
@@ -1005,6 +1023,8 @@ export const ListMyOrdersResponseItem = zod.object({
   orderNumber: zod.string(),
   channel: zod.enum(["pos", "online"]),
   status: zod.enum([
+    "pending_payment",
+    "paid",
     "pending",
     "confirmed",
     "preparing",
@@ -1012,6 +1032,7 @@ export const ListMyOrdersResponseItem = zod.object({
     "out_for_delivery",
     "completed",
     "cancelled",
+    "refunded",
   ]),
   customerId: zod.string().optional(),
   customerName: zod.string().optional(),
@@ -1019,7 +1040,9 @@ export const ListMyOrdersResponseItem = zod.object({
   customerEmail: zod.string().optional(),
   deliveryAddress: zod.string().optional(),
   deliveryNotes: zod.string().optional(),
-  paymentMethod: zod.enum(["cash", "card", "cod", "online"]).optional(),
+  paymentMethod: zod
+    .enum(["cash", "card", "cod", "bank_transfer", "stripe", "paypal"])
+    .optional(),
   subtotalMinor: zod.number(),
   discountMinor: zod.number().optional(),
   deliveryFeeMinor: zod.number().optional(),

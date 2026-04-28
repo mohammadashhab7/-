@@ -42,6 +42,7 @@ const STATUS_TRANSITIONS: Record<OrderStatus, OrderStatus[]> = {
 const router: IRouter = Router();
 
 function serialize(o: typeof salesOrders.$inferSelect) {
+  const placedAtIso = o.placedAt.toISOString();
   return {
     id: o.id,
     orderNumber: o.orderNumber,
@@ -58,8 +59,10 @@ function serialize(o: typeof salesOrders.$inferSelect) {
     taxMinor: o.taxMinor,
     deliveryFeeMinor: o.deliveryFeeMinor,
     totalMinor: o.totalMinor,
+    currency: "SYP",
     notesAr: o.notesAr,
-    placedAt: o.placedAt.toISOString(),
+    placedAt: placedAtIso,
+    createdAt: placedAtIso,
     completedAt: o.completedAt?.toISOString() ?? null,
   };
 }
@@ -300,11 +303,12 @@ router.get("/sales-orders/:id", requirePermission("orders", "read"), async (req,
   res.json({
     ...serialize(rows[0]),
     items: items.map((it) => ({
+      id: it.id,
       productId: it.productId,
       productNameAr: it.productNameAr,
       quantity: it.quantity,
       unitPriceMinor: it.unitPriceMinor,
-      totalMinor: it.totalMinor,
+      lineTotalMinor: it.totalMinor,
     })),
   });
 });
