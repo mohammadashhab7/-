@@ -96,7 +96,7 @@ export default function HomePage() {
             
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
               {featuredProducts.slice(0, 6).map((product) => (
-                <Link key={product.id} href={`/shop/product/${product.slug}`}>
+                <Link key={product.id} href={`/product/${product.slug}`}>
                   <Card className="h-full overflow-hidden border-border/40 hover:border-primary/30 transition-all duration-300 hover:shadow-lg hover:-translate-y-1 bg-background group cursor-pointer">
                     <div className="aspect-[4/3] relative overflow-hidden bg-muted">
                       {product.imageUrl && (

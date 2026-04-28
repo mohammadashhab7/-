@@ -123,7 +123,7 @@ router.post("/recipes", requirePermission("recipes", "write"), async (req, res) 
 });
 
 router.get("/recipes/:id", requirePermission("recipes", "read"), async (req, res) => {
-  const f = await loadFull(req.params.id);
+  const f = await loadFull(String(req.params.id));
   if (!f) {
     res.status(404).json({ error: "NOT_FOUND" });
     return;
@@ -137,14 +137,14 @@ router.patch("/recipes/:id", requirePermission("recipes", "write"), async (req, 
   if (b.yieldQuantity !== undefined) updates.yieldQuantity = b.yieldQuantity;
   if (b.notesAr !== undefined) updates.notesAr = b.notesAr;
   if (b.isActive !== undefined) updates.isActive = b.isActive;
-  await db.update(recipes).set(updates).where(eq(recipes.id, req.params.id));
+  await db.update(recipes).set(updates).where(eq(recipes.id, String(req.params.id)));
 
   if (Array.isArray(b.items)) {
-    await db.delete(recipeItems).where(eq(recipeItems.recipeId, req.params.id));
+    await db.delete(recipeItems).where(eq(recipeItems.recipeId, String(req.params.id)));
     if (b.items.length) {
       await db.insert(recipeItems).values(
         b.items.map((it: { materialId: string; quantity: number; unit?: string }) => ({
-          recipeId: req.params.id,
+          recipeId: String(req.params.id),
           materialId: it.materialId,
           quantity: it.quantity,
           unit: it.unit || "g",
@@ -152,13 +152,13 @@ router.patch("/recipes/:id", requirePermission("recipes", "write"), async (req, 
       );
     }
   }
-  await recomputeUnitCost(req.params.id);
-  const full = await loadFull(req.params.id);
+  await recomputeUnitCost(String(req.params.id));
+  const full = await loadFull(String(req.params.id));
   res.json(full);
 });
 
 router.delete("/recipes/:id", requirePermission("recipes", "write"), async (req, res) => {
-  await db.delete(recipes).where(eq(recipes.id, req.params.id));
+  await db.delete(recipes).where(eq(recipes.id, String(req.params.id)));
   res.status(204).send();
 });
 

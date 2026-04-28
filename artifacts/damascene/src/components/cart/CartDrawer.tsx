@@ -36,7 +36,7 @@ export default function CartDrawer({ children }: { children: React.ReactNode }) 
       return;
     }
     updateItem.mutate(
-      { id: productId, data: { quantity } },
+      { itemId: productId, data: { quantity } },
       {
         onSuccess: () => {
           queryClient.invalidateQueries({ queryKey: getGetCartQueryKey() });
@@ -47,7 +47,7 @@ export default function CartDrawer({ children }: { children: React.ReactNode }) 
 
   const handleRemoveItem = (productId: string) => {
     removeItem.mutate(
-      { id: productId },
+      { itemId: productId },
       {
         onSuccess: () => {
           queryClient.invalidateQueries({ queryKey: getGetCartQueryKey() });

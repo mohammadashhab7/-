@@ -26,7 +26,7 @@ router.get("/admin/users", requireOwnerOrAdmin(), async (_req, res) => {
 });
 
 router.patch("/admin/users/:id", requireOwnerOrAdmin(), async (req, res) => {
-  const id = req.params.id;
+  const id = String(req.params.id);
   const { role, permissions, isActive } = req.body ?? {};
   const updates: Partial<typeof users.$inferInsert> = { updatedAt: new Date() };
   if (typeof role === "string") updates.role = role as typeof users.$inferSelect.role;

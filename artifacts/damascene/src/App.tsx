@@ -22,6 +22,7 @@ import StoryPage from "@/pages/public/Story";
 import ContactPage from "@/pages/public/Contact";
 import SignInPage from "@/pages/public/SignIn";
 import SignUpPage from "@/pages/public/SignUp";
+import UnauthorizedPage from "@/pages/Unauthorized";
 
 import AccountHomePage from "@/pages/account/AccountHome";
 import MyOrdersPage from "@/pages/account/MyOrders";
@@ -42,6 +43,7 @@ import AdminReportsPage from "@/pages/admin/Reports";
 import AdminEmployeesPage from "@/pages/admin/Employees";
 import AdminUsersPage from "@/pages/admin/Users";
 import AdminCmsPage from "@/pages/admin/Cms";
+import AdminMediaPage from "@/pages/admin/Media";
 import AdminSettingsPage from "@/pages/admin/Settings";
 
 const PUBLISHABLE_KEY = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
@@ -58,8 +60,8 @@ function StaffRoute({ children }: { children: React.ReactNode }) {
   if (!me?.isAuthenticated) {
     return <RedirectToSignIn />;
   }
-  if (me.user?.role === "customer") {
-    return <Redirect to="/account" />;
+  if (me.role === "customer") {
+    return <Redirect to="/unauthorized" />;
   }
   return <>{children}</>;
 }
@@ -102,6 +104,7 @@ function Router() {
               <Route path="/employees" component={AdminEmployeesPage} />
               <Route path="/users" component={AdminUsersPage} />
               <Route path="/cms" component={AdminCmsPage} />
+              <Route path="/media" component={AdminMediaPage} />
               <Route path="/settings" component={AdminSettingsPage} />
               <Route component={NotFound} />
             </Switch>
@@ -139,6 +142,7 @@ function Router() {
             <Route path="/sign-in/*?" component={SignInPage} />
             <Route path="/sign-up" component={SignUpPage} />
             <Route path="/sign-up/*?" component={SignUpPage} />
+            <Route path="/unauthorized" component={UnauthorizedPage} />
             <Route component={NotFound} />
           </Switch>
         </PublicLayout>

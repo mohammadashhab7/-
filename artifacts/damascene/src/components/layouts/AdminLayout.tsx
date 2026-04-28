@@ -89,8 +89,6 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
     </nav>
   );
 
-  // If in POS mode, we might want a different layout, but for now we keep the sidebar or hide it depending on preference.
-  // We will hide the sidebar for POS to give it full screen, and just show a top bar to exit POS.
   if (isPos) {
     return (
       <div className="min-h-screen flex flex-col bg-background font-sans text-foreground">

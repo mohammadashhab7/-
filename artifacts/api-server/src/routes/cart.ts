@@ -123,7 +123,7 @@ router.patch("/cart/items/:itemId", async (req, res) => {
   await db
     .update(cartItems)
     .set({ quantity: qty })
-    .where(and(eq(cartItems.id, req.params.itemId), eq(cartItems.cartId, cart.id)));
+    .where(and(eq(cartItems.id, String(req.params.itemId)), eq(cartItems.cartId, cart.id)));
   res.json(await serializeCart(cart));
 });
 
@@ -131,7 +131,7 @@ router.delete("/cart/items/:itemId", async (req, res) => {
   const cart = await loadOrCreateCart(req, res);
   await db
     .delete(cartItems)
-    .where(and(eq(cartItems.id, req.params.itemId), eq(cartItems.cartId, cart.id)));
+    .where(and(eq(cartItems.id, String(req.params.itemId)), eq(cartItems.cartId, cart.id)));
   res.json(await serializeCart(cart));
 });
 

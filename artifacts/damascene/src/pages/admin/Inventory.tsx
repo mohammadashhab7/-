@@ -128,8 +128,8 @@ export default function AdminInventoryPage() {
                   {lowStock?.map((l, i) => (
                     <TableRow key={i}>
                       <TableCell className="font-medium">{l.itemNameAr}</TableCell>
-                      <TableCell className="text-destructive">{formatQty(l.quantity)} <span className="text-xs">{l.unit}</span></TableCell>
-                      <TableCell>{formatQty(l.threshold)} <span className="text-xs">{l.unit}</span></TableCell>
+                      <TableCell className="text-destructive">{formatQty(l.totalQuantity)} <span className="text-xs">{l.unit}</span></TableCell>
+                      <TableCell>{formatQty(l.reorderThreshold)} <span className="text-xs">{l.unit}</span></TableCell>
                     </TableRow>
                   ))}
                 </TableBody>

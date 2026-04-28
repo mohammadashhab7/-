@@ -17,7 +17,7 @@ import { formatSyp, formatDate } from "@/lib/format";
 export default function AdminClosingPage() {
   const today = new Date().toISOString().slice(0, 10);
   const [date, setDate] = useState(today);
-  const { data: closing, isLoading } = useGetDailyClosing({ date });
+  const { data: closing, isLoading } = useGetDailyClosing(date);
   const closeMut = useCloseDailyClosing();
   const qc = useQueryClient();
   const { toast } = useToast();
@@ -28,7 +28,7 @@ export default function AdminClosingPage() {
     e.preventDefault();
     closeMut.mutate({ date, data: { countedCash: Number(counted) || 0, note: note || undefined } }, {
       onSuccess: () => {
-        qc.invalidateQueries({ queryKey: getGetDailyClosingQueryKey({ date }) });
+        qc.invalidateQueries({ queryKey: getGetDailyClosingQueryKey(date) });
         toast({ title: "تم إغلاق اليوم" });
       },
       onError: () => toast({ title: "خطأ", variant: "destructive" }),
@@ -55,6 +55,16 @@ export default function AdminClosingPage() {
               <div className="flex justify-between"><span>إجمالي المبيعات:</span><span className="font-medium">{formatSyp(closing.salesTotalMinor)}</span></div>
               <div className="flex justify-between"><span>نقداً:</span><span className="font-medium">{formatSyp(closing.cashTotalMinor)}</span></div>
               <div className="flex justify-between"><span>بطاقة:</span><span className="font-medium">{formatSyp(closing.cardTotalMinor)}</span></div>
+              {closing.otherTotalMinor !== undefined && closing.otherTotalMinor > 0 && (
+                <div className="flex justify-between"><span>طرق أخرى:</span><span className="font-medium">{formatSyp(closing.otherTotalMinor)}</span></div>
+              )}
+              {closing.breakdown && (
+                <div className="text-xs text-foreground/60 pt-2 border-t mt-2 space-y-1">
+                  {Object.entries(closing.breakdown).map(([k, v]) => (
+                    <div key={k} className="flex justify-between"><span>{k}</span><span dir="ltr">{formatSyp(Number(v))}</span></div>
+                  ))}
+                </div>
+              )}
               {closing.isClosed ? (
                 <div className="space-y-2 pt-3 border-t">
                   <Badge variant="secondary">مُغلق</Badge>

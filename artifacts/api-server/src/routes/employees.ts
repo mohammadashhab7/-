@@ -144,7 +144,7 @@ router.post("/employees/salaries", requirePermission("employees", "write"), asyn
 });
 
 router.get("/employees/:id", requirePermission("employees", "read"), async (req, res) => {
-  const rows = await db.select().from(employees).where(eq(employees.id, req.params.id)).limit(1);
+  const rows = await db.select().from(employees).where(eq(employees.id, String(req.params.id))).limit(1);
   if (!rows[0]) {
     res.status(404).json({ error: "NOT_FOUND" });
     return;
@@ -172,7 +172,7 @@ router.patch("/employees/:id", requirePermission("employees", "write"), async (r
   const updated = await db
     .update(employees)
     .set(updates)
-    .where(eq(employees.id, req.params.id))
+    .where(eq(employees.id, String(req.params.id)))
     .returning();
   if (!updated[0]) {
     res.status(404).json({ error: "NOT_FOUND" });
@@ -183,7 +183,7 @@ router.patch("/employees/:id", requirePermission("employees", "write"), async (r
 
 router.get("/employees/:id/attendance", requirePermission("employees", "read"), async (req, res) => {
   const { fromDate, toDate } = req.query;
-  const filters = [eq(attendanceRecords.employeeId, req.params.id)];
+  const filters = [eq(attendanceRecords.employeeId, String(req.params.id))];
   if (typeof fromDate === "string") filters.push(gte(attendanceRecords.workDate, fromDate));
   if (typeof toDate === "string") filters.push(lte(attendanceRecords.workDate, toDate));
   const rows = await db
@@ -214,7 +214,7 @@ router.post("/employees/:id/attendance", requirePermission("employees", "write")
     .from(attendanceRecords)
     .where(
       and(
-        eq(attendanceRecords.employeeId, req.params.id),
+        eq(attendanceRecords.employeeId, String(req.params.id)),
         eq(attendanceRecords.workDate, b.workDate),
       ),
     )
@@ -237,7 +237,7 @@ router.post("/employees/:id/attendance", requirePermission("employees", "write")
       await db
         .insert(attendanceRecords)
         .values({
-          employeeId: req.params.id,
+          employeeId: String(req.params.id),
           workDate: b.workDate,
           status: b.status,
           hoursWorked: typeof b.hoursWorked === "number" ? b.hoursWorked : 80,

@@ -24,6 +24,7 @@ export * from "./closeDailyClosingBody";
 export * from "./contentBlock";
 export * from "./contentBlockInput";
 export * from "./dailyClosing";
+export * from "./dailyClosingBreakdown";
 export * from "./dashboardKpis";
 export * from "./employee";
 export * from "./employeeInput";

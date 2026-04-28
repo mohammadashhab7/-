@@ -108,7 +108,7 @@ router.get("/products/:id", async (req, res) => {
     .select({ p: products, catName: categories.nameAr })
     .from(products)
     .leftJoin(categories, eq(products.categoryId, categories.id))
-    .where(eq(products.id, req.params.id))
+    .where(eq(products.id, String(req.params.id)))
     .limit(1);
   if (!rows[0]) {
     res.status(404).json({ error: "NOT_FOUND" });
@@ -146,7 +146,7 @@ router.patch("/products/:id", requirePermission("products", "write"), async (req
   const updated = await db
     .update(products)
     .set(updates)
-    .where(eq(products.id, req.params.id))
+    .where(eq(products.id, String(req.params.id)))
     .returning();
   if (!updated[0]) {
     res.status(404).json({ error: "NOT_FOUND" });
@@ -156,7 +156,7 @@ router.patch("/products/:id", requirePermission("products", "write"), async (req
 });
 
 router.delete("/products/:id", requirePermission("products", "write"), async (req, res) => {
-  await db.delete(products).where(eq(products.id, req.params.id));
+  await db.delete(products).where(eq(products.id, String(req.params.id)));
   res.status(204).send();
 });
 

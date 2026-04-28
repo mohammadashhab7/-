@@ -51,7 +51,7 @@ router.post("/checkout", async (req, res) => {
       | "paypal"
       | "bank_transfer"
       | "cash"
-      | "card_terminal";
+      | "card";
     const order = await createSalesOrderInternal({
       channel: "online",
       customerUserId: user?.id ?? null,

@@ -36,7 +36,7 @@ export default function DashboardPage() {
   const { data: kpis, isLoading: isLoadingKpis } = useGetDashboardKpis();
   const { data: salesTrend, isLoading: isLoadingTrend } = useGetSalesTrend({ days: 7 });
   const { data: topProducts, isLoading: isLoadingTop } = useGetTopProducts({ limit: 5 });
-  const { data: recentActivity, isLoading: isLoadingActivity } = useGetRecentActivity({ limit: 10 });
+  const { data: recentActivity, isLoading: isLoadingActivity } = useGetRecentActivity();
   const { data: lowStock } = useListLowStock();
 
   const formatCurrency = (minor: number | undefined) => {
@@ -305,8 +305,8 @@ export default function DashboardPage() {
                           </div>
                         </div>
                         {activity.amountMinor !== undefined && (
-                          <div className={`text-sm font-medium mt-1 ${activity.kind === 'expense' ? 'text-destructive' : 'text-primary'}`} dir="ltr">
-                            {activity.kind === 'expense' ? '-' : '+'}{formatCurrency(activity.amountMinor)}
+                          <div className={`text-sm font-medium mt-1 ${activity.kind === 'financial' && (activity.amountMinor ?? 0) < 0 ? 'text-destructive' : 'text-primary'}`} dir="ltr">
+                            {activity.kind === 'financial' && (activity.amountMinor ?? 0) < 0 ? '-' : '+'}{formatCurrency(Math.abs(activity.amountMinor ?? 0))}
                           </div>
                         )}
                       </div>

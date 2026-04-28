@@ -14,7 +14,15 @@ export default function AccountLayout({ children }: { children: ReactNode }) {
           <Link href="/" className="text-xl font-serif text-primary">
             الدمشقي
           </Link>
-          <Button variant="ghost" size="sm" onClick={() => signOut(() => (window.location.href = "/"))}>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() =>
+              void signOut().then(() => {
+                window.location.href = "/";
+              })
+            }
+          >
             <LogOut className="ml-2 h-4 w-4" />
             تسجيل الخروج
           </Button>

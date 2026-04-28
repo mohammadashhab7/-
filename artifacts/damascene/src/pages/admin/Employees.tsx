@@ -137,8 +137,14 @@ function SalariesTab() {
 function AttendanceTab() {
   const month = new Date().toISOString().slice(0, 7);
   const [m, setM] = useState(month);
-  const { data } = useListAttendance({ month: m });
   const { data: employees } = useListEmployees();
+  const [selectedEmp, setSelectedEmp] = useState("");
+  const effectiveEmp = selectedEmp || employees?.[0]?.id || "";
+  const { data } = useListAttendance(
+    effectiveEmp,
+    { month: m },
+    { query: { enabled: !!effectiveEmp } as Parameters<typeof useListAttendance>[2] extends { query?: infer Q } ? Q : never },
+  );
   const create = useCreateAttendance();
   const qc = useQueryClient();
   const { toast } = useToast();
@@ -148,8 +154,13 @@ function AttendanceTab() {
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!empId) return;
     create.mutate({ id: empId, data: { ...form, hoursWorked: Number(form.hoursWorked) || undefined } }, {
-      onSuccess: () => { qc.invalidateQueries({ queryKey: getListAttendanceQueryKey() }); setOpen(false); toast({ title: "تم التسجيل" }); },
+      onSuccess: () => {
+        qc.invalidateQueries({ queryKey: getListAttendanceQueryKey(empId, { month: m }) });
+        setOpen(false);
+        toast({ title: "تم التسجيل" });
+      },
     });
   };
 

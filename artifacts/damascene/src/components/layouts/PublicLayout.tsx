@@ -90,13 +90,16 @@ export default function PublicLayout({ children }: PublicLayoutProps) {
                       الطلبات السابقة
                     </Link>
                   </DropdownMenuItem>
-                  {user?.publicMetadata?.role && user.publicMetadata.role !== "customer" && (
-                    <DropdownMenuItem asChild>
-                      <Link href="/admin" className="cursor-pointer w-full text-primary" data-testid="link-admin">
-                        لوحة التحكم
-                      </Link>
-                    </DropdownMenuItem>
-                  )}
+                  {(() => {
+                    const role = user?.publicMetadata?.role;
+                    return typeof role === "string" && role !== "customer" ? (
+                      <DropdownMenuItem asChild>
+                        <Link href="/admin" className="cursor-pointer w-full text-primary" data-testid="link-admin">
+                          لوحة التحكم
+                        </Link>
+                      </DropdownMenuItem>
+                    ) : null;
+                  })()}
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={() => signOut()} className="text-destructive focus:text-destructive cursor-pointer" data-testid="button-sign-out">
                     <LogOut className="mr-2 h-4 w-4" />

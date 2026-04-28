@@ -12,4 +12,8 @@ export type CheckoutInputPaymentMethod =
 export const CheckoutInputPaymentMethod = {
   cod: "cod",
   card: "card",
+  cash: "cash",
+  bank_transfer: "bank_transfer",
+  stripe: "stripe",
+  paypal: "paypal",
 } as const;

@@ -287,7 +287,7 @@ router.get("/sales-orders/:id", requirePermission("orders", "read"), async (req,
   const rows = await db
     .select()
     .from(salesOrders)
-    .where(eq(salesOrders.id, req.params.id))
+    .where(eq(salesOrders.id, String(req.params.id)))
     .limit(1);
   if (!rows[0]) {
     res.status(404).json({ error: "NOT_FOUND" });
@@ -296,7 +296,7 @@ router.get("/sales-orders/:id", requirePermission("orders", "read"), async (req,
   const items = await db
     .select()
     .from(salesOrderItems)
-    .where(eq(salesOrderItems.orderId, req.params.id));
+    .where(eq(salesOrderItems.orderId, String(req.params.id)));
   res.json({
     ...serialize(rows[0]),
     items: items.map((it) => ({
@@ -331,7 +331,7 @@ router.patch("/sales-orders/:id/status", requirePermission("orders", "write"), a
   try {
     const finalRow = await db.transaction(async (tx) => {
       const cur = (
-        await tx.select().from(salesOrders).where(eq(salesOrders.id, req.params.id)).limit(1)
+        await tx.select().from(salesOrders).where(eq(salesOrders.id, String(req.params.id))).limit(1)
       )[0];
       if (!cur) {
         const e = new Error("NOT_FOUND");

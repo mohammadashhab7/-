@@ -848,11 +848,17 @@ export const GetDailyClosingParams = zod.object({
 
 export const GetDailyClosingResponse = zod.object({
   date: zod.coerce.date(),
-  openCount: zod.number(),
   completedCount: zod.number(),
   salesTotalMinor: zod.number(),
   cashTotalMinor: zod.number(),
   cardTotalMinor: zod.number(),
+  otherTotalMinor: zod.number().optional(),
+  breakdown: zod
+    .record(zod.string(), zod.number())
+    .optional()
+    .describe(
+      "Sales totals by payment method (cash, card, cod, bank_transfer, stripe, paypal)",
+    ),
   countedCashMinor: zod.number().optional(),
   varianceMinor: zod.number().optional(),
   isClosed: zod.boolean(),
@@ -871,11 +877,17 @@ export const CloseDailyClosingBody = zod.object({
 
 export const CloseDailyClosingResponse = zod.object({
   date: zod.coerce.date(),
-  openCount: zod.number(),
   completedCount: zod.number(),
   salesTotalMinor: zod.number(),
   cashTotalMinor: zod.number(),
   cardTotalMinor: zod.number(),
+  otherTotalMinor: zod.number().optional(),
+  breakdown: zod
+    .record(zod.string(), zod.number())
+    .optional()
+    .describe(
+      "Sales totals by payment method (cash, card, cod, bank_transfer, stripe, paypal)",
+    ),
   countedCashMinor: zod.number().optional(),
   varianceMinor: zod.number().optional(),
   isClosed: zod.boolean(),
@@ -983,7 +995,9 @@ export const CheckoutBody = zod.object({
   customerEmail: zod.string().optional(),
   deliveryAddress: zod.string(),
   deliveryNotes: zod.string().optional(),
-  paymentMethod: zod.enum(["cod", "card"]).optional(),
+  paymentMethod: zod
+    .enum(["cod", "card", "cash", "bank_transfer", "stripe", "paypal"])
+    .optional(),
 });
 
 export const ListMyOrdersResponseItem = zod.object({

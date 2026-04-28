@@ -79,7 +79,7 @@ router.get("/public/products/:slug", async (req, res) => {
     .select({ p: products, catName: categories.nameAr })
     .from(products)
     .leftJoin(categories, eq(products.categoryId, categories.id))
-    .where(and(eq(products.slug, req.params.slug), eq(products.isActive, true)))
+    .where(and(eq(products.slug, String(req.params.slug)), eq(products.isActive, true)))
     .limit(1);
   if (!rows[0]) {
     res.status(404).json({ error: "NOT_FOUND" });

@@ -10,12 +10,11 @@ const objectStorage = new ObjectStorageService();
 function serialize(m: typeof mediaAssets.$inferSelect) {
   return {
     id: m.id,
-    kind: m.kind,
+    name: m.titleAr ?? "",
     url: m.url,
-    titleAr: m.titleAr,
-    alt: m.alt,
-    sizeBytes: m.sizeBytes,
-    mimeType: m.mimeType,
+    objectPath: m.url,
+    kind: m.kind,
+    sizeBytes: m.sizeBytes ?? undefined,
     createdAt: m.createdAt.toISOString(),
   };
 }
@@ -31,19 +30,22 @@ router.get("/media", requirePermission("media", "read"), async (_req, res) => {
 
 router.post("/media", requirePermission("media", "write"), async (req, res) => {
   const b = req.body ?? {};
-  if (!b.url) {
+  const sourceUrl = b.uploadURL || b.url;
+  if (!sourceUrl || !b.name) {
     res.status(400).json({ error: "VALIDATION" });
     return;
   }
-  const normalized = b.url.startsWith("https://storage.googleapis.com")
-    ? objectStorage.normalizeObjectEntityPath(b.url)
-    : b.url;
+  const normalized =
+    typeof sourceUrl === "string" &&
+    sourceUrl.startsWith("https://storage.googleapis.com")
+      ? objectStorage.normalizeObjectEntityPath(sourceUrl)
+      : sourceUrl;
   const inserted = await db
     .insert(mediaAssets)
     .values({
       kind: b.kind || "image",
       url: normalized,
-      titleAr: b.titleAr ?? null,
+      titleAr: b.name,
       alt: b.alt ?? null,
       sizeBytes: b.sizeBytes ?? null,
       mimeType: b.mimeType ?? null,
@@ -54,7 +56,7 @@ router.post("/media", requirePermission("media", "write"), async (req, res) => {
 });
 
 router.delete("/media/:id", requirePermission("media", "write"), async (req, res) => {
-  await db.delete(mediaAssets).where(eq(mediaAssets.id, req.params.id));
+  await db.delete(mediaAssets).where(eq(mediaAssets.id, String(req.params.id)));
   res.status(204).send();
 });
 

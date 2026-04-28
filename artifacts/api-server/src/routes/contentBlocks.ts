@@ -33,7 +33,7 @@ router.get("/content-blocks/:key", async (req, res) => {
   const rows = await db
     .select()
     .from(contentBlocks)
-    .where(eq(contentBlocks.key, req.params.key))
+    .where(eq(contentBlocks.key, String(req.params.key)))
     .limit(1);
   if (!rows[0]) {
     res.status(404).json({ error: "NOT_FOUND" });
@@ -47,7 +47,7 @@ router.put("/content-blocks/:key", requirePermission("cms", "write"), async (req
   const existing = await db
     .select()
     .from(contentBlocks)
-    .where(eq(contentBlocks.key, req.params.key))
+    .where(eq(contentBlocks.key, String(req.params.key)))
     .limit(1);
   let row;
   if (existing[0]) {
@@ -62,7 +62,7 @@ router.put("/content-blocks/:key", requirePermission("cms", "write"), async (req
           metadata: b.metadata ?? {},
           updatedAt: new Date(),
         })
-        .where(eq(contentBlocks.key, req.params.key))
+        .where(eq(contentBlocks.key, String(req.params.key)))
         .returning()
     )[0]!;
   } else {
@@ -70,7 +70,7 @@ router.put("/content-blocks/:key", requirePermission("cms", "write"), async (req
       await db
         .insert(contentBlocks)
         .values({
-          key: req.params.key,
+          key: String(req.params.key),
           page: b.page || "general",
           titleAr: b.titleAr ?? null,
           bodyAr: b.bodyAr ?? null,

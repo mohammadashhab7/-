@@ -651,7 +651,7 @@ async function seedSampleSales(
             totalMinor: total,
             costMinor: Math.round(total * 0.45),
             placedAt,
-            completedAt: status === "delivered" ? placedAt : null,
+            completedAt: status === "completed" ? placedAt : null,
           })
           .returning()
       )[0]!;
@@ -666,7 +666,7 @@ async function seedSampleSales(
           totalMinor: it.unitPriceMinor * it.quantity,
         });
       }
-      if (status === "delivered") {
+      if (status === "completed") {
         await db.insert(financialEntries).values({
           module: "store",
           type: "income",

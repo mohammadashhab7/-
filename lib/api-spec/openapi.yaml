@@ -1611,7 +1611,7 @@ components:
         customerEmail: { type: string }
         deliveryAddress: { type: string }
         deliveryNotes: { type: string }
-        paymentMethod: { type: string, enum: [cod, card] }
+        paymentMethod: { type: string, enum: [cod, card, cash, bank_transfer, stripe, paypal] }
 
     Cart:
       type: object
@@ -1638,14 +1638,18 @@ components:
 
     DailyClosing:
       type: object
-      required: [date, openCount, completedCount, salesTotalMinor, cashTotalMinor, cardTotalMinor, isClosed]
+      required: [date, completedCount, salesTotalMinor, cashTotalMinor, cardTotalMinor, isClosed]
       properties:
         date: { type: string, format: date }
-        openCount: { type: integer }
         completedCount: { type: integer }
         salesTotalMinor: { type: integer }
         cashTotalMinor: { type: integer }
         cardTotalMinor: { type: integer }
+        otherTotalMinor: { type: integer }
+        breakdown:
+          type: object
+          additionalProperties: { type: integer }
+          description: Sales totals by payment method (cash, card, cod, bank_transfer, stripe, paypal)
         countedCashMinor: { type: integer }
         varianceMinor: { type: integer }
         isClosed: { type: boolean }

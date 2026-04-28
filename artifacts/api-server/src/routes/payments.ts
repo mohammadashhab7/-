@@ -168,7 +168,7 @@ router.get("/payments/order/:orderId", async (req, res) => {
     return;
   }
   const order = (
-    await db.select().from(salesOrders).where(eq(salesOrders.id, req.params.orderId)).limit(1)
+    await db.select().from(salesOrders).where(eq(salesOrders.id, String(req.params.orderId))).limit(1)
   )[0];
   if (!order) {
     res.status(404).json({ error: "NOT_FOUND" });
@@ -206,7 +206,7 @@ router.patch(
     const updated = await db
       .update(payments)
       .set({ status: "succeeded", updatedAt: new Date() })
-      .where(eq(payments.id, req.params.id))
+      .where(eq(payments.id, String(req.params.id)))
       .returning();
     if (!updated[0]) {
       res.status(404).json({ error: "NOT_FOUND" });

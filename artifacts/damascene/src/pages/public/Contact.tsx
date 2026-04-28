@@ -38,7 +38,7 @@ export default function ContactPage() {
               <Clock className="h-5 w-5 text-primary mt-1" />
               <div>
                 <div className="font-medium">ساعات العمل</div>
-                <div className="text-foreground/70">{settings?.openingHoursAr || "السبت — الخميس: 9 صباحًا — 11 مساءً"}</div>
+                <div className="text-foreground/70">السبت — الخميس: 9 صباحًا — 11 مساءً</div>
               </div>
             </div>
           </CardContent>

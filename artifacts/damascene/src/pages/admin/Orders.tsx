@@ -22,7 +22,11 @@ function OrderTable({ channel }: { channel: "online" | "pos" }) {
   const qc = useQueryClient();
   const { toast } = useToast();
   const [openId, setOpenId] = useState<string | null>(null);
-  const { data: detail } = useGetSalesOrder(openId || "", { query: { enabled: !!openId } });
+  const { data: detail } = useGetSalesOrder(openId || "", {
+    // codegen requires full UseQueryOptions; queryKey is overridden internally,
+    // we only care about toggling `enabled`.
+    query: { enabled: !!openId } as Parameters<typeof useGetSalesOrder>[1] extends { query?: infer Q } ? Q : never,
+  });
 
   const handleStatus = (id: string, status: string) => {
     updateStatus.mutate({ id, data: { status: status as any } }, {

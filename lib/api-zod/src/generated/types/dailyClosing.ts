@@ -5,14 +5,17 @@
  * الدمشقي ERP + e-commerce + POS + manufacturing API
  * OpenAPI spec version: 0.1.0
  */
+import type { DailyClosingBreakdown } from "./dailyClosingBreakdown";
 
 export interface DailyClosing {
   date: Date;
-  openCount: number;
   completedCount: number;
   salesTotalMinor: number;
   cashTotalMinor: number;
   cardTotalMinor: number;
+  otherTotalMinor?: number;
+  /** Sales totals by payment method (cash, card, cod, bank_transfer, stripe, paypal) */
+  breakdown?: DailyClosingBreakdown;
   countedCashMinor?: number;
   varianceMinor?: number;
   isClosed: boolean;

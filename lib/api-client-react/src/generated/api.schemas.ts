@@ -427,6 +427,10 @@ export type CheckoutInputPaymentMethod =
 export const CheckoutInputPaymentMethod = {
   cod: "cod",
   card: "card",
+  cash: "cash",
+  bank_transfer: "bank_transfer",
+  stripe: "stripe",
+  paypal: "paypal",
 } as const;
 
 export interface CheckoutInput {
@@ -456,13 +460,20 @@ export interface Cart {
   currency: string;
 }
 
+/**
+ * Sales totals by payment method (cash, card, cod, bank_transfer, stripe, paypal)
+ */
+export type DailyClosingBreakdown = { [key: string]: number };
+
 export interface DailyClosing {
   date: string;
-  openCount: number;
   completedCount: number;
   salesTotalMinor: number;
   cashTotalMinor: number;
   cardTotalMinor: number;
+  otherTotalMinor?: number;
+  /** Sales totals by payment method (cash, card, cod, bank_transfer, stripe, paypal) */
+  breakdown?: DailyClosingBreakdown;
   countedCashMinor?: number;
   varianceMinor?: number;
   isClosed: boolean;

@@ -9,8 +9,16 @@ import { loadAppUser } from "../lib/auth";
 const router: IRouter = Router();
 const objectStorage = new ObjectStorageService();
 
-async function pipeFetchResponse(webResponse: Response, expressRes: Response) {
-  webResponse.headers.forEach((value, key) => {
+/**
+ * Pipe a Fetch API Response (returned by GCS download) to an Express Response.
+ * Intentionally types the first argument as `globalThis.Response` to avoid
+ * collision with Express' `Response` type alias imported above.
+ */
+async function pipeFetchResponse(
+  webResponse: globalThis.Response,
+  expressRes: Response,
+) {
+  webResponse.headers.forEach((value: string, key: string) => {
     expressRes.setHeader(key, value);
   });
   expressRes.status(webResponse.status);
@@ -63,8 +71,8 @@ router.get(
   "/storage/public-objects/*filePath",
   async (req: Request, res: Response) => {
     try {
-      const raw = req.params.filePath;
-      const filePath = Array.isArray(raw) ? raw.join("/") : raw;
+      const raw = req.params.filePath as string | string[] | undefined;
+      const filePath = Array.isArray(raw) ? raw.join("/") : String(raw ?? "");
       const file = await objectStorage.searchPublicObject(filePath);
       if (!file) {
         res.status(404).json({ error: "File not found" });
@@ -85,8 +93,8 @@ router.get(
   "/storage/objects/*objectPath",
   async (req: Request, res: Response) => {
     try {
-      const raw = req.params.objectPath;
-      const objectPath = Array.isArray(raw) ? raw.join("/") : raw;
+      const raw = req.params.objectPath as string | string[] | undefined;
+      const objectPath = Array.isArray(raw) ? raw.join("/") : String(raw ?? "");
       const objectFile = await objectStorage.getObjectEntityFile(
         `/objects/${objectPath}`,
       );

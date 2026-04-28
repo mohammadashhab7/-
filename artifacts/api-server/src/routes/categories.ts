@@ -59,7 +59,7 @@ router.post("/categories", requirePermission("categories", "write"), async (req,
 });
 
 router.patch("/categories/:id", requirePermission("categories", "write"), async (req, res) => {
-  const id = req.params.id;
+  const id = String(req.params.id);
   const { nameAr, nameEn, descriptionAr, imageUrl, sortOrder, isActive, slug } =
     req.body ?? {};
   const updates: Partial<typeof categories.$inferInsert> = {
@@ -85,7 +85,7 @@ router.patch("/categories/:id", requirePermission("categories", "write"), async 
 });
 
 router.delete("/categories/:id", requirePermission("categories", "write"), async (req, res) => {
-  await db.delete(categories).where(eq(categories.id, req.params.id));
+  await db.delete(categories).where(eq(categories.id, String(req.params.id)));
   res.status(204).send();
 });
 

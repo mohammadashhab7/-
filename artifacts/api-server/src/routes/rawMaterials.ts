@@ -77,7 +77,7 @@ router.patch("/raw-materials/:id", requirePermission("raw_materials", "write"), 
   const updated = await db
     .update(rawMaterials)
     .set(updates)
-    .where(eq(rawMaterials.id, req.params.id))
+    .where(eq(rawMaterials.id, String(req.params.id)))
     .returning();
   if (!updated[0]) {
     res.status(404).json({ error: "NOT_FOUND" });
@@ -87,7 +87,7 @@ router.patch("/raw-materials/:id", requirePermission("raw_materials", "write"), 
 });
 
 router.delete("/raw-materials/:id", requirePermission("raw_materials", "write"), async (req, res) => {
-  await db.delete(rawMaterials).where(eq(rawMaterials.id, req.params.id));
+  await db.delete(rawMaterials).where(eq(rawMaterials.id, String(req.params.id)));
   res.status(204).send();
 });
 

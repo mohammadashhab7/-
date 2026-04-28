@@ -199,7 +199,7 @@ router.get("/production-orders/:id", requirePermission("production", "read"), as
     .select({ o: productionOrders, name: products.nameAr })
     .from(productionOrders)
     .innerJoin(products, eq(productionOrders.productId, products.id))
-    .where(eq(productionOrders.id, req.params.id))
+    .where(eq(productionOrders.id, String(req.params.id)))
     .limit(1);
   if (!rows[0]) {
     res.status(404).json({ error: "NOT_FOUND" });
@@ -209,7 +209,7 @@ router.get("/production-orders/:id", requirePermission("production", "read"), as
     .select({ poi: productionOrderItems, mat: rawMaterials })
     .from(productionOrderItems)
     .innerJoin(rawMaterials, eq(productionOrderItems.materialId, rawMaterials.id))
-    .where(eq(productionOrderItems.productionOrderId, req.params.id));
+    .where(eq(productionOrderItems.productionOrderId, String(req.params.id)));
   res.json({
     ...serialize(rows[0].o, rows[0].name),
     items: items.map((x) => ({
