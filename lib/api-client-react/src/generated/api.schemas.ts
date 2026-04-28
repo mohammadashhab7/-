@@ -405,6 +405,7 @@ export type PosOrderInputPaymentMethod =
 export const PosOrderInputPaymentMethod = {
   cash: "cash",
   card: "card",
+  bank_transfer: "bank_transfer",
 } as const;
 
 export type PosOrderInputItemsItem = {

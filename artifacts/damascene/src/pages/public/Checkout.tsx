@@ -33,7 +33,7 @@ export default function CheckoutPage() {
   const [email, setEmail] = useState(user?.primaryEmailAddress?.emailAddress || "");
   const [address, setAddress] = useState("");
   const [notes, setNotes] = useState("");
-  type PaymentMethod = "cod" | "stripe" | "paypal";
+  type PaymentMethod = "cod" | "stripe" | "paypal" | "bank_transfer";
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("cod");
 
   if (!cart || cart.items.length === 0) {
@@ -123,13 +123,26 @@ export default function CheckoutPage() {
                   <RadioGroupItem value="cod" data-testid="radio-cod" />
                   <span>الدفع عند الاستلام</span>
                 </label>
-                <label className="flex items-center gap-3 border rounded-md p-3 cursor-pointer opacity-50">
-                  <RadioGroupItem value="stripe" disabled data-testid="radio-stripe" />
-                  <span>بطاقة ائتمان عبر Stripe (قريبًا)</span>
+                <label className="flex items-center gap-3 border rounded-md p-3 cursor-pointer hover:bg-accent">
+                  <RadioGroupItem value="stripe" data-testid="radio-stripe" />
+                  <span className="flex-1">
+                    بطاقة ائتمان عبر Stripe
+                    <span className="block text-xs text-foreground/60 mt-0.5">سيتم تسجيل الطلب كـ "بانتظار الدفع" — البوابة غير مفعّلة حالياً</span>
+                  </span>
                 </label>
-                <label className="flex items-center gap-3 border rounded-md p-3 cursor-pointer opacity-50">
-                  <RadioGroupItem value="paypal" disabled data-testid="radio-paypal" />
-                  <span>PayPal (قريبًا)</span>
+                <label className="flex items-center gap-3 border rounded-md p-3 cursor-pointer hover:bg-accent">
+                  <RadioGroupItem value="paypal" data-testid="radio-paypal" />
+                  <span className="flex-1">
+                    PayPal
+                    <span className="block text-xs text-foreground/60 mt-0.5">سيتم تسجيل الطلب كـ "بانتظار الدفع" — البوابة غير مفعّلة حالياً</span>
+                  </span>
+                </label>
+                <label className="flex items-center gap-3 border rounded-md p-3 cursor-pointer hover:bg-accent">
+                  <RadioGroupItem value="bank_transfer" data-testid="radio-bank-transfer" />
+                  <span className="flex-1">
+                    حوالة مصرفية
+                    <span className="block text-xs text-foreground/60 mt-0.5">سيتم التواصل معكم لتأكيد الحوالة قبل التحضير</span>
+                  </span>
                 </label>
               </RadioGroup>
             </CardContent>

@@ -1,69 +1,101 @@
 import { Router, type IRouter } from "express";
-import { desc, eq, sql } from "drizzle-orm";
+import { desc, sql } from "drizzle-orm";
 import { db, activityLog } from "@workspace/db";
-import { requireStaff, requirePermission } from "../lib/auth";
+import { requirePermission } from "../lib/auth";
 
 const router: IRouter = Router();
 
-router.get("/dashboard/kpis", requirePermission("reports", "read"), async (_req, res) => {
-  const today = await db.execute<{
-    total: string;
-    count: string;
-  }>(sql`
+router.get(
+  "/dashboard/kpis",
+  requirePermission("reports", "read"),
+  async (_req, res) => {
+    const today = await db.execute<{ total: string; count: string }>(sql`
     select coalesce(sum(total_minor), 0)::text as total,
            count(*)::text as count
     from sales_orders where placed_at::date = now()::date
   `);
-  const month = await db.execute<{ total: string; count: string }>(sql`
+    const month = await db.execute<{ total: string; count: string }>(sql`
     select coalesce(sum(total_minor), 0)::text as total,
            count(*)::text as count
     from sales_orders where date_trunc('month', placed_at) = date_trunc('month', now())
   `);
-  const pending = await db.execute<{ count: string }>(sql`
+    const pending = await db.execute<{ count: string }>(sql`
     select count(*)::text as count from sales_orders
-    where channel='online' and status in ('pending', 'confirmed', 'preparing', 'ready', 'out_for_delivery')
+    where channel='online' and status in ('pending', 'pending_payment', 'paid', 'confirmed', 'preparing', 'ready', 'out_for_delivery')
   `);
-  const lowStock = await db.execute<{ count: string }>(sql`
+    const lowStock = await db.execute<{ count: string }>(sql`
     select count(*)::text as count from stock_levels sl
     join products p on p.id = sl.product_id
     where sl.item_type='product' and p.reorder_threshold > 0 and sl.quantity_thousandths < p.reorder_threshold
   `);
-  const products = await db.execute<{ count: string }>(
-    sql`select count(*)::text as count from products where is_active = true`,
-  );
-  const customers = await db.execute<{ count: string }>(
-    sql`select count(*)::text as count from users where role = 'customer'`,
-  );
-  res.json({
-    todaySalesMinor: Number(today.rows[0]!.total),
-    todayOrderCount: Number(today.rows[0]!.count),
-    monthSalesMinor: Number(month.rows[0]!.total),
-    monthOrderCount: Number(month.rows[0]!.count),
-    pendingOnlineOrders: Number(pending.rows[0]!.count),
-    lowStockCount: Number(lowStock.rows[0]!.count),
-    activeProductCount: Number(products.rows[0]!.count),
-    customerCount: Number(customers.rows[0]!.count),
-  });
-});
+    const openProd = await db.execute<{ count: string }>(sql`
+    select count(*)::text as count from production_orders
+    where status in ('planned', 'in_progress')
+      and (planned_for is null or planned_for::date <= now()::date)
+  `);
+    const cashOnHand = await db.execute<{ total: string }>(sql`
+    select coalesce(sum(total_minor), 0)::text as total from sales_orders
+    where channel='pos' and payment_method='cash'
+      and placed_at::date = now()::date
+  `);
+    res.json({
+      currency: "SYP",
+      todaySalesMinor: Number(today.rows[0]!.total),
+      todayOrders: Number(today.rows[0]!.count),
+      monthSalesMinor: Number(month.rows[0]!.total),
+      monthOrders: Number(month.rows[0]!.count),
+      pendingOnlineOrders: Number(pending.rows[0]!.count),
+      lowStockCount: Number(lowStock.rows[0]!.count),
+      openProductionToday: Number(openProd.rows[0]!.count),
+      cashOnHandMinor: Number(cashOnHand.rows[0]!.total),
+    });
+  },
+);
 
-router.get("/dashboard/recent-activity", requirePermission("reports", "read"), async (_req, res) => {
-  const rows = await db
-    .select()
-    .from(activityLog)
-    .orderBy(desc(activityLog.createdAt))
-    .limit(20);
-  res.json(
-    rows.map((a) => ({
-      id: a.id,
-      kind: a.kind,
-      titleAr: a.titleAr,
-      descriptionAr: a.descriptionAr,
-      actorNameAr: a.actorNameAr,
-      referenceType: a.referenceType,
-      referenceId: a.referenceId,
-      createdAt: a.createdAt.toISOString(),
-    })),
-  );
-});
+function mapActivityKind(kind: string): string {
+  if (kind.startsWith("order")) return "order";
+  if (kind.startsWith("production")) return "production";
+  if (kind.startsWith("transfer") || kind.startsWith("stock_transfer"))
+    return "transfer";
+  if (kind.startsWith("adjustment") || kind.startsWith("stock_adjust"))
+    return "adjustment";
+  if (
+    kind.startsWith("financial") ||
+    kind.startsWith("expense") ||
+    kind.startsWith("income") ||
+    kind.startsWith("payment")
+  )
+    return "financial";
+  return "order";
+}
+
+router.get(
+  "/dashboard/recent-activity",
+  requirePermission("reports", "read"),
+  async (_req, res) => {
+    const rows = await db
+      .select()
+      .from(activityLog)
+      .orderBy(desc(activityLog.createdAt))
+      .limit(20);
+    res.json(
+      rows.map((a) => {
+        const meta = a.metadata ?? {};
+        const amountMinor =
+          typeof (meta as Record<string, unknown>).amountMinor === "number"
+            ? ((meta as Record<string, unknown>).amountMinor as number)
+            : undefined;
+        return {
+          id: a.id,
+          kind: mapActivityKind(a.kind),
+          titleAr: a.titleAr,
+          subtitleAr: a.descriptionAr ?? undefined,
+          amountMinor,
+          occurredAt: a.createdAt.toISOString(),
+        };
+      }),
+    );
+  },
+);
 
 export default router;

@@ -19,9 +19,64 @@ export default function AdminPosPage() {
   const [search, setSearch] = useState("");
   const [cart, setCart] = useState<CartLine[]>([]);
   const [discount, setDiscount] = useState(0);
-  const [paymentMethod, setPaymentMethod] = useState<"cash" | "card">("cash");
+  const [paymentMethod, setPaymentMethod] = useState<"cash" | "card" | "bank_transfer">("cash");
   const [customerName, setCustomerName] = useState("");
   const [customerPhone, setCustomerPhone] = useState("");
+  const [lastInvoice, setLastInvoice] = useState<{
+    orderNumber: string;
+    items: CartLine[];
+    subtotal: number;
+    discount: number;
+    total: number;
+    paymentMethod: string;
+    customerName?: string;
+    customerPhone?: string;
+    issuedAt: string;
+  } | null>(null);
+
+  const printInvoice = () => {
+    if (!lastInvoice) return;
+    const w = window.open("", "_blank", "width=400,height=600");
+    if (!w) return;
+    const fmt = (n: number) =>
+      `${(n / 100).toLocaleString("ar-SY")} ل.س`;
+    const pmLabel: Record<string, string> = {
+      cash: "نقداً",
+      card: "بطاقة",
+      bank_transfer: "حوالة",
+    };
+    w.document.write(`<!doctype html><html dir="rtl" lang="ar"><head><meta charset="utf-8"><title>فاتورة ${lastInvoice.orderNumber}</title>
+<style>
+  body{font-family:Tajawal,Arial;padding:12px;font-size:13px;color:#000}
+  h1{text-align:center;font-size:18px;margin:0 0 4px}
+  .meta{text-align:center;color:#555;font-size:11px;margin-bottom:10px}
+  .row{display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px dashed #ccc}
+  .total{font-weight:bold;font-size:15px;border-top:2px solid #000;border-bottom:none;padding-top:8px;margin-top:6px}
+  .center{text-align:center;margin-top:14px;font-size:11px}
+  @media print{button{display:none}}
+</style></head><body>
+  <h1>الدمشقي</h1>
+  <div class="meta">فاتورة رقم: ${lastInvoice.orderNumber}<br>${new Date(lastInvoice.issuedAt).toLocaleString("ar-SY")}</div>
+  ${lastInvoice.customerName ? `<div class="row"><span>العميل</span><span>${lastInvoice.customerName}</span></div>` : ""}
+  ${lastInvoice.customerPhone ? `<div class="row"><span>الهاتف</span><span dir="ltr">${lastInvoice.customerPhone}</span></div>` : ""}
+  <div style="margin-top:8px;border-top:1px solid #000;padding-top:6px">
+    ${lastInvoice.items
+      .map(
+        (l) =>
+          `<div class="row"><span>${l.nameAr} ×${l.quantity}</span><span>${fmt(l.priceMinor * l.quantity)}</span></div>`,
+      )
+      .join("")}
+  </div>
+  <div class="row"><span>المجموع الفرعي</span><span>${fmt(lastInvoice.subtotal)}</span></div>
+  ${lastInvoice.discount > 0 ? `<div class="row"><span>الخصم</span><span>-${fmt(lastInvoice.discount)}</span></div>` : ""}
+  <div class="row"><span>طريقة الدفع</span><span>${pmLabel[lastInvoice.paymentMethod] ?? lastInvoice.paymentMethod}</span></div>
+  <div class="row total"><span>الإجمالي</span><span>${fmt(lastInvoice.total)}</span></div>
+  <div class="center">شكراً لزيارتكم</div>
+  <div class="center"><button onclick="window.print()">طباعة</button></div>
+  <script>setTimeout(()=>window.print(),300)</script>
+</body></html>`);
+    w.document.close();
+  };
 
   const filtered = useMemo(() => {
     if (!products) return [];
@@ -57,6 +112,17 @@ export default function AdminPosPage() {
     }}, {
       onSuccess: (order) => {
         toast({ title: "تم البيع", description: `رقم الطلب: ${order.orderNumber}` });
+        setLastInvoice({
+          orderNumber: order.orderNumber,
+          items: cart,
+          subtotal,
+          discount: Number(discount) || 0,
+          total,
+          paymentMethod,
+          customerName: customerName || undefined,
+          customerPhone: customerPhone || undefined,
+          issuedAt: new Date().toISOString(),
+        });
         clearCart();
       },
       onError: (e: any) => toast({ title: "خطأ", description: e?.message || "تعذّر البيع", variant: "destructive" }),
@@ -117,9 +183,10 @@ export default function AdminPosPage() {
             <Label>خصم (×100)</Label>
             <Input type="number" className="w-32" value={discount} onChange={(e) => setDiscount(Number(e.target.value))} />
           </div>
-          <div className="flex gap-2">
-            <Button className="flex-1" variant={paymentMethod === "cash" ? "default" : "outline"} onClick={() => setPaymentMethod("cash")}>نقداً</Button>
-            <Button className="flex-1" variant={paymentMethod === "card" ? "default" : "outline"} onClick={() => setPaymentMethod("card")}>بطاقة</Button>
+          <div className="grid grid-cols-3 gap-2">
+            <Button variant={paymentMethod === "cash" ? "default" : "outline"} onClick={() => setPaymentMethod("cash")} data-testid="button-pos-pay-cash">نقداً</Button>
+            <Button variant={paymentMethod === "card" ? "default" : "outline"} onClick={() => setPaymentMethod("card")} data-testid="button-pos-pay-card">بطاقة</Button>
+            <Button variant={paymentMethod === "bank_transfer" ? "default" : "outline"} onClick={() => setPaymentMethod("bank_transfer")} data-testid="button-pos-pay-transfer">حوالة</Button>
           </div>
           <Separator />
           <div className="flex items-center justify-between text-lg font-bold">
@@ -129,6 +196,11 @@ export default function AdminPosPage() {
           <Button className="w-full" size="lg" disabled={cart.length === 0 || createOrder.isPending} onClick={checkout} data-testid="button-pos-checkout">
             {createOrder.isPending ? "جاري الإصدار..." : "إصدار الفاتورة"}
           </Button>
+          {lastInvoice && (
+            <Button className="w-full" size="sm" variant="outline" onClick={printInvoice} data-testid="button-pos-print-invoice">
+              طباعة فاتورة #{lastInvoice.orderNumber}
+            </Button>
+          )}
         </div>
       </Card>
     </div>

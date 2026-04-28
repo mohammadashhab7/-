@@ -8,6 +8,7 @@ import {
   recipeItems,
   rawMaterials,
   products,
+  financialEntries,
 } from "@workspace/db";
 import { requireStaff, requirePermission } from "../lib/auth";
 import {
@@ -171,6 +172,22 @@ router.post("/production-orders", requirePermission("production", "write"), asyn
         })
         .where(eq(productionOrders.id, order.id))
         .returning();
+
+      if (totalCost > 0) {
+        await tx.insert(financialEntries).values({
+          module: "production",
+          type: "expense",
+          category: "raw_materials",
+          amountMinor: totalCost,
+          currency: "SYP",
+          referenceType: "production_order",
+          referenceId: order.id,
+          descriptionAr: `تكلفة مواد إنتاج ${product.nameAr} (أمر ${orderNumber})`,
+          occurredAt: new Date(),
+          createdByUserId: req.appUser?.id ?? null,
+        });
+      }
+
       return { o: updated[0]!, totalCost, unitsProduced };
     });
 

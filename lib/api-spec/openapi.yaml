@@ -1591,7 +1591,7 @@ components:
       properties:
         customerName: { type: string }
         customerPhone: { type: string }
-        paymentMethod: { type: string, enum: [cash, card] }
+        paymentMethod: { type: string, enum: [cash, card, bank_transfer] }
         discountMinor: { type: integer }
         items:
           type: array

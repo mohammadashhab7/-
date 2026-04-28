@@ -733,7 +733,7 @@ export const ListSalesOrdersResponse = zod.array(ListSalesOrdersResponseItem);
 export const CreateSalesOrderBody = zod.object({
   customerName: zod.string().optional(),
   customerPhone: zod.string().optional(),
-  paymentMethod: zod.enum(["cash", "card"]),
+  paymentMethod: zod.enum(["cash", "card", "bank_transfer"]),
   discountMinor: zod.number().optional(),
   items: zod.array(
     zod.object({
