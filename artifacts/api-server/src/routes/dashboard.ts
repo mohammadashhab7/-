@@ -56,7 +56,6 @@ router.get(
     const openProd = await db.execute<{ count: string }>(sql`
     select count(*)::text as count from production_orders
     where status in ('planned', 'in_progress')
-      and (planned_for is null or planned_for::date <= now()::date)
   `);
     const cashOnHand = await db.execute<{ total: string }>(sql`
     select coalesce(sum(total_minor), 0)::text as total from sales_orders
