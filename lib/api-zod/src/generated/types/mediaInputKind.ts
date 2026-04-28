@@ -11,5 +11,6 @@ export type MediaInputKind =
 
 export const MediaInputKind = {
   image: "image",
+  video: "video",
   document: "document",
 } as const;

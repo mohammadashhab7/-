@@ -788,6 +788,7 @@ export type MediaAssetKind =
 
 export const MediaAssetKind = {
   image: "image",
+  video: "video",
   document: "document",
 } as const;
 
@@ -806,6 +807,7 @@ export type MediaInputKind =
 
 export const MediaInputKind = {
   image: "image",
+  video: "video",
   document: "document",
 } as const;
 

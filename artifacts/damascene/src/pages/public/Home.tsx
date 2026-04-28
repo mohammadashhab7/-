@@ -6,7 +6,7 @@ import {
 } from "@workspace/api-client-react";
 import type { ContentBlock } from "@workspace/api-client-react";
 
-import HeroSection from "@/components/home/HeroSection";
+import HeroSection, { type HeroMediaType } from "@/components/home/HeroSection";
 import QualitySection from "@/components/home/QualitySection";
 import ProductStorySection from "@/components/home/ProductStorySection";
 import BrandStorySection from "@/components/home/BrandStorySection";
@@ -24,6 +24,20 @@ function metaString(meta: BlockMeta, k: string): string | undefined {
   return typeof v === "string" && v.length > 0 ? v : undefined;
 }
 
+function metaNumber(meta: BlockMeta, k: string): number | undefined {
+  const v = meta[k];
+  if (typeof v === "number" && Number.isFinite(v)) return v;
+  if (typeof v === "string" && v.length > 0) {
+    const n = Number(v);
+    if (Number.isFinite(n)) return n;
+  }
+  return undefined;
+}
+
+function blockMeta(b: ContentBlock | undefined): BlockMeta {
+  return ((b as unknown as { metadata?: BlockMeta })?.metadata ?? {}) as BlockMeta;
+}
+
 export default function HomePage() {
   const { data: categories } = useListPublicCategories();
   const { data: featuredProducts } = useListFeaturedProducts();
@@ -36,18 +50,28 @@ export default function HomePage() {
   const featuredBlock = useMemo(() => pickBlock(blocks, "home_featured_section"), [blocks]);
   const ctaBlock = useMemo(() => pickBlock(blocks, "home_cta"), [blocks]);
 
-  const heroMeta = ((hero as unknown as { metadata?: BlockMeta })?.metadata ?? {}) as BlockMeta;
+  const heroMeta = blockMeta(hero);
   const heroVideoUrl = metaString(heroMeta, "videoUrl") ?? null;
-  const ctaSecondaryLabel = metaString(heroMeta, "ctaSecondary");
-  const ctaSecondaryHref = metaString(heroMeta, "ctaSecondaryHref") ?? "/about";
+  const heroFallbackUrl = metaString(heroMeta, "fallbackImageUrl") ?? null;
+  const heroMediaTypeRaw = metaString(heroMeta, "mediaType");
+  const heroMediaType: HeroMediaType | undefined =
+    heroMediaTypeRaw === "video" || heroMediaTypeRaw === "image"
+      ? heroMediaTypeRaw
+      : undefined;
+  const heroOverlay = metaNumber(heroMeta, "overlayOpacity");
+  const heroAlt = metaString(heroMeta, "alt");
+  const heroCtaSecondary = metaString(heroMeta, "ctaSecondary");
+  const heroCtaSecondaryHref = metaString(heroMeta, "ctaSecondaryHref") ?? "/about";
 
-  const storyMeta = ((story as unknown as { metadata?: BlockMeta })?.metadata ?? {}) as BlockMeta;
+  const storyMeta = blockMeta(story);
   const storyImageUrl = story?.imageUrl ?? metaString(storyMeta, "imageUrl") ?? null;
+  const storyVideoUrl = metaString(storyMeta, "videoUrl") ?? null;
+  const storyMobileImageUrl = metaString(storyMeta, "mobileImageUrl") ?? null;
+  const storyMobileVideoUrl = metaString(storyMeta, "mobileVideoUrl") ?? null;
+  const storyAlt = metaString(storyMeta, "alt");
 
-  const ctaMeta = ((ctaBlock as unknown as { metadata?: BlockMeta })?.metadata ?? {}) as BlockMeta;
-  const ctaSecondaryLabelFinal = ctaBlock
-    ? metaString(ctaMeta, "ctaSecondary")
-    : undefined;
+  const ctaMeta = blockMeta(ctaBlock);
+  const ctaSecondaryLabelFinal = ctaBlock ? metaString(ctaMeta, "ctaSecondary") : undefined;
   const ctaSecondaryHrefFinal = metaString(ctaMeta, "ctaSecondaryHref") ?? "/contact";
 
   return (
@@ -58,10 +82,14 @@ export default function HomePage() {
           body={hero.contentAr ?? undefined}
           imageUrl={hero.imageUrl ?? null}
           videoUrl={heroVideoUrl}
+          fallbackImageUrl={heroFallbackUrl}
+          mediaType={heroMediaType}
+          overlayOpacity={heroOverlay}
+          alt={heroAlt}
           ctaPrimaryLabel={hero.ctaLabel ?? undefined}
           ctaPrimaryHref={hero.ctaHref || "/shop"}
-          ctaSecondaryLabel={ctaSecondaryLabel}
-          ctaSecondaryHref={ctaSecondaryHref}
+          ctaSecondaryLabel={heroCtaSecondary}
+          ctaSecondaryHref={heroCtaSecondaryHref}
         />
       )}
 
@@ -88,6 +116,10 @@ export default function HomePage() {
         ctaLabel={story?.ctaLabel ?? undefined}
         ctaHref={story?.ctaHref ?? "/about"}
         imageUrl={storyImageUrl}
+        videoUrl={storyVideoUrl}
+        mobileImageUrl={storyMobileImageUrl}
+        mobileVideoUrl={storyMobileVideoUrl}
+        alt={storyAlt}
       />
 
       <FeaturedProductsSection

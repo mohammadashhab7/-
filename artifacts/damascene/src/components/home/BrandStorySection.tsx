@@ -1,5 +1,5 @@
 import { Link } from "wouter";
-import { useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { motion, useScroll, useTransform } from "framer-motion";
 import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -12,7 +12,24 @@ export interface BrandStorySectionProps {
   ctaLabel?: string;
   ctaHref?: string;
   imageUrl?: string | null;
+  videoUrl?: string | null;
+  mobileImageUrl?: string | null;
+  mobileVideoUrl?: string | null;
+  alt?: string;
   eyebrow?: string;
+}
+
+function useIsMobile(breakpointPx = 768) {
+  const [isMobile, setIsMobile] = useState(false);
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const mq = window.matchMedia(`(max-width: ${breakpointPx - 1}px)`);
+    const handler = () => setIsMobile(mq.matches);
+    handler();
+    mq.addEventListener("change", handler);
+    return () => mq.removeEventListener("change", handler);
+  }, [breakpointPx]);
+  return isMobile;
 }
 
 export default function BrandStorySection({
@@ -21,9 +38,16 @@ export default function BrandStorySection({
   ctaLabel,
   ctaHref,
   imageUrl,
+  videoUrl,
+  mobileImageUrl,
+  mobileVideoUrl,
+  alt,
   eyebrow = "حكاية الدمشقي",
 }: BrandStorySectionProps) {
   const ref = useRef<HTMLElement>(null);
+  const isMobile = useIsMobile();
+  const [videoFailed, setVideoFailed] = useState(false);
+
   const { scrollYProgress } = useScroll({
     target: ref,
     offset: ["start end", "end start"],
@@ -31,9 +55,26 @@ export default function BrandStorySection({
   const imageY = useTransform(scrollYProgress, [0, 1], ["-12%", "12%"]);
   const imageScale = useTransform(scrollYProgress, [0, 0.5, 1], [1.05, 1, 1.05]);
 
+  // Choose image / video per viewport. Fall back to desktop variants if mobile
+  // counterparts aren't set, then to bundled atelier asset for image.
+  const chosenImageUrl = isMobile && mobileImageUrl ? mobileImageUrl : imageUrl;
+  const chosenVideoUrl = isMobile && mobileVideoUrl ? mobileVideoUrl : videoUrl;
+
+  const resolvedImage = chosenImageUrl ? imgSrc(chosenImageUrl) : atelierImg;
+  const resolvedVideo = chosenVideoUrl ? imgSrc(chosenVideoUrl) : null;
+
+  // Reset failure flag whenever the chosen video URL changes (e.g. switching
+  // between desktop and mobile variants) so a fresh source isn't permanently
+  // blocked by an earlier failure. Must run before any conditional early-return
+  // to keep hook order stable.
+  useEffect(() => {
+    setVideoFailed(false);
+  }, [resolvedVideo]);
+
   if (!title && !body) return null;
 
-  const resolvedImage = imageUrl ? imgSrc(imageUrl) : atelierImg;
+  const showVideo = !!resolvedVideo && !videoFailed;
+  const altText = alt || title || "";
 
   return (
     <section
@@ -97,12 +138,29 @@ export default function BrandStorySection({
             transition={{ duration: 0.9, ease: [0.22, 1, 0.36, 1] }}
           >
             <div className="relative aspect-[4/5] overflow-hidden rounded-2xl bg-muted shadow-2xl">
-              <motion.img
-                src={resolvedImage}
-                alt={title ?? ""}
-                className="w-full h-[120%] object-cover"
-                style={{ y: imageY, scale: imageScale }}
-              />
+              {showVideo ? (
+                <motion.video
+                  src={resolvedVideo!}
+                  poster={resolvedImage}
+                  autoPlay
+                  muted
+                  loop
+                  playsInline
+                  className="w-full h-[120%] object-cover"
+                  style={{ y: imageY, scale: imageScale }}
+                  aria-label={altText}
+                  onError={() => setVideoFailed(true)}
+                  data-testid="video-story"
+                />
+              ) : (
+                <motion.img
+                  src={resolvedImage}
+                  alt={altText}
+                  className="w-full h-[120%] object-cover"
+                  style={{ y: imageY, scale: imageScale }}
+                  data-testid="img-story"
+                />
+              )}
               <div className="absolute inset-0 ring-1 ring-inset ring-black/5 rounded-2xl" />
             </div>
           </motion.div>

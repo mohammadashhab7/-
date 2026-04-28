@@ -1647,7 +1647,7 @@ export const ListMediaResponseItem = zod.object({
   name: zod.string(),
   url: zod.string(),
   objectPath: zod.string().optional(),
-  kind: zod.enum(["image", "document"]),
+  kind: zod.enum(["image", "video", "document"]),
   sizeBytes: zod.number().optional(),
   createdAt: zod.coerce.date(),
 });
@@ -1659,7 +1659,7 @@ export const ListMediaResponse = zod.array(ListMediaResponseItem);
 export const CreateMediaBody = zod.object({
   name: zod.string(),
   uploadURL: zod.string(),
-  kind: zod.enum(["image", "document"]).optional(),
+  kind: zod.enum(["image", "video", "document"]).optional(),
 });
 
 export const DeleteMediaParams = zod.object({

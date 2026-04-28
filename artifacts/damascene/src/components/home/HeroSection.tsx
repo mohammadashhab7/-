@@ -1,20 +1,33 @@
 import { Link } from "wouter";
 import { motion, useScroll, useTransform } from "framer-motion";
-import { useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { imgSrc } from "@/lib/imgSrc";
 import heroImg from "@/assets/hero.png";
+
+export type HeroMediaType = "image" | "video";
 
 export interface HeroSectionProps {
   title?: string;
   body?: string;
   imageUrl?: string | null;
   videoUrl?: string | null;
+  fallbackImageUrl?: string | null;
+  mediaType?: HeroMediaType;
+  overlayOpacity?: number;
+  alt?: string;
   ctaPrimaryLabel?: string;
   ctaPrimaryHref?: string;
   ctaSecondaryLabel?: string;
   ctaSecondaryHref?: string;
+}
+
+function clampOpacity(o: number | undefined): number {
+  if (typeof o !== "number" || !Number.isFinite(o)) return 60;
+  if (o < 0) return 0;
+  if (o > 100) return 100;
+  return o;
 }
 
 export default function HeroSection({
@@ -22,12 +35,18 @@ export default function HeroSection({
   body,
   imageUrl,
   videoUrl,
+  fallbackImageUrl,
+  mediaType,
+  overlayOpacity,
+  alt,
   ctaPrimaryLabel,
   ctaPrimaryHref = "/shop",
   ctaSecondaryLabel,
   ctaSecondaryHref = "/about",
 }: HeroSectionProps) {
   const ref = useRef<HTMLElement>(null);
+  const [videoFailed, setVideoFailed] = useState(false);
+
   const { scrollYProgress } = useScroll({
     target: ref,
     offset: ["start start", "end start"],
@@ -37,8 +56,25 @@ export default function HeroSection({
   const contentY = useTransform(scrollYProgress, [0, 1], ["0%", "40%"]);
   const contentOpacity = useTransform(scrollYProgress, [0, 0.6, 1], [1, 0.5, 0]);
 
+  // Image priority: explicit imageUrl, then bundled hero asset.
   const resolvedImage = imageUrl ? imgSrc(imageUrl) : heroImg;
+  // Poster/fallback for video: explicit fallbackImageUrl, else the regular image.
+  const resolvedFallback = fallbackImageUrl
+    ? imgSrc(fallbackImageUrl)
+    : resolvedImage;
   const resolvedVideo = videoUrl ? imgSrc(videoUrl) : null;
+
+  const wantsVideo = mediaType === "video" || (!mediaType && !!resolvedVideo);
+  const showVideo = wantsVideo && !!resolvedVideo && !videoFailed;
+
+  // Reset failure flag whenever the effective video source changes so a fresh
+  // URL gets a clean chance to load instead of silently falling back forever.
+  useEffect(() => {
+    setVideoFailed(false);
+  }, [resolvedVideo]);
+
+  const overlayPct = clampOpacity(overlayOpacity);
+  const overlayDecimal = overlayPct / 100;
 
   return (
     <section
@@ -50,26 +86,32 @@ export default function HeroSection({
         className="absolute inset-0 w-full h-[120%]"
         style={{ y: mediaY }}
       >
-        {resolvedVideo ? (
+        {showVideo ? (
           <video
             autoPlay
             muted
             loop
             playsInline
             className="w-full h-full object-cover object-center"
-            src={resolvedVideo}
-            poster={resolvedImage}
+            src={resolvedVideo!}
+            poster={resolvedFallback}
+            aria-label={alt || title || ""}
+            onError={() => setVideoFailed(true)}
             data-testid="video-hero"
           />
         ) : (
           <img
-            src={resolvedImage}
-            alt={title ?? ""}
+            src={resolvedFallback}
+            alt={alt || title || ""}
             className="w-full h-full object-cover object-center"
             data-testid="img-hero"
           />
         )}
-        <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-black/55 to-black/85" />
+        <div
+          className="absolute inset-0 bg-gradient-to-b from-black/30 via-black/45 to-black/80"
+          style={{ opacity: 0.35 + overlayDecimal * 0.65 }}
+          data-testid="hero-overlay"
+        />
       </motion.div>
 
       <motion.div

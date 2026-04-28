@@ -2048,7 +2048,7 @@ components:
         name: { type: string }
         url: { type: string }
         objectPath: { type: string }
-        kind: { type: string, enum: [image, document] }
+        kind: { type: string, enum: [image, video, document] }
         sizeBytes: { type: integer }
         createdAt: { type: string, format: date-time }
     MediaInput:
@@ -2057,7 +2057,7 @@ components:
       properties:
         name: { type: string }
         uploadURL: { type: string }
-        kind: { type: string, enum: [image, document] }
+        kind: { type: string, enum: [image, video, document] }
 
     Settings:
       type: object
