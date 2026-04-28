@@ -348,6 +348,7 @@ export const OrderStatus = {
   preparing: "preparing",
   ready: "ready",
   out_for_delivery: "out_for_delivery",
+  delivered: "delivered",
   completed: "completed",
   cancelled: "cancelled",
   refunded: "refunded",
@@ -764,6 +765,41 @@ export interface Settings {
   whatsappNumber?: string;
 }
 
+export type PaymentRecordProvider =
+  (typeof PaymentRecordProvider)[keyof typeof PaymentRecordProvider];
+
+export const PaymentRecordProvider = {
+  stripe: "stripe",
+  paypal: "paypal",
+  cod: "cod",
+  cash: "cash",
+  bank_transfer: "bank_transfer",
+  card_terminal: "card_terminal",
+} as const;
+
+export type PaymentRecordStatus =
+  (typeof PaymentRecordStatus)[keyof typeof PaymentRecordStatus];
+
+export const PaymentRecordStatus = {
+  pending: "pending",
+  succeeded: "succeeded",
+  failed: "failed",
+  refunded: "refunded",
+  not_required: "not_required",
+} as const;
+
+export interface PaymentRecord {
+  id: string;
+  orderId: string;
+  provider: PaymentRecordProvider;
+  status: PaymentRecordStatus;
+  amountMinor: number;
+  currency: string;
+  providerIntentId?: string | null;
+  providerActive: boolean;
+  createdAt: string;
+}
+
 export interface SettingsInput {
   storeNameAr?: string;
   storeNameEn?: string;
@@ -962,4 +998,26 @@ export type ListContentBlocksParams = {
 
 export type GetMediaUploadUrl200 = {
   uploadURL: string;
+};
+
+export type MarkPaymentSucceeded200 = {
+  ok: boolean;
+};
+
+export type RequestUploadUrlBody = {
+  name?: string;
+  size?: number;
+  contentType?: string;
+};
+
+export type RequestUploadUrl200Metadata = {
+  name?: string | null;
+  size?: number | null;
+  contentType?: string | null;
+};
+
+export type RequestUploadUrl200 = {
+  uploadURL: string;
+  objectPath: string;
+  metadata?: RequestUploadUrl200Metadata;
 };

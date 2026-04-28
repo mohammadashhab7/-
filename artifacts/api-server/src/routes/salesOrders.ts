@@ -28,12 +28,13 @@ type OrderStatus = typeof salesOrders.$inferSelect.status;
 // Refunds reverse a completed order and write reversing financial entries.
 const STATUS_TRANSITIONS: Record<OrderStatus, OrderStatus[]> = {
   pending_payment: ["paid", "cancelled"],
-  paid: ["confirmed", "preparing", "ready", "out_for_delivery", "completed", "cancelled"],
-  pending: ["confirmed", "preparing", "ready", "out_for_delivery", "completed", "cancelled"],
-  confirmed: ["preparing", "ready", "out_for_delivery", "completed", "cancelled"],
-  preparing: ["ready", "out_for_delivery", "completed", "cancelled"],
-  ready: ["out_for_delivery", "completed", "cancelled"],
-  out_for_delivery: ["completed", "cancelled"],
+  paid: ["confirmed", "preparing", "ready", "out_for_delivery", "delivered", "completed", "cancelled"],
+  pending: ["confirmed", "preparing", "ready", "out_for_delivery", "delivered", "completed", "cancelled"],
+  confirmed: ["preparing", "ready", "out_for_delivery", "delivered", "completed", "cancelled"],
+  preparing: ["ready", "out_for_delivery", "delivered", "completed", "cancelled"],
+  ready: ["out_for_delivery", "delivered", "completed", "cancelled"],
+  out_for_delivery: ["delivered", "completed", "cancelled"],
+  delivered: ["completed", "refunded"],
   completed: ["refunded"],
   cancelled: [],
   refunded: [],
@@ -398,6 +399,7 @@ router.patch("/sales-orders/:id/status", requirePermission("orders", "write"), a
     "preparing",
     "ready",
     "out_for_delivery",
+    "delivered",
     "completed",
     "cancelled",
     "refunded",
@@ -460,12 +462,12 @@ router.patch("/sales-orders/:id/status", requirePermission("orders", "write"), a
           status,
           notesAr: notesAr ?? undefined,
           updatedAt: new Date(),
-          completedAt: status === "completed" ? new Date() : cur.completedAt ?? undefined,
+          completedAt: status === "completed" || status === "delivered" ? new Date() : cur.completedAt ?? undefined,
         })
         .where(eq(salesOrders.id, cur.id))
         .returning();
 
-      if (status === "paid" || status === "completed") {
+      if (status === "paid" || status === "completed" || status === "delivered") {
         await postSaleRevenue(tx, updated[0]!, req.appUser?.id ?? null);
       }
 

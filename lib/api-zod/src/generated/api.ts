@@ -698,6 +698,7 @@ export const ListSalesOrdersResponseItem = zod.object({
     "preparing",
     "ready",
     "out_for_delivery",
+    "delivered",
     "completed",
     "cancelled",
     "refunded",
@@ -764,6 +765,7 @@ export const GetSalesOrderResponse = zod.object({
     "preparing",
     "ready",
     "out_for_delivery",
+    "delivered",
     "completed",
     "cancelled",
     "refunded",
@@ -809,6 +811,7 @@ export const UpdateSalesOrderStatusBody = zod.object({
     "preparing",
     "ready",
     "out_for_delivery",
+    "delivered",
     "completed",
     "cancelled",
     "refunded",
@@ -828,6 +831,7 @@ export const UpdateSalesOrderStatusResponse = zod.object({
     "preparing",
     "ready",
     "out_for_delivery",
+    "delivered",
     "completed",
     "cancelled",
     "refunded",
@@ -1030,6 +1034,7 @@ export const ListMyOrdersResponseItem = zod.object({
     "preparing",
     "ready",
     "out_for_delivery",
+    "delivered",
     "completed",
     "cancelled",
     "refunded",
@@ -1484,4 +1489,62 @@ export const UpdateSettingsResponse = zod.object({
   instagramUrl: zod.string().optional(),
   facebookUrl: zod.string().optional(),
   whatsappNumber: zod.string().optional(),
+});
+
+export const ListPaymentsForOrderParams = zod.object({
+  orderId: zod.coerce.string(),
+});
+
+export const ListPaymentsForOrderResponseItem = zod.object({
+  id: zod.string(),
+  orderId: zod.string(),
+  provider: zod.enum([
+    "stripe",
+    "paypal",
+    "cod",
+    "cash",
+    "bank_transfer",
+    "card_terminal",
+  ]),
+  status: zod.enum([
+    "pending",
+    "succeeded",
+    "failed",
+    "refunded",
+    "not_required",
+  ]),
+  amountMinor: zod.number(),
+  currency: zod.string(),
+  providerIntentId: zod.string().nullish(),
+  providerActive: zod.boolean(),
+  createdAt: zod.coerce.date(),
+});
+export const ListPaymentsForOrderResponse = zod.array(
+  ListPaymentsForOrderResponseItem,
+);
+
+export const MarkPaymentSucceededParams = zod.object({
+  id: zod.coerce.string(),
+});
+
+export const MarkPaymentSucceededResponse = zod.object({
+  ok: zod.boolean(),
+});
+
+export const RequestUploadUrlBody = zod.object({
+  name: zod.string().optional(),
+  size: zod.number().optional(),
+  contentType: zod.string().optional(),
+});
+
+export const RequestUploadUrlResponse = zod.object({
+  uploadURL: zod.string(),
+  objectPath: zod.string(),
+  metadata: zod
+    .object({
+      name: zod.string().nullish(),
+      size: zod.number().nullish(),
+      contentType: zod.string().nullish(),
+    })
+    .optional(),
 });

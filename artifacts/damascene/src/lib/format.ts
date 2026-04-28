@@ -48,6 +48,7 @@ export const ORDER_STATUS_AR: Record<string, string> = {
   preparing: "قيد التحضير",
   ready: "جاهز",
   out_for_delivery: "قيد التوصيل",
+  delivered: "تم التوصيل",
   completed: "مكتمل",
   cancelled: "ملغي",
   refunded: "مسترجع",

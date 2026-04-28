@@ -15,7 +15,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { useToast } from "@/hooks/use-toast";
 import { formatSyp, formatDateTime, ORDER_STATUS_AR, CHANNEL_AR, PAYMENT_METHOD_AR } from "@/lib/format";
 
-const statusOptions: OrderStatus[] = ["pending_payment", "paid", "pending", "confirmed", "preparing", "ready", "out_for_delivery", "completed", "cancelled", "refunded"];
+const statusOptions: OrderStatus[] = ["pending_payment", "paid", "pending", "confirmed", "preparing", "ready", "out_for_delivery", "delivered", "completed", "cancelled", "refunded"];
 
 function OrderTable({ channel }: { channel: "online" | "pos" }) {
   const { data: orders, isLoading } = useListSalesOrders({ channel });

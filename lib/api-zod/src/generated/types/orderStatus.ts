@@ -16,6 +16,7 @@ export const OrderStatus = {
   preparing: "preparing",
   ready: "ready",
   out_for_delivery: "out_for_delivery",
+  delivered: "delivered",
   completed: "completed",
   cancelled: "cancelled",
   refunded: "refunded",

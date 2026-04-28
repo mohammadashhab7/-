@@ -88,7 +88,7 @@ export default function AdminPosPage() {
   const subtotal = cart.reduce((sum, l) => sum + l.priceMinor * l.quantity, 0);
   const total = Math.max(0, subtotal - Number(discount || 0));
 
-  const addToCart = (p: any) => {
+  const addToCart = (p: { id: string; nameAr: string; priceMinor: number }) => {
     setCart((prev) => {
       const exists = prev.find((l) => l.productId === p.id);
       if (exists) return prev.map((l) => l.productId === p.id ? { ...l, quantity: l.quantity + 1 } : l);
@@ -125,7 +125,7 @@ export default function AdminPosPage() {
         });
         clearCart();
       },
-      onError: (e: any) => toast({ title: "خطأ", description: e?.message || "تعذّر البيع", variant: "destructive" }),
+      onError: (e: unknown) => toast({ title: "خطأ", description: e instanceof Error ? e.message : "تعذّر البيع", variant: "destructive" }),
     });
   };
 

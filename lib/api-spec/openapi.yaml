@@ -1229,6 +1229,76 @@ paths:
             application/json:
               schema: { $ref: "#/components/schemas/Settings" }
 
+  /payments/order/{orderId}:
+    get:
+      operationId: listPaymentsForOrder
+      tags: [payments]
+      parameters:
+        - name: orderId
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/PaymentRecord" }
+
+  /payments/{id}/mark-succeeded:
+    patch:
+      operationId: markPaymentSucceeded
+      tags: [payments]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [ok]
+                properties:
+                  ok: { type: boolean }
+
+  /storage/uploads/request-url:
+    post:
+      operationId: requestUploadUrl
+      tags: [storage]
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name: { type: string }
+                size: { type: integer }
+                contentType: { type: string }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [uploadURL, objectPath]
+                properties:
+                  uploadURL: { type: string }
+                  objectPath: { type: string }
+                  metadata:
+                    type: object
+                    properties:
+                      name: { type: string, nullable: true }
+                      size: { type: integer, nullable: true }
+                      contentType: { type: string, nullable: true }
+
 components:
   schemas:
     HealthStatus:
@@ -1547,7 +1617,7 @@ components:
 
     OrderStatus:
       type: string
-      enum: [pending_payment, paid, pending, confirmed, preparing, ready, out_for_delivery, completed, cancelled, refunded]
+      enum: [pending_payment, paid, pending, confirmed, preparing, ready, out_for_delivery, delivered, completed, cancelled, refunded]
 
     SalesOrder:
       type: object
@@ -1877,6 +1947,21 @@ components:
         instagramUrl: { type: string }
         facebookUrl: { type: string }
         whatsappNumber: { type: string }
+
+    PaymentRecord:
+      type: object
+      required: [id, orderId, provider, status, amountMinor, currency, providerActive, createdAt]
+      properties:
+        id: { type: string }
+        orderId: { type: string }
+        provider: { type: string, enum: [stripe, paypal, cod, cash, bank_transfer, card_terminal] }
+        status: { type: string, enum: [pending, succeeded, failed, refunded, not_required] }
+        amountMinor: { type: integer }
+        currency: { type: string }
+        providerIntentId: { type: string, nullable: true }
+        providerActive: { type: boolean }
+        createdAt: { type: string, format: date-time }
+
     SettingsInput:
       type: object
       properties:
