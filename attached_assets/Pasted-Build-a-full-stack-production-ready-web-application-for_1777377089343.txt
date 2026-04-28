@@ -1,0 +1,234 @@
+Build a full-stack, production-ready web application for an Arabic sweets business called "الدمشقي".
+
+This is NOT a simple website. This is a complete ERP + E-commerce + POS + Manufacturing Management System.
+
+---
+
+## GENERAL REQUIREMENTS
+
+* Language: Arabic (RTL support بالكامل)
+* Architecture: Full-stack (Frontend + Backend + Database)
+* Use a real database (PostgreSQL preferred)
+* Build clean REST API or modular backend structure
+* No mock data – real data handling only
+* Scalable and modular codebase
+* Clean UI + professional UX
+
+---
+
+## CORE MODULES
+
+1. PRODUCT MANAGEMENT SYSTEM (TWO-LAYER)
+
+A) Production (المشغل)
+
+* Raw materials management (materials CRUD)
+* Recipes system (define ingredients per product)
+* Production orders:
+
+  * Input: raw materials
+  * Output: finished products
+* Auto cost calculation per product
+
+B) Store / Exhibition (المعرض)
+
+* Receive products from production
+* Inventory management (stock tracking)
+* Product availability for sale
+
+IMPORTANT:
+
+* Internal transfer system:
+  Production → Store
+* Deduct materials on production
+* Increase finished goods stock
+
+---
+
+2. FINANCIAL SYSTEM (ADVANCED)
+
+Separate financial tracking for:
+
+A) Production:
+
+* Raw materials cost
+* Salaries
+* Operational expenses
+* Production cost reports
+
+B) Store:
+
+* Sales revenue
+* Expenses
+* Profit tracking
+* POS income
+
+IMPORTANT:
+
+* Each module has independent accounting
+* Global combined financial reports
+
+---
+
+3. SALES SYSTEM
+
+A) Online Store:
+
+* Product listing
+* Shopping cart
+* Checkout system
+* Order management
+
+B) POS (Cashier System):
+
+* Fast selling interface
+* Add/remove products quickly
+* Multiple payment methods
+* Invoice generation
+* Daily closing (cash register closing report)
+
+IMPORTANT:
+
+* Same inventory shared between online & POS
+
+---
+
+4. EMPLOYEE MANAGEMENT
+
+* Employee records
+* Attendance system
+* Salaries tracking
+* Role-based permissions
+
+---
+
+5. USER SYSTEM
+
+Roles:
+
+* Super Admin
+* Admin (custom permissions)
+* Customer
+
+Authentication:
+
+* Email login
+* Phone number login
+
+---
+
+6. DASHBOARD (CONTROL PANEL)
+
+Build a powerful admin dashboard that controls EVERYTHING:
+
+* Products
+* Production
+* Inventory
+* Sales (online + POS)
+* Financial systems
+* Employees
+* Reports
+* Website content (CMS)
+
+IMPORTANT:
+
+* Full control over all text, images, and videos
+
+---
+
+7. WEBSITE (FRONTEND)
+
+Pages:
+
+* Home
+* About Us
+* Products
+* Contact
+
+Design Requirements:
+
+* Arabic RTL layout
+* Symmetric design
+* Luxury, premium feel
+
+IMPORTANT DESIGN INSTRUCTION:
+ادخل الى صفحة ابل و شوف طريقة العرض تبع الايفون عندهم
+
+Apply:
+
+* Smooth animations
+* Scroll-based storytelling
+* Product showcase like Apple style
+* High-end modern UI
+
+---
+
+8. MEDIA SYSTEM
+
+* Support uploading images & videos
+* Ability to use video backgrounds in:
+
+  * Home page
+  * About page
+* Control via dashboard
+
+---
+
+9. PAYMENT SYSTEM (PREPARED)
+
+* Prepare system for future integration with:
+
+  * Stripe
+  * PayPal
+* Do NOT fully integrate yet, just structure ready
+
+---
+
+10. REPORTS & ANALYTICS
+
+* Sales reports
+* Financial reports
+* Production reports
+* Profit analysis
+* Dashboard charts
+
+---
+
+11. SYSTEM INTEGRATION LOGIC (CRITICAL)
+
+Enforce logic:
+
+* Production reduces raw materials
+* Production increases finished products
+* Transfer moves stock to store
+* Sales reduce stock
+* Sales generate financial records
+
+---
+
+TECH STACK (SUGGESTED)
+
+* Frontend: React / Next.js
+* Backend: Node.js / Express
+* Database: PostgreSQL
+* UI: Modern component library (clean and minimal)
+* Support Arabic RTL properly
+
+---
+
+FINAL NOTES
+
+* Build real working system (NOT prototype)
+* Clean database schema
+* Modular structure
+* Ready for scaling
+* Ready for white-label future
+
+Start by:
+
+1. Designing database schema
+2. Building backend APIs
+3. Then frontend dashboard
+4. Then public website
+
+---
