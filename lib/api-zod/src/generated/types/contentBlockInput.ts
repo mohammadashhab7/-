@@ -5,6 +5,7 @@
  * الدمشقي ERP + e-commerce + POS + manufacturing API
  * OpenAPI spec version: 0.1.0
  */
+import type { ContentBlockInputMetadata } from "./contentBlockInputMetadata";
 
 export interface ContentBlockInput {
   page: string;
@@ -13,4 +14,5 @@ export interface ContentBlockInput {
   imageUrl?: string;
   ctaLabel?: string;
   ctaHref?: string;
+  metadata?: ContentBlockInputMetadata;
 }

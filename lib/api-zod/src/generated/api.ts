@@ -1362,6 +1362,7 @@ export const ListContentBlocksResponseItem = zod.object({
   imageUrl: zod.string().optional(),
   ctaLabel: zod.string().optional(),
   ctaHref: zod.string().optional(),
+  metadata: zod.record(zod.string(), zod.unknown()).optional(),
   updatedAt: zod.coerce.date(),
 });
 export const ListContentBlocksResponse = zod.array(
@@ -1381,6 +1382,7 @@ export const GetContentBlockResponse = zod.object({
   imageUrl: zod.string().optional(),
   ctaLabel: zod.string().optional(),
   ctaHref: zod.string().optional(),
+  metadata: zod.record(zod.string(), zod.unknown()).optional(),
   updatedAt: zod.coerce.date(),
 });
 
@@ -1395,6 +1397,7 @@ export const UpsertContentBlockBody = zod.object({
   imageUrl: zod.string().optional(),
   ctaLabel: zod.string().optional(),
   ctaHref: zod.string().optional(),
+  metadata: zod.record(zod.string(), zod.unknown()).optional(),
 });
 
 export const UpsertContentBlockResponse = zod.object({
@@ -1406,6 +1409,7 @@ export const UpsertContentBlockResponse = zod.object({
   imageUrl: zod.string().optional(),
   ctaLabel: zod.string().optional(),
   ctaHref: zod.string().optional(),
+  metadata: zod.record(zod.string(), zod.unknown()).optional(),
   updatedAt: zod.coerce.date(),
 });
 

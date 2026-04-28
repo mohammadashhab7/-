@@ -1898,6 +1898,9 @@ components:
         imageUrl: { type: string }
         ctaLabel: { type: string }
         ctaHref: { type: string }
+        metadata:
+          type: object
+          additionalProperties: true
         updatedAt: { type: string, format: date-time }
     ContentBlockInput:
       type: object
@@ -1909,6 +1912,9 @@ components:
         imageUrl: { type: string }
         ctaLabel: { type: string }
         ctaHref: { type: string }
+        metadata:
+          type: object
+          additionalProperties: true
 
     MediaAsset:
       type: object

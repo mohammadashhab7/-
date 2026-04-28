@@ -23,6 +23,8 @@ export * from "./checkoutInputPaymentMethod";
 export * from "./closeDailyClosingBody";
 export * from "./contentBlock";
 export * from "./contentBlockInput";
+export * from "./contentBlockInputMetadata";
+export * from "./contentBlockMetadata";
 export * from "./dailyClosing";
 export * from "./dailyClosingBreakdown";
 export * from "./dashboardKpis";

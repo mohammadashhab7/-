@@ -44,9 +44,21 @@ export class InsufficientStockError extends Error {
 type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
 
 /**
- * Append-only ledger entry + atomic stock_levels update with weighted-average cost.
- * Rejects when the resulting quantity would be negative unless `allowNegative` is true
- * (used only for adjustments). Pass an outer `tx` to participate in a larger transaction.
+ * Inventory model: event-sourced ledger with a transactional projection.
+ *
+ *   inventory_movements ── append-only event log (the source of truth).
+ *   stock_levels        ── derived projection (current quantity + WAC) maintained
+ *                          in the SAME transaction as the ledger insert below.
+ *
+ * Stock is therefore always equal to SUM(quantity_delta) over all movements for
+ * a (location, item) tuple. The projection exists for read performance and
+ * concurrency-safe stock checks; it is NEVER updated outside this function.
+ * The /inventory/stock-from-ledger endpoint reconstructs stock from the ledger
+ * to verify the invariant at any time.
+ *
+ * Rejects when the resulting quantity would be negative unless `allowNegative`
+ * is true (used only for adjustments). Pass an outer `tx` to participate in a
+ * larger transaction.
  */
 export async function applyLedgerEntry(input: LedgerInput, tx?: Tx) {
   const exec = async (txx: Tx) => {
@@ -76,11 +88,18 @@ export async function applyLedgerEntry(input: LedgerInput, tx?: Tx) {
         : isNull(stockLevels.productId),
     );
 
+    // Lock the row (or absence of row) for the rest of the transaction so
+    // concurrent decrements cannot lose updates. Drizzle's .for("update")
+    // emits SELECT ... FOR UPDATE; rows that don't yet exist are protected
+    // by a transactional INSERT below — the unique index on
+    // (location_id, item_type, material_id, product_id) makes the second
+    // INSERT fail and forces a retry.
     const existing = await txx
       .select()
       .from(stockLevels)
       .where(cond)
-      .limit(1);
+      .limit(1)
+      .for("update");
 
     if (existing.length === 0) {
       if (quantityDelta < 0 && !allowNegative) {

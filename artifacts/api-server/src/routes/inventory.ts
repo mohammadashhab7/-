@@ -197,4 +197,64 @@ router.get("/inventory/low-stock", requirePermission("inventory", "read"), async
   res.json(out);
 });
 
+/**
+ * Recompute current stock from the inventory_movements ledger and return both
+ * the projection (stock_levels) and the ledger-derived sum so callers can
+ * verify the event-source invariant: stock = SUM(movements).
+ */
+router.get(
+  "/inventory/stock-from-ledger",
+  requirePermission("inventory", "read"),
+  async (_req, res) => {
+    const rows = await db.execute<{
+      location_id: string;
+      item_type: string;
+      material_id: string | null;
+      product_id: string | null;
+      ledger_quantity: string;
+      projected_quantity: string | null;
+      drift: string;
+    }>(sql`
+      with ledger as (
+        select location_id,
+               item_type,
+               material_id,
+               product_id,
+               sum(quantity_delta_thousandths)::bigint as ledger_quantity
+        from inventory_movements
+        group by location_id, item_type, material_id, product_id
+      ),
+      projection as (
+        select location_id, item_type, material_id, product_id,
+               quantity_thousandths::bigint as projected_quantity
+        from stock_levels
+      )
+      select coalesce(l.location_id, p.location_id) as location_id,
+             coalesce(l.item_type, p.item_type) as item_type,
+             coalesce(l.material_id, p.material_id) as material_id,
+             coalesce(l.product_id, p.product_id) as product_id,
+             coalesce(l.ledger_quantity, 0)::text as ledger_quantity,
+             p.projected_quantity::text as projected_quantity,
+             (coalesce(l.ledger_quantity, 0) - coalesce(p.projected_quantity, 0))::text as drift
+      from ledger l
+      full outer join projection p
+        on p.location_id = l.location_id
+       and p.item_type = l.item_type
+       and coalesce(p.material_id, '') = coalesce(l.material_id, '')
+       and coalesce(p.product_id, '') = coalesce(l.product_id, '')
+    `);
+    res.json(
+      rows.rows.map((r) => ({
+        locationId: r.location_id,
+        itemType: r.item_type,
+        materialId: r.material_id,
+        productId: r.product_id,
+        ledgerQuantity: Number(r.ledger_quantity),
+        projectedQuantity: r.projected_quantity == null ? null : Number(r.projected_quantity),
+        drift: Number(r.drift),
+      })),
+    );
+  },
+);
+
 export default router;

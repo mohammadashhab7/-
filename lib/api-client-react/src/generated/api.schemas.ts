@@ -695,6 +695,8 @@ export interface SalaryRecord {
   createdAt: string;
 }
 
+export type ContentBlockMetadata = { [key: string]: unknown };
+
 export interface ContentBlock {
   id: string;
   key: string;
@@ -704,8 +706,11 @@ export interface ContentBlock {
   imageUrl?: string;
   ctaLabel?: string;
   ctaHref?: string;
+  metadata?: ContentBlockMetadata;
   updatedAt: string;
 }
+
+export type ContentBlockInputMetadata = { [key: string]: unknown };
 
 export interface ContentBlockInput {
   page: string;
@@ -714,6 +719,7 @@ export interface ContentBlockInput {
   imageUrl?: string;
   ctaLabel?: string;
   ctaHref?: string;
+  metadata?: ContentBlockInputMetadata;
 }
 
 export type MediaAssetKind =

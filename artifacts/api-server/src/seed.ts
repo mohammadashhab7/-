@@ -468,6 +468,17 @@ async function seedContent() {
       metadata: {},
     },
     {
+      key: "story_hero",
+      page: "story",
+      titleAr: "قصة الدمشقي",
+      bodyAr: "إرث دمشقي يتوارث منذ أكثر من نصف قرن.",
+      imageUrl: null,
+      metadata: {
+        videoUrl: "",
+        posterUrl: "",
+      },
+    },
+    {
       key: "story_main",
       page: "story",
       titleAr: "قصتنا",
@@ -475,11 +486,23 @@ async function seedContent() {
       metadata: {},
     },
     {
-      key: "contact_main",
+      key: "contact_hero",
       page: "contact",
       titleAr: "تواصل معنا",
       bodyAr: "نسعد دائماً بخدمتكم. زورونا في معرضنا أو اتصلوا بنا لطلباتكم الخاصة والمناسبات.",
-      metadata: {},
+      metadata: {
+        hoursAr: "السبت — الخميس: ٩ صباحًا — ١١ مساءً\nالجمعة: ٢ ظهرًا — ١١ مساءً",
+      },
+    },
+    {
+      key: "contact_visit",
+      page: "contact",
+      titleAr: "زورونا في المتجر",
+      bodyAr: "يسعدنا استقبالكم في فروعنا للاستمتاع بتجربة طازجة من حلويات الدمشقي، المُحضّرة يوميًا بأيدي حرفيين مهرة وفق وصفات عائلية متوارثة.",
+      metadata: {
+        mapEmbedUrl: "",
+        mapImageUrl: "",
+      },
     },
   ];
   await db.insert(contentBlocks).values(blocks);

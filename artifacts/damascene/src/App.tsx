@@ -98,6 +98,7 @@ function Router() {
               <Route path="/transfers" component={AdminTransfersPage} />
               <Route path="/pos" component={AdminPosPage} />
               <Route path="/daily-closing" component={AdminClosingPage} />
+              <Route path="/pos/closing" component={AdminClosingPage} />
               <Route path="/orders" component={AdminOrdersPage} />
               <Route path="/financials" component={AdminFinancialsPage} />
               <Route path="/reports" component={AdminReportsPage} />
