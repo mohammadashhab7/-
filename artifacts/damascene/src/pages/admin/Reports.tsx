@@ -1,5 +1,11 @@
 import { useState } from "react";
-import { useGetSalesTrend, useGetTopProducts, useGetFinancialReport } from "@workspace/api-client-react";
+import {
+  useGetSalesTrend,
+  useGetTopProducts,
+  useGetFinancialReport,
+  useGetMaterialSpend,
+  useGetStoreKpis,
+} from "@workspace/api-client-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -17,6 +23,8 @@ export default function AdminReportsPage() {
   const today = new Date().toISOString().slice(0, 10);
   const dateFrom = new Date(Date.now() - days * 86400000).toISOString().slice(0, 10);
   const { data: report } = useGetFinancialReport({ dateFrom, dateTo: today });
+  const { data: materialSpend } = useGetMaterialSpend({ fromDate: dateFrom, toDate: today });
+  const { data: storeKpis } = useGetStoreKpis({ fromDate: dateFrom, toDate: today });
 
   const csvHref = (path: string) => `${API_BASE}${path}`;
 
@@ -98,6 +106,101 @@ export default function AdminReportsPage() {
                   <TableCell className="font-medium">{formatSyp(t.revenueMinor)}</TableCell>
                 </TableRow>
               ))}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
+
+      <Card data-testid="card-store-kpis">
+        <CardHeader>
+          <CardTitle>مؤشرات المتجر (POS مقابل الإنترنت)</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid md:grid-cols-3 gap-3">
+            <div className="rounded-md border p-3">
+              <div className="text-xs text-foreground/70">إجمالي الطلبات</div>
+              <div className="text-xl font-bold" data-testid="store-kpi-total-orders">{storeKpis?.totalOrders ?? 0}</div>
+            </div>
+            <div className="rounded-md border p-3">
+              <div className="text-xs text-foreground/70">إجمالي الإيرادات</div>
+              <div className="text-xl font-bold" data-testid="store-kpi-total-revenue">{formatSyp(storeKpis?.totalRevenueMinor)}</div>
+            </div>
+            <div className="rounded-md border p-3">
+              <div className="text-xs text-foreground/70">متوسط قيمة الطلب</div>
+              <div className="text-xl font-bold" data-testid="store-kpi-aov">{formatSyp(storeKpis?.avgOrderValueMinor)}</div>
+            </div>
+          </div>
+          <div className="grid md:grid-cols-2 gap-4">
+            <div>
+              <h3 className="text-sm font-medium mb-2">حسب القناة</h3>
+              <Table>
+                <TableHeader><TableRow><TableHead>القناة</TableHead><TableHead>الطلبات</TableHead><TableHead>الإيرادات</TableHead></TableRow></TableHeader>
+                <TableBody>
+                  {(storeKpis?.byChannel || []).map((c) => (
+                    <TableRow key={c.channel} data-testid={`store-kpi-channel-${c.channel}`}>
+                      <TableCell>{c.channel === "pos" ? "نقطة البيع" : "الإنترنت"}</TableCell>
+                      <TableCell>{c.orders}</TableCell>
+                      <TableCell className="font-medium">{formatSyp(c.revenueMinor)}</TableCell>
+                    </TableRow>
+                  ))}
+                  {(storeKpis?.byChannel?.length ?? 0) === 0 && (
+                    <TableRow><TableCell colSpan={3} className="text-center text-muted-foreground py-3">لا توجد بيانات</TableCell></TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </div>
+            <div>
+              <h3 className="text-sm font-medium mb-2">حسب طريقة الدفع</h3>
+              <Table>
+                <TableHeader><TableRow><TableHead>الطريقة</TableHead><TableHead>الطلبات</TableHead><TableHead>الإيرادات</TableHead></TableRow></TableHeader>
+                <TableBody>
+                  {(storeKpis?.byPaymentMethod || []).map((p) => (
+                    <TableRow key={p.paymentMethod} data-testid={`store-kpi-payment-${p.paymentMethod}`}>
+                      <TableCell>{p.paymentMethod}</TableCell>
+                      <TableCell>{p.orders}</TableCell>
+                      <TableCell className="font-medium">{formatSyp(p.revenueMinor)}</TableCell>
+                    </TableRow>
+                  ))}
+                  {(storeKpis?.byPaymentMethod?.length ?? 0) === 0 && (
+                    <TableRow><TableCell colSpan={3} className="text-center text-muted-foreground py-3">لا توجد بيانات</TableCell></TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card data-testid="card-material-spend">
+        <CardHeader>
+          <CardTitle>مصاريف المواد الأولية في الإنتاج</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <div className="rounded-md border p-3 inline-block">
+            <div className="text-xs text-foreground/70">إجمالي مصاريف المواد</div>
+            <div className="text-2xl font-bold" data-testid="material-spend-total">{formatSyp(materialSpend?.totalSpendMinor)}</div>
+          </div>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>المادة</TableHead>
+                <TableHead>الكمية المستهلكة</TableHead>
+                <TableHead>الوحدة</TableHead>
+                <TableHead>التكلفة</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {(materialSpend?.byMaterial || []).map((m) => (
+                <TableRow key={m.materialId} data-testid={`material-spend-row-${m.materialId}`}>
+                  <TableCell className="font-medium">{m.nameAr}</TableCell>
+                  <TableCell>{(m.quantityThousandths / 1000).toFixed(3)}</TableCell>
+                  <TableCell>{m.unit}</TableCell>
+                  <TableCell className="font-medium">{formatSyp(m.spendMinor)}</TableCell>
+                </TableRow>
+              ))}
+              {(materialSpend?.byMaterial?.length ?? 0) === 0 && (
+                <TableRow><TableCell colSpan={4} className="text-center text-muted-foreground py-3">لا توجد دفعات إنتاج مكتملة في هذه الفترة</TableCell></TableRow>
+              )}
             </TableBody>
           </Table>
         </CardContent>

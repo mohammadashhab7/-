@@ -1186,10 +1186,62 @@ export const GetTopProductsResponseItem = zod.object({
 });
 export const GetTopProductsResponse = zod.array(GetTopProductsResponseItem);
 
+export const GetMaterialSpendQueryParams = zod.object({
+  fromDate: zod.date().optional(),
+  toDate: zod.date().optional(),
+});
+
+export const GetMaterialSpendResponse = zod.object({
+  currency: zod.string(),
+  totalSpendMinor: zod.number(),
+  byMaterial: zod.array(
+    zod.object({
+      materialId: zod.string(),
+      nameAr: zod.string(),
+      unit: zod.string(),
+      quantityThousandths: zod.number(),
+      spendMinor: zod.number(),
+    }),
+  ),
+});
+
+export const GetStoreKpisQueryParams = zod.object({
+  fromDate: zod.date().optional(),
+  toDate: zod.date().optional(),
+});
+
+export const GetStoreKpisResponse = zod.object({
+  currency: zod.string(),
+  totalOrders: zod.number(),
+  totalRevenueMinor: zod.number(),
+  avgOrderValueMinor: zod.number(),
+  byChannel: zod.array(
+    zod.object({
+      channel: zod.enum(["pos", "online"]),
+      orders: zod.number(),
+      revenueMinor: zod.number(),
+    }),
+  ),
+  byPaymentMethod: zod.array(
+    zod.object({
+      paymentMethod: zod.string(),
+      orders: zod.number(),
+      revenueMinor: zod.number(),
+    }),
+  ),
+});
+
 export const GetDashboardKpisResponse = zod.object({
   currency: zod.string(),
   todaySalesMinor: zod.number(),
   todayOrders: zod.number(),
+  todayPosSalesMinor: zod.number().optional(),
+  todayPosOrders: zod.number().optional(),
+  todayOnlineSalesMinor: zod.number().optional(),
+  todayOnlineOrders: zod.number().optional(),
+  thisWeekSalesMinor: zod.number().optional(),
+  lastWeekSalesMinor: zod.number().optional(),
+  wowDeltaPct: zod.number().nullish(),
   monthSalesMinor: zod.number(),
   monthOrders: zod.number(),
   pendingOnlineOrders: zod.number(),

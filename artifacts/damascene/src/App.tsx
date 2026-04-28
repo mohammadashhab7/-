@@ -12,6 +12,7 @@ import PublicLayout from "@/components/layouts/PublicLayout";
 import AdminLayout from "@/components/layouts/AdminLayout";
 import AccountLayout from "@/components/layouts/AccountLayout";
 import { useGetMe } from "@workspace/api-client-react";
+import { PermissionRoute } from "@/components/PermissionRoute";
 
 import HomePage from "@/pages/public/Home";
 import ShopPage from "@/pages/public/Shop";
@@ -89,24 +90,24 @@ function Router() {
           <AdminLayout>
             <Switch>
               <Route path="/" component={DashboardPage} />
-              <Route path="/products" component={AdminProductsPage} />
-              <Route path="/categories" component={AdminCategoriesPage} />
-              <Route path="/raw-materials" component={AdminRawMaterialsPage} />
-              <Route path="/recipes" component={AdminRecipesPage} />
-              <Route path="/inventory" component={AdminInventoryPage} />
-              <Route path="/production" component={AdminProductionPage} />
-              <Route path="/transfers" component={AdminTransfersPage} />
-              <Route path="/pos" component={AdminPosPage} />
-              <Route path="/daily-closing" component={AdminClosingPage} />
-              <Route path="/pos/closing" component={AdminClosingPage} />
-              <Route path="/orders" component={AdminOrdersPage} />
-              <Route path="/financials" component={AdminFinancialsPage} />
-              <Route path="/reports" component={AdminReportsPage} />
-              <Route path="/employees" component={AdminEmployeesPage} />
-              <Route path="/users" component={AdminUsersPage} />
-              <Route path="/cms" component={AdminCmsPage} />
-              <Route path="/media" component={AdminMediaPage} />
-              <Route path="/settings" component={AdminSettingsPage} />
+              <Route path="/products"><PermissionRoute module="products"><AdminProductsPage /></PermissionRoute></Route>
+              <Route path="/categories"><PermissionRoute module="categories"><AdminCategoriesPage /></PermissionRoute></Route>
+              <Route path="/raw-materials"><PermissionRoute module="raw_materials"><AdminRawMaterialsPage /></PermissionRoute></Route>
+              <Route path="/recipes"><PermissionRoute module="recipes"><AdminRecipesPage /></PermissionRoute></Route>
+              <Route path="/inventory"><PermissionRoute module="inventory"><AdminInventoryPage /></PermissionRoute></Route>
+              <Route path="/production"><PermissionRoute module="production"><AdminProductionPage /></PermissionRoute></Route>
+              <Route path="/transfers"><PermissionRoute module="transfers"><AdminTransfersPage /></PermissionRoute></Route>
+              <Route path="/pos"><PermissionRoute module="pos"><AdminPosPage /></PermissionRoute></Route>
+              <Route path="/daily-closing"><PermissionRoute module="pos"><AdminClosingPage /></PermissionRoute></Route>
+              <Route path="/pos/closing"><PermissionRoute module="pos"><AdminClosingPage /></PermissionRoute></Route>
+              <Route path="/orders"><PermissionRoute module="orders"><AdminOrdersPage /></PermissionRoute></Route>
+              <Route path="/financials"><PermissionRoute module="financial"><AdminFinancialsPage /></PermissionRoute></Route>
+              <Route path="/reports"><PermissionRoute module="reports"><AdminReportsPage /></PermissionRoute></Route>
+              <Route path="/employees"><PermissionRoute module="employees"><AdminEmployeesPage /></PermissionRoute></Route>
+              <Route path="/users"><PermissionRoute module="users"><AdminUsersPage /></PermissionRoute></Route>
+              <Route path="/cms"><PermissionRoute module="cms"><AdminCmsPage /></PermissionRoute></Route>
+              <Route path="/media"><PermissionRoute module="media"><AdminMediaPage /></PermissionRoute></Route>
+              <Route path="/settings"><PermissionRoute module="settings"><AdminSettingsPage /></PermissionRoute></Route>
               <Route component={NotFound} />
             </Switch>
           </AdminLayout>

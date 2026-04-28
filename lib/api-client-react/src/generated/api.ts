@@ -37,8 +37,10 @@ import type {
   FinancialEntryInput,
   FinancialReport,
   GetFinancialReportParams,
+  GetMaterialSpendParams,
   GetMediaUploadUrl200,
   GetSalesTrendParams,
+  GetStoreKpisParams,
   GetTopProductsParams,
   HealthStatus,
   InventoryAdjustmentInput,
@@ -56,6 +58,7 @@ import type {
   ListStockParams,
   LowStockAlert,
   MarkPaymentSucceeded200,
+  MaterialSpendReport,
   Me,
   MediaAsset,
   MediaInput,
@@ -79,6 +82,7 @@ import type {
   Settings,
   SettingsInput,
   StockLevel,
+  StoreKpisReport,
   TopProduct,
   Transfer,
   TransferInput,
@@ -4373,6 +4377,183 @@ export function useGetTopProducts<
   },
 ): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
   const queryOptions = getGetTopProductsQueryOptions(params, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+export const getGetMaterialSpendUrl = (params?: GetMaterialSpendParams) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : value.toString());
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/reports/material-spend?${stringifiedParams}`
+    : `/api/reports/material-spend`;
+};
+
+export const getMaterialSpend = async (
+  params?: GetMaterialSpendParams,
+  options?: RequestInit,
+): Promise<MaterialSpendReport> => {
+  return customFetch<MaterialSpendReport>(getGetMaterialSpendUrl(params), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetMaterialSpendQueryKey = (
+  params?: GetMaterialSpendParams,
+) => {
+  return [`/api/reports/material-spend`, ...(params ? [params] : [])] as const;
+};
+
+export const getGetMaterialSpendQueryOptions = <
+  TData = Awaited<ReturnType<typeof getMaterialSpend>>,
+  TError = ErrorType<unknown>,
+>(
+  params?: GetMaterialSpendParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getMaterialSpend>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getGetMaterialSpendQueryKey(params);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getMaterialSpend>>
+  > = ({ signal }) => getMaterialSpend(params, { signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getMaterialSpend>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetMaterialSpendQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getMaterialSpend>>
+>;
+export type GetMaterialSpendQueryError = ErrorType<unknown>;
+
+export function useGetMaterialSpend<
+  TData = Awaited<ReturnType<typeof getMaterialSpend>>,
+  TError = ErrorType<unknown>,
+>(
+  params?: GetMaterialSpendParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getMaterialSpend>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetMaterialSpendQueryOptions(params, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+export const getGetStoreKpisUrl = (params?: GetStoreKpisParams) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : value.toString());
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/reports/store-kpis?${stringifiedParams}`
+    : `/api/reports/store-kpis`;
+};
+
+export const getStoreKpis = async (
+  params?: GetStoreKpisParams,
+  options?: RequestInit,
+): Promise<StoreKpisReport> => {
+  return customFetch<StoreKpisReport>(getGetStoreKpisUrl(params), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetStoreKpisQueryKey = (params?: GetStoreKpisParams) => {
+  return [`/api/reports/store-kpis`, ...(params ? [params] : [])] as const;
+};
+
+export const getGetStoreKpisQueryOptions = <
+  TData = Awaited<ReturnType<typeof getStoreKpis>>,
+  TError = ErrorType<unknown>,
+>(
+  params?: GetStoreKpisParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getStoreKpis>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetStoreKpisQueryKey(params);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getStoreKpis>>> = ({
+    signal,
+  }) => getStoreKpis(params, { signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getStoreKpis>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetStoreKpisQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getStoreKpis>>
+>;
+export type GetStoreKpisQueryError = ErrorType<unknown>;
+
+export function useGetStoreKpis<
+  TData = Awaited<ReturnType<typeof getStoreKpis>>,
+  TError = ErrorType<unknown>,
+>(
+  params?: GetStoreKpisParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getStoreKpis>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetStoreKpisQueryOptions(params, options);
 
   const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
     queryKey: QueryKey;

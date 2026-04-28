@@ -10,6 +10,13 @@ export interface DashboardKpis {
   currency: string;
   todaySalesMinor: number;
   todayOrders: number;
+  todayPosSalesMinor?: number;
+  todayPosOrders?: number;
+  todayOnlineSalesMinor?: number;
+  todayOnlineOrders?: number;
+  thisWeekSalesMinor?: number;
+  lastWeekSalesMinor?: number;
+  wowDeltaPct?: number | null;
   monthSalesMinor: number;
   monthOrders: number;
   pendingOnlineOrders: number;

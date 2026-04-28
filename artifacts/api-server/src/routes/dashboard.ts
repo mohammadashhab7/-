@@ -9,10 +9,35 @@ router.get(
   "/dashboard/kpis",
   requirePermission("reports", "read"),
   async (_req, res) => {
-    const today = await db.execute<{ total: string; count: string }>(sql`
+    const today = await db.execute<{
+      total: string;
+      count: string;
+      pos_total: string;
+      pos_count: string;
+      online_total: string;
+      online_count: string;
+    }>(sql`
+    select coalesce(sum(total_minor), 0)::text as total,
+           count(*)::text as count,
+           coalesce(sum(case when channel='pos' then total_minor else 0 end), 0)::text as pos_total,
+           count(*) filter (where channel='pos')::text as pos_count,
+           coalesce(sum(case when channel='online' then total_minor else 0 end), 0)::text as online_total,
+           count(*) filter (where channel='online')::text as online_count
+    from sales_orders where placed_at::date = now()::date
+  `);
+    const thisWeek = await db.execute<{ total: string; count: string }>(sql`
     select coalesce(sum(total_minor), 0)::text as total,
            count(*)::text as count
-    from sales_orders where placed_at::date = now()::date
+    from sales_orders
+    where placed_at >= date_trunc('week', now())
+      and placed_at < date_trunc('week', now()) + interval '7 days'
+  `);
+    const lastWeek = await db.execute<{ total: string; count: string }>(sql`
+    select coalesce(sum(total_minor), 0)::text as total,
+           count(*)::text as count
+    from sales_orders
+    where placed_at >= date_trunc('week', now()) - interval '7 days'
+      and placed_at < date_trunc('week', now())
   `);
     const month = await db.execute<{ total: string; count: string }>(sql`
     select coalesce(sum(total_minor), 0)::text as total,
@@ -38,12 +63,25 @@ router.get(
     where channel='pos' and payment_method='cash'
       and placed_at::date = now()::date
   `);
+    const thisWeekTotal = Number(thisWeek.rows[0]!.total);
+    const lastWeekTotal = Number(lastWeek.rows[0]!.total);
+    const wowDeltaPct =
+      lastWeekTotal > 0
+        ? ((thisWeekTotal - lastWeekTotal) / lastWeekTotal) * 100
+        : null;
     res.json({
       currency: "SYP",
       todaySalesMinor: Number(today.rows[0]!.total),
       todayOrders: Number(today.rows[0]!.count),
+      todayPosSalesMinor: Number(today.rows[0]!.pos_total),
+      todayPosOrders: Number(today.rows[0]!.pos_count),
+      todayOnlineSalesMinor: Number(today.rows[0]!.online_total),
+      todayOnlineOrders: Number(today.rows[0]!.online_count),
       monthSalesMinor: Number(month.rows[0]!.total),
       monthOrders: Number(month.rows[0]!.count),
+      thisWeekSalesMinor: thisWeekTotal,
+      lastWeekSalesMinor: lastWeekTotal,
+      wowDeltaPct: wowDeltaPct === null ? null : Math.round(wowDeltaPct * 10) / 10,
       pendingOnlineOrders: Number(pending.rows[0]!.count),
       lowStockCount: Number(lowStock.rows[0]!.count),
       openProductionToday: Number(openProd.rows[0]!.count),

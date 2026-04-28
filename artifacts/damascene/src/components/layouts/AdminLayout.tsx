@@ -1,6 +1,8 @@
 import React, { ReactNode } from "react";
 import { Link, useLocation } from "wouter";
 import { useClerk, useUser } from "@clerk/react";
+import { useGetMe } from "@workspace/api-client-react";
+import { hasModulePerm, type ModuleName } from "@/components/PermissionRoute";
 import { 
   LayoutDashboard, 
   Package, 
@@ -39,36 +41,49 @@ interface AdminLayoutProps {
   children: ReactNode;
 }
 
-const SIDEBAR_NAV = [
-  { title: "الرئيسية", href: "/admin", icon: LayoutDashboard },
-  { title: "نقطة البيع (POS)", href: "/admin/pos", icon: MonitorSmartphone },
-  { title: "الطلبات", href: "/admin/orders", icon: ShoppingCart },
-  { title: "المنتجات", href: "/admin/products", icon: Package },
-  { title: "التصنيفات", href: "/admin/categories", icon: Tags },
-  { title: "المواد الأولية", href: "/admin/raw-materials", icon: FlaskConical },
-  { title: "الوصفات", href: "/admin/recipes", icon: ChefHat },
-  { title: "المخزون", href: "/admin/inventory", icon: Warehouse },
-  { title: "التصنيع", href: "/admin/production", icon: Factory },
-  { title: "التحويلات", href: "/admin/transfers", icon: ArrowRightLeft },
-  { title: "المالية", href: "/admin/financials", icon: Wallet },
-  { title: "التقارير", href: "/admin/reports", icon: BarChart3 },
-  { title: "الموظفين", href: "/admin/employees", icon: Users },
-  { title: "المستخدمين", href: "/admin/users", icon: ShieldCheck },
-  { title: "المحتوى (CMS)", href: "/admin/cms", icon: FileText },
-  { title: "الوسائط", href: "/admin/media", icon: ImageIcon },
-  { title: "الإعدادات", href: "/admin/settings", icon: Settings },
+type NavItem = { title: string; href: string; icon: typeof LayoutDashboard; module: ModuleName | null };
+
+const SIDEBAR_NAV: NavItem[] = [
+  { title: "الرئيسية", href: "/admin", icon: LayoutDashboard, module: null },
+  { title: "نقطة البيع (POS)", href: "/admin/pos", icon: MonitorSmartphone, module: "pos" },
+  { title: "الطلبات", href: "/admin/orders", icon: ShoppingCart, module: "orders" },
+  { title: "المنتجات", href: "/admin/products", icon: Package, module: "products" },
+  { title: "التصنيفات", href: "/admin/categories", icon: Tags, module: "categories" },
+  { title: "المواد الأولية", href: "/admin/raw-materials", icon: FlaskConical, module: "raw_materials" },
+  { title: "الوصفات", href: "/admin/recipes", icon: ChefHat, module: "recipes" },
+  { title: "المخزون", href: "/admin/inventory", icon: Warehouse, module: "inventory" },
+  { title: "التصنيع", href: "/admin/production", icon: Factory, module: "production" },
+  { title: "التحويلات", href: "/admin/transfers", icon: ArrowRightLeft, module: "transfers" },
+  { title: "المالية", href: "/admin/financials", icon: Wallet, module: "financial" },
+  { title: "التقارير", href: "/admin/reports", icon: BarChart3, module: "reports" },
+  { title: "الموظفين", href: "/admin/employees", icon: Users, module: "employees" },
+  { title: "المستخدمين", href: "/admin/users", icon: ShieldCheck, module: "users" },
+  { title: "المحتوى (CMS)", href: "/admin/cms", icon: FileText, module: "cms" },
+  { title: "الوسائط", href: "/admin/media", icon: ImageIcon, module: "media" },
+  { title: "الإعدادات", href: "/admin/settings", icon: Settings, module: "settings" },
 ];
 
 export default function AdminLayout({ children }: AdminLayoutProps) {
   const [location] = useLocation();
   const { user } = useUser();
   const { signOut } = useClerk();
+  const { data: me } = useGetMe();
 
   const isPos = location.startsWith("/admin/pos");
 
+  const visibleNav = SIDEBAR_NAV.filter((item) => {
+    if (item.module === null) return true;
+    return hasModulePerm(
+      me?.permissions as string[] | undefined,
+      me?.role,
+      item.module,
+      "read",
+    );
+  });
+
   const NavItems = () => (
     <nav className="flex flex-col gap-1 p-4">
-      {SIDEBAR_NAV.map((item) => {
+      {visibleNav.map((item) => {
         const isActive = location === item.href || (location.startsWith(item.href) && item.href !== "/admin");
         return (
           <Link 

@@ -13,6 +13,7 @@ import { format } from "date-fns";
 import { ar } from "date-fns/locale";
 import { 
   TrendingUp, 
+  TrendingDown,
   ShoppingCart, 
   AlertTriangle, 
   Wallet,
@@ -20,7 +21,9 @@ import {
   Clock,
   Package,
   ArrowRightLeft,
-  Factory
+  Factory,
+  MonitorSmartphone,
+  Globe
 } from "lucide-react";
 import { 
   AreaChart, 
@@ -63,7 +66,7 @@ export default function DashboardPage() {
 
       {/* KPIs */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card className="border-border/50 shadow-sm bg-card">
+        <Card className="border-border/50 shadow-sm bg-card" data-testid="kpi-today-sales">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">مبيعات اليوم</CardTitle>
             <TrendingUp className="h-4 w-4 text-muted-foreground" />
@@ -76,8 +79,45 @@ export default function DashboardPage() {
                 {formatCurrency(kpis?.todaySalesMinor)} <span className="text-sm text-muted-foreground ml-1">{kpis?.currency}</span>
               </div>
             )}
+            <div className="text-xs text-muted-foreground mt-1 space-y-0.5">
+              <div>{kpis?.todayOrders ?? 0} طلب اليوم</div>
+              <div className="flex items-center gap-3 pt-1">
+                <span className="flex items-center gap-1" data-testid="kpi-today-pos">
+                  <MonitorSmartphone className="h-3 w-3" />
+                  POS: <span dir="ltr">{formatCurrency(kpis?.todayPosSalesMinor)}</span>
+                </span>
+                <span className="flex items-center gap-1" data-testid="kpi-today-online">
+                  <Globe className="h-3 w-3" />
+                  أونلاين: <span dir="ltr">{formatCurrency(kpis?.todayOnlineSalesMinor)}</span>
+                </span>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="border-border/50 shadow-sm bg-card" data-testid="kpi-wow">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">مبيعات هذا الأسبوع</CardTitle>
+            {(kpis?.wowDeltaPct ?? 0) >= 0
+              ? <TrendingUp className="h-4 w-4 text-green-600" />
+              : <TrendingDown className="h-4 w-4 text-destructive" />}
+          </CardHeader>
+          <CardContent>
+            {isLoadingKpis ? (
+              <div className="h-8 bg-muted animate-pulse rounded mt-1 w-1/2" />
+            ) : (
+              <div className="text-2xl font-bold" dir="ltr">
+                {formatCurrency(kpis?.thisWeekSalesMinor)} <span className="text-sm text-muted-foreground ml-1">{kpis?.currency}</span>
+              </div>
+            )}
             <p className="text-xs text-muted-foreground mt-1">
-              {kpis?.todayOrders} طلب اليوم
+              {kpis?.wowDeltaPct === null || kpis?.wowDeltaPct === undefined ? (
+                <span>لا توجد بيانات للأسبوع الماضي</span>
+              ) : (
+                <span className={kpis.wowDeltaPct >= 0 ? "text-green-600" : "text-destructive"} dir="ltr" data-testid="kpi-wow-delta">
+                  {kpis.wowDeltaPct >= 0 ? "+" : ""}{kpis.wowDeltaPct}% مقارنة بالأسبوع الماضي
+                </span>
+              )}
             </p>
           </CardContent>
         </Card>

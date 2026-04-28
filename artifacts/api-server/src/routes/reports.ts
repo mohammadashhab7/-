@@ -356,4 +356,117 @@ router.get(
   },
 );
 
+router.get(
+  "/reports/material-spend",
+  requirePermission("reports", "read"),
+  async (req, res) => {
+    const fromDate =
+      typeof req.query.fromDate === "string" ? req.query.fromDate : undefined;
+    const toDate =
+      typeof req.query.toDate === "string" ? req.query.toDate : undefined;
+    const where = sql`po.status = 'completed'
+      ${fromDate ? sql` and po.completed_at >= ${fromDate}::date` : sql``}
+      ${toDate ? sql` and po.completed_at < (${toDate}::date + interval '1 day')` : sql``}`;
+    const totalRow = await db.execute<{ total: string }>(sql`
+      select coalesce(sum(poi.total_cost_minor), 0)::text as total
+      from production_order_items poi
+      join production_orders po on po.id = poi.production_order_id
+      where ${where}
+    `);
+    const byMaterial = await db.execute<{
+      material_id: string;
+      name_ar: string;
+      qty_thousandths: string;
+      unit: string;
+      total: string;
+    }>(sql`
+      select poi.material_id as material_id,
+             rm.name_ar as name_ar,
+             rm.unit as unit,
+             coalesce(sum(poi.quantity_consumed_thousandths), 0)::text as qty_thousandths,
+             coalesce(sum(poi.total_cost_minor), 0)::text as total
+      from production_order_items poi
+      join production_orders po on po.id = poi.production_order_id
+      join raw_materials rm on rm.id = poi.material_id
+      where ${where}
+      group by poi.material_id, rm.name_ar, rm.unit
+      order by sum(poi.total_cost_minor) desc
+      limit 50
+    `);
+    res.json({
+      currency: "SYP",
+      totalSpendMinor: Number(totalRow.rows[0]!.total),
+      byMaterial: byMaterial.rows.map((r) => ({
+        materialId: r.material_id,
+        nameAr: r.name_ar,
+        unit: r.unit,
+        quantityThousandths: Number(r.qty_thousandths),
+        spendMinor: Number(r.total),
+      })),
+    });
+  },
+);
+
+router.get(
+  "/reports/store-kpis",
+  requirePermission("reports", "read"),
+  async (req, res) => {
+    const fromDate =
+      typeof req.query.fromDate === "string" ? req.query.fromDate : undefined;
+    const toDate =
+      typeof req.query.toDate === "string" ? req.query.toDate : undefined;
+    const where = sql`status not in ('cancelled', 'refunded')
+      ${fromDate ? sql` and placed_at >= ${fromDate}::date` : sql``}
+      ${toDate ? sql` and placed_at < (${toDate}::date + interval '1 day')` : sql``}`;
+    const channels = await db.execute<{
+      channel: string;
+      orders: string;
+      total: string;
+    }>(sql`
+      select channel, count(*)::text as orders, coalesce(sum(total_minor), 0)::text as total
+      from sales_orders
+      where ${where}
+      group by channel
+    `);
+    const payments = await db.execute<{
+      payment_method: string;
+      orders: string;
+      total: string;
+    }>(sql`
+      select payment_method, count(*)::text as orders, coalesce(sum(total_minor), 0)::text as total
+      from sales_orders
+      where ${where}
+      group by payment_method
+      order by sum(total_minor) desc
+    `);
+    const overall = await db.execute<{
+      orders: string;
+      total: string;
+      avg: string;
+    }>(sql`
+      select count(*)::text as orders,
+             coalesce(sum(total_minor), 0)::text as total,
+             coalesce(avg(total_minor), 0)::text as avg
+      from sales_orders
+      where ${where}
+    `);
+    res.json({
+      currency: "SYP",
+      totalOrders: Number(overall.rows[0]!.orders),
+      totalRevenueMinor: Number(overall.rows[0]!.total),
+      avgOrderValueMinor: Math.round(Number(overall.rows[0]!.avg)),
+      byChannel: channels.rows.map((r) => ({
+        channel: r.channel,
+        orders: Number(r.orders),
+        revenueMinor: Number(r.total),
+      })),
+      byPaymentMethod: payments.rows.map((r) => ({
+        paymentMethod: r.payment_method,
+        orders: Number(r.orders),
+        revenueMinor: Number(r.total),
+      })),
+    });
+  },
+);
+
 export default router;

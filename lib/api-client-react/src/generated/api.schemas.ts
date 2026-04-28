@@ -589,12 +589,62 @@ export interface DashboardKpis {
   currency: string;
   todaySalesMinor: number;
   todayOrders: number;
+  todayPosSalesMinor?: number;
+  todayPosOrders?: number;
+  todayOnlineSalesMinor?: number;
+  todayOnlineOrders?: number;
+  thisWeekSalesMinor?: number;
+  lastWeekSalesMinor?: number;
+  wowDeltaPct?: number | null;
   monthSalesMinor: number;
   monthOrders: number;
   pendingOnlineOrders: number;
   lowStockCount: number;
   openProductionToday: number;
   cashOnHandMinor?: number;
+}
+
+export type MaterialSpendReportByMaterialItem = {
+  materialId: string;
+  nameAr: string;
+  unit: string;
+  quantityThousandths: number;
+  spendMinor: number;
+};
+
+export interface MaterialSpendReport {
+  currency: string;
+  totalSpendMinor: number;
+  byMaterial: MaterialSpendReportByMaterialItem[];
+}
+
+export type StoreKpisReportByChannelItemChannel =
+  (typeof StoreKpisReportByChannelItemChannel)[keyof typeof StoreKpisReportByChannelItemChannel];
+
+export const StoreKpisReportByChannelItemChannel = {
+  pos: "pos",
+  online: "online",
+} as const;
+
+export type StoreKpisReportByChannelItem = {
+  channel: StoreKpisReportByChannelItemChannel;
+  orders: number;
+  revenueMinor: number;
+};
+
+export type StoreKpisReportByPaymentMethodItem = {
+  paymentMethod: string;
+  orders: number;
+  revenueMinor: number;
+};
+
+export interface StoreKpisReport {
+  currency: string;
+  totalOrders: number;
+  totalRevenueMinor: number;
+  avgOrderValueMinor: number;
+  byChannel: StoreKpisReportByChannelItem[];
+  byPaymentMethod: StoreKpisReportByPaymentMethodItem[];
 }
 
 export type ActivityItemKind =
@@ -973,6 +1023,16 @@ export type GetTopProductsParams = {
    * @maximum 90
    */
   days?: number;
+};
+
+export type GetMaterialSpendParams = {
+  fromDate?: string;
+  toDate?: string;
+};
+
+export type GetStoreKpisParams = {
+  fromDate?: string;
+  toDate?: string;
 };
 
 export type ListAttendanceParams = {

@@ -934,6 +934,44 @@ paths:
                 type: array
                 items: { $ref: "#/components/schemas/TopProduct" }
 
+  /reports/material-spend:
+    get:
+      operationId: getMaterialSpend
+      tags: [reports]
+      parameters:
+        - name: fromDate
+          in: query
+          required: false
+          schema: { type: string, format: date }
+        - name: toDate
+          in: query
+          required: false
+          schema: { type: string, format: date }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/MaterialSpendReport" }
+  /reports/store-kpis:
+    get:
+      operationId: getStoreKpis
+      tags: [reports]
+      parameters:
+        - name: fromDate
+          in: query
+          required: false
+          schema: { type: string, format: date }
+        - name: toDate
+          in: query
+          required: false
+          schema: { type: string, format: date }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/StoreKpisReport" }
   /dashboard/kpis:
     get:
       operationId: getDashboardKpis
@@ -1802,12 +1840,64 @@ components:
         currency: { type: string }
         todaySalesMinor: { type: integer }
         todayOrders: { type: integer }
+        todayPosSalesMinor: { type: integer }
+        todayPosOrders: { type: integer }
+        todayOnlineSalesMinor: { type: integer }
+        todayOnlineOrders: { type: integer }
+        thisWeekSalesMinor: { type: integer }
+        lastWeekSalesMinor: { type: integer }
+        wowDeltaPct: { type: number, nullable: true }
         monthSalesMinor: { type: integer }
         monthOrders: { type: integer }
         pendingOnlineOrders: { type: integer }
         lowStockCount: { type: integer }
         openProductionToday: { type: integer }
         cashOnHandMinor: { type: integer }
+
+    MaterialSpendReport:
+      type: object
+      required: [currency, totalSpendMinor, byMaterial]
+      properties:
+        currency: { type: string }
+        totalSpendMinor: { type: integer }
+        byMaterial:
+          type: array
+          items:
+            type: object
+            required: [materialId, nameAr, unit, quantityThousandths, spendMinor]
+            properties:
+              materialId: { type: string }
+              nameAr: { type: string }
+              unit: { type: string }
+              quantityThousandths: { type: integer }
+              spendMinor: { type: integer }
+
+    StoreKpisReport:
+      type: object
+      required: [currency, totalOrders, totalRevenueMinor, avgOrderValueMinor, byChannel, byPaymentMethod]
+      properties:
+        currency: { type: string }
+        totalOrders: { type: integer }
+        totalRevenueMinor: { type: integer }
+        avgOrderValueMinor: { type: integer }
+        byChannel:
+          type: array
+          items:
+            type: object
+            required: [channel, orders, revenueMinor]
+            properties:
+              channel: { type: string, enum: [pos, online] }
+              orders: { type: integer }
+              revenueMinor: { type: integer }
+        byPaymentMethod:
+          type: array
+          items:
+            type: object
+            required: [paymentMethod, orders, revenueMinor]
+            properties:
+              paymentMethod: { type: string }
+              orders: { type: integer }
+              revenueMinor: { type: integer }
 
     ActivityItem:
       type: object
