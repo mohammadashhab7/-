@@ -12,6 +12,6 @@ export interface CheckoutInput {
   customerPhone: string;
   customerEmail?: string;
   deliveryAddress: string;
-  deliveryNotes?: string;
+  notesAr?: string;
   paymentMethod?: CheckoutInputPaymentMethod;
 }

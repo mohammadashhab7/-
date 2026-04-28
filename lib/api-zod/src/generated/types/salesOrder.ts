@@ -9,6 +9,7 @@ import type { OrderStatus } from "./orderStatus";
 import type { SalesOrderChannel } from "./salesOrderChannel";
 import type { SalesOrderItem } from "./salesOrderItem";
 import type { SalesOrderPaymentMethod } from "./salesOrderPaymentMethod";
+import type { SalesOrderStatusEvent } from "./salesOrderStatusEvent";
 
 export interface SalesOrder {
   id: string;
@@ -20,7 +21,7 @@ export interface SalesOrder {
   customerPhone?: string;
   customerEmail?: string;
   deliveryAddress?: string;
-  deliveryNotes?: string;
+  notesAr?: string;
   paymentMethod?: SalesOrderPaymentMethod;
   subtotalMinor: number;
   discountMinor?: number;
@@ -29,5 +30,6 @@ export interface SalesOrder {
   currency: string;
   cashierId?: string;
   items: SalesOrderItem[];
+  statusHistory?: SalesOrderStatusEvent[];
   createdAt: Date;
 }

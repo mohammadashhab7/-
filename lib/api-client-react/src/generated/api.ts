@@ -36,6 +36,7 @@ import type {
   FinancialEntry,
   FinancialEntryInput,
   FinancialReport,
+  GetBootstrapStatus200,
   GetFinancialReportParams,
   GetMaterialSpendParams,
   GetMediaUploadUrl200,
@@ -167,6 +168,81 @@ export function useHealthCheck<
   request?: SecondParameter<typeof customFetch>;
 }): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
   const queryOptions = getHealthCheckQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Whether a Super Admin (owner) account already exists
+ */
+export const getGetBootstrapStatusUrl = () => {
+  return `/api/bootstrap-status`;
+};
+
+export const getBootstrapStatus = async (
+  options?: RequestInit,
+): Promise<GetBootstrapStatus200> => {
+  return customFetch<GetBootstrapStatus200>(getGetBootstrapStatusUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetBootstrapStatusQueryKey = () => {
+  return [`/api/bootstrap-status`] as const;
+};
+
+export const getGetBootstrapStatusQueryOptions = <
+  TData = Awaited<ReturnType<typeof getBootstrapStatus>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getBootstrapStatus>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetBootstrapStatusQueryKey();
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getBootstrapStatus>>
+  > = ({ signal }) => getBootstrapStatus({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getBootstrapStatus>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetBootstrapStatusQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getBootstrapStatus>>
+>;
+export type GetBootstrapStatusQueryError = ErrorType<unknown>;
+
+/**
+ * @summary Whether a Super Admin (owner) account already exists
+ */
+
+export function useGetBootstrapStatus<
+  TData = Awaited<ReturnType<typeof getBootstrapStatus>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getBootstrapStatus>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetBootstrapStatusQueryOptions(options);
 
   const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
     queryKey: QueryKey;

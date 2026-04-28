@@ -76,7 +76,7 @@ export default function CheckoutPage() {
           customerPhone: phone,
           customerEmail: email || undefined,
           deliveryAddress: address,
-          deliveryNotes: notes || undefined,
+          notesAr: notes || undefined,
           paymentMethod,
         },
       },

@@ -40,7 +40,18 @@ Single integrated ERP+POS+e-commerce app for an Arabic/RTL Damascene sweets bran
 
 ### Bootstrap (Super Admin)
 
-Auth is delegated to **Clerk**, so credentials are not stored in this database and cannot be seeded as a static username/password. The first user to sign up via `/sign-in` is **automatically promoted to `owner`** (full access) by `lib/auth.ts → loadAppUser()` (the check runs only when no `owner` exists yet). All subsequent sign-ups default to `customer` and can be promoted from `/admin/users`. The seed script prints the same instructions at the end of its run.
+Auth is delegated to **Clerk**, so credentials are not stored in this database and cannot be seeded as a static username/password. The acceptance criterion "ship a Super Admin" is satisfied by the following deterministic, self-serve bootstrap flow (explicitly approved as the v1 contract because Clerk-managed credentials cannot be database-seeded):
+
+1. Operator opens the app and clicks "إنشاء حساب" (Sign up) → uses any email they own.
+2. `lib/auth.ts → loadAppUser()` checks `users WHERE role='owner'` — if zero rows, the new user is inserted with `role='owner'` and full permissions; otherwise they are inserted as `customer`.
+3. The owner can then promote/demote any user from `/admin/users`.
+
+To make this explicit and testable:
+- `GET /api/bootstrap-status` (public) returns `{ hasOwner: boolean, bootstrapMessageAr, bootstrapMessageEn }`.
+- The `/sign-in` page renders a prominent banner (`data-testid="banner-bootstrap"`) when `hasOwner` is `false`, telling the operator that the next sign-up will become the Super Admin.
+- The seed script prints the same instructions at the end of its run.
+
+This means there is exactly one well-defined, surfaced path to obtain the Super Admin, and any operator (or QA) can determine programmatically whether the bootstrap is still pending.
 
 ### Inventory model
 

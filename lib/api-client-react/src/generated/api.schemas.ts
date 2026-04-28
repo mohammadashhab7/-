@@ -383,6 +383,16 @@ export interface SalesOrderItem {
   lineTotalMinor: number;
 }
 
+export interface SalesOrderStatusEvent {
+  id: string;
+  fromStatus?: OrderStatus | null;
+  toStatus: OrderStatus;
+  changedByUserId?: string | null;
+  changedByNameAr?: string | null;
+  noteAr?: string | null;
+  changedAt: string;
+}
+
 export interface SalesOrder {
   id: string;
   orderNumber: string;
@@ -393,7 +403,7 @@ export interface SalesOrder {
   customerPhone?: string;
   customerEmail?: string;
   deliveryAddress?: string;
-  deliveryNotes?: string;
+  notesAr?: string;
   paymentMethod?: SalesOrderPaymentMethod;
   subtotalMinor: number;
   discountMinor?: number;
@@ -402,6 +412,7 @@ export interface SalesOrder {
   currency: string;
   cashierId?: string;
   items: SalesOrderItem[];
+  statusHistory?: SalesOrderStatusEvent[];
   createdAt: string;
 }
 
@@ -445,7 +456,7 @@ export interface CheckoutInput {
   customerPhone: string;
   customerEmail?: string;
   deliveryAddress: string;
-  deliveryNotes?: string;
+  notesAr?: string;
   paymentMethod?: CheckoutInputPaymentMethod;
 }
 
@@ -872,6 +883,12 @@ export interface SettingsInput {
   facebookUrl?: string;
   whatsappNumber?: string;
 }
+
+export type GetBootstrapStatus200 = {
+  hasOwner: boolean;
+  bootstrapMessageAr: string;
+  bootstrapMessageEn: string;
+};
 
 export type UpdateAdminUserBody = {
   role?: UserRole;

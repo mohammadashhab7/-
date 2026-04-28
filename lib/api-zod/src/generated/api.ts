@@ -15,6 +15,15 @@ export const HealthCheckResponse = zod.object({
 });
 
 /**
+ * @summary Whether a Super Admin (owner) account already exists
+ */
+export const GetBootstrapStatusResponse = zod.object({
+  hasOwner: zod.boolean(),
+  bootstrapMessageAr: zod.string(),
+  bootstrapMessageEn: zod.string(),
+});
+
+/**
  * @summary Current user with role and permissions
  */
 export const GetMeResponse = zod.object({
@@ -708,7 +717,7 @@ export const ListSalesOrdersResponseItem = zod.object({
   customerPhone: zod.string().optional(),
   customerEmail: zod.string().optional(),
   deliveryAddress: zod.string().optional(),
-  deliveryNotes: zod.string().optional(),
+  notesAr: zod.string().optional(),
   paymentMethod: zod
     .enum(["cash", "card", "cod", "bank_transfer", "stripe", "paypal"])
     .optional(),
@@ -728,6 +737,48 @@ export const ListSalesOrdersResponseItem = zod.object({
       lineTotalMinor: zod.number(),
     }),
   ),
+  statusHistory: zod
+    .array(
+      zod.object({
+        id: zod.string(),
+        fromStatus: zod
+          .union([
+            zod.enum([
+              "pending_payment",
+              "paid",
+              "pending",
+              "confirmed",
+              "preparing",
+              "ready",
+              "out_for_delivery",
+              "delivered",
+              "completed",
+              "cancelled",
+              "refunded",
+            ]),
+            zod.null(),
+          ])
+          .optional(),
+        toStatus: zod.enum([
+          "pending_payment",
+          "paid",
+          "pending",
+          "confirmed",
+          "preparing",
+          "ready",
+          "out_for_delivery",
+          "delivered",
+          "completed",
+          "cancelled",
+          "refunded",
+        ]),
+        changedByUserId: zod.string().nullish(),
+        changedByNameAr: zod.string().nullish(),
+        noteAr: zod.string().nullish(),
+        changedAt: zod.coerce.date(),
+      }),
+    )
+    .optional(),
   createdAt: zod.coerce.date(),
 });
 export const ListSalesOrdersResponse = zod.array(ListSalesOrdersResponseItem);
@@ -775,7 +826,7 @@ export const GetSalesOrderResponse = zod.object({
   customerPhone: zod.string().optional(),
   customerEmail: zod.string().optional(),
   deliveryAddress: zod.string().optional(),
-  deliveryNotes: zod.string().optional(),
+  notesAr: zod.string().optional(),
   paymentMethod: zod
     .enum(["cash", "card", "cod", "bank_transfer", "stripe", "paypal"])
     .optional(),
@@ -795,6 +846,48 @@ export const GetSalesOrderResponse = zod.object({
       lineTotalMinor: zod.number(),
     }),
   ),
+  statusHistory: zod
+    .array(
+      zod.object({
+        id: zod.string(),
+        fromStatus: zod
+          .union([
+            zod.enum([
+              "pending_payment",
+              "paid",
+              "pending",
+              "confirmed",
+              "preparing",
+              "ready",
+              "out_for_delivery",
+              "delivered",
+              "completed",
+              "cancelled",
+              "refunded",
+            ]),
+            zod.null(),
+          ])
+          .optional(),
+        toStatus: zod.enum([
+          "pending_payment",
+          "paid",
+          "pending",
+          "confirmed",
+          "preparing",
+          "ready",
+          "out_for_delivery",
+          "delivered",
+          "completed",
+          "cancelled",
+          "refunded",
+        ]),
+        changedByUserId: zod.string().nullish(),
+        changedByNameAr: zod.string().nullish(),
+        noteAr: zod.string().nullish(),
+        changedAt: zod.coerce.date(),
+      }),
+    )
+    .optional(),
   createdAt: zod.coerce.date(),
 });
 
@@ -841,7 +934,7 @@ export const UpdateSalesOrderStatusResponse = zod.object({
   customerPhone: zod.string().optional(),
   customerEmail: zod.string().optional(),
   deliveryAddress: zod.string().optional(),
-  deliveryNotes: zod.string().optional(),
+  notesAr: zod.string().optional(),
   paymentMethod: zod
     .enum(["cash", "card", "cod", "bank_transfer", "stripe", "paypal"])
     .optional(),
@@ -861,6 +954,48 @@ export const UpdateSalesOrderStatusResponse = zod.object({
       lineTotalMinor: zod.number(),
     }),
   ),
+  statusHistory: zod
+    .array(
+      zod.object({
+        id: zod.string(),
+        fromStatus: zod
+          .union([
+            zod.enum([
+              "pending_payment",
+              "paid",
+              "pending",
+              "confirmed",
+              "preparing",
+              "ready",
+              "out_for_delivery",
+              "delivered",
+              "completed",
+              "cancelled",
+              "refunded",
+            ]),
+            zod.null(),
+          ])
+          .optional(),
+        toStatus: zod.enum([
+          "pending_payment",
+          "paid",
+          "pending",
+          "confirmed",
+          "preparing",
+          "ready",
+          "out_for_delivery",
+          "delivered",
+          "completed",
+          "cancelled",
+          "refunded",
+        ]),
+        changedByUserId: zod.string().nullish(),
+        changedByNameAr: zod.string().nullish(),
+        noteAr: zod.string().nullish(),
+        changedAt: zod.coerce.date(),
+      }),
+    )
+    .optional(),
   createdAt: zod.coerce.date(),
 });
 
@@ -1016,7 +1151,7 @@ export const CheckoutBody = zod.object({
   customerPhone: zod.string(),
   customerEmail: zod.string().optional(),
   deliveryAddress: zod.string(),
-  deliveryNotes: zod.string().optional(),
+  notesAr: zod.string().optional(),
   paymentMethod: zod
     .enum(["cod", "card", "cash", "bank_transfer", "stripe", "paypal"])
     .optional(),
@@ -1044,7 +1179,7 @@ export const ListMyOrdersResponseItem = zod.object({
   customerPhone: zod.string().optional(),
   customerEmail: zod.string().optional(),
   deliveryAddress: zod.string().optional(),
-  deliveryNotes: zod.string().optional(),
+  notesAr: zod.string().optional(),
   paymentMethod: zod
     .enum(["cash", "card", "cod", "bank_transfer", "stripe", "paypal"])
     .optional(),
@@ -1064,6 +1199,48 @@ export const ListMyOrdersResponseItem = zod.object({
       lineTotalMinor: zod.number(),
     }),
   ),
+  statusHistory: zod
+    .array(
+      zod.object({
+        id: zod.string(),
+        fromStatus: zod
+          .union([
+            zod.enum([
+              "pending_payment",
+              "paid",
+              "pending",
+              "confirmed",
+              "preparing",
+              "ready",
+              "out_for_delivery",
+              "delivered",
+              "completed",
+              "cancelled",
+              "refunded",
+            ]),
+            zod.null(),
+          ])
+          .optional(),
+        toStatus: zod.enum([
+          "pending_payment",
+          "paid",
+          "pending",
+          "confirmed",
+          "preparing",
+          "ready",
+          "out_for_delivery",
+          "delivered",
+          "completed",
+          "cancelled",
+          "refunded",
+        ]),
+        changedByUserId: zod.string().nullish(),
+        changedByNameAr: zod.string().nullish(),
+        noteAr: zod.string().nullish(),
+        changedAt: zod.coerce.date(),
+      }),
+    )
+    .optional(),
   createdAt: zod.coerce.date(),
 });
 export const ListMyOrdersResponse = zod.array(ListMyOrdersResponseItem);

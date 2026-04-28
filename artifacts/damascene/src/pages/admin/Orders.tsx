@@ -228,6 +228,40 @@ export default function AdminOrdersPage() {
               <div className="flex justify-between pt-3 border-t font-medium">
                 <span>الإجمالي:</span><span>{formatSyp(detail.totalMinor)}</span>
               </div>
+              {detail.statusHistory && detail.statusHistory.length > 0 && (
+                <div className="pt-3 border-t" data-testid="order-status-timeline">
+                  <h3 className="font-medium mb-2">سجل الحالة</h3>
+                  <ol className="space-y-2 border-r-2 border-border pr-4 me-2">
+                    {detail.statusHistory.map((ev) => (
+                      <li
+                        key={ev.id}
+                        data-testid={`timeline-event-${ev.toStatus}`}
+                        className="relative"
+                      >
+                        <span className="absolute -right-[1.45rem] top-1 w-3 h-3 rounded-full bg-primary" />
+                        <div className="flex items-center gap-2 flex-wrap">
+                          {ev.fromStatus ? (
+                            <>
+                              <Badge variant="outline">{ORDER_STATUS_AR[ev.fromStatus]}</Badge>
+                              <span className="text-foreground/40">←</span>
+                            </>
+                          ) : (
+                            <span className="text-foreground/60 text-xs">إنشاء</span>
+                          )}
+                          <Badge variant="secondary">{ORDER_STATUS_AR[ev.toStatus]}</Badge>
+                        </div>
+                        <div className="text-xs text-foreground/60 mt-1">
+                          {new Date(ev.changedAt).toLocaleString("ar-SY")}
+                          {ev.changedByNameAr && <span> · {ev.changedByNameAr}</span>}
+                        </div>
+                        {ev.noteAr && (
+                          <div className="text-xs text-foreground/80 mt-1">{ev.noteAr}</div>
+                        )}
+                      </li>
+                    ))}
+                  </ol>
+                </div>
+              )}
             </div>
           )}
         </DialogContent>

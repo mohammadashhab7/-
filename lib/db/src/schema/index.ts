@@ -677,6 +677,27 @@ export const idCounters = pgTable("id_counters", {
   value: integer("value").notNull().default(0),
 });
 
+export const orderStatusHistory = pgTable(
+  "order_status_history",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    orderId: uuid("order_id")
+      .notNull()
+      .references(() => salesOrders.id, { onDelete: "cascade" }),
+    fromStatus: orderStatusEnum("from_status"),
+    toStatus: orderStatusEnum("to_status").notNull(),
+    changedByUserId: uuid("changed_by_user_id").references(() => users.id),
+    changedByNameAr: text("changed_by_name_ar"),
+    noteAr: text("note_ar"),
+    changedAt: timestamp("changed_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (t) => [
+    index("order_status_history_order_idx").on(t.orderId, t.changedAt),
+  ],
+);
+
 export const activityLog = pgTable(
   "activity_log",
   {

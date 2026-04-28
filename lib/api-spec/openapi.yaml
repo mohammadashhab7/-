@@ -40,6 +40,23 @@ paths:
           content:
             application/json:
               schema: { $ref: "#/components/schemas/HealthStatus" }
+  /bootstrap-status:
+    get:
+      operationId: getBootstrapStatus
+      tags: [health]
+      summary: Whether a Super Admin (owner) account already exists
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [hasOwner, bootstrapMessageAr, bootstrapMessageEn]
+                properties:
+                  hasOwner: { type: boolean }
+                  bootstrapMessageAr: { type: string }
+                  bootstrapMessageEn: { type: string }
 
   /me:
     get:
@@ -1670,7 +1687,7 @@ components:
         customerPhone: { type: string }
         customerEmail: { type: string }
         deliveryAddress: { type: string }
-        deliveryNotes: { type: string }
+        notesAr: { type: string }
         paymentMethod: { type: string, enum: [cash, card, cod, bank_transfer, stripe, paypal] }
         subtotalMinor: { type: integer }
         discountMinor: { type: integer }
@@ -1681,7 +1698,24 @@ components:
         items:
           type: array
           items: { $ref: "#/components/schemas/SalesOrderItem" }
+        statusHistory:
+          type: array
+          items: { $ref: "#/components/schemas/SalesOrderStatusEvent" }
         createdAt: { type: string, format: date-time }
+    SalesOrderStatusEvent:
+      type: object
+      required: [id, toStatus, changedAt]
+      properties:
+        id: { type: string }
+        fromStatus:
+          oneOf:
+            - { $ref: "#/components/schemas/OrderStatus" }
+            - { type: "null" }
+        toStatus: { $ref: "#/components/schemas/OrderStatus" }
+        changedByUserId: { type: string, nullable: true }
+        changedByNameAr: { type: string, nullable: true }
+        noteAr: { type: string, nullable: true }
+        changedAt: { type: string, format: date-time }
     SalesOrderItem:
       type: object
       required: [id, productId, productNameAr, quantity, unitPriceMinor, lineTotalMinor]
@@ -1718,7 +1752,7 @@ components:
         customerPhone: { type: string }
         customerEmail: { type: string }
         deliveryAddress: { type: string }
-        deliveryNotes: { type: string }
+        notesAr: { type: string }
         paymentMethod: { type: string, enum: [cod, card, cash, bank_transfer, stripe, paypal] }
 
     Cart:

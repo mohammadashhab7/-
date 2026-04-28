@@ -4,9 +4,11 @@ import {
   db,
   salesOrders,
   salesOrderItems,
+  orderStatusHistory,
   products,
   financialEntries,
   dailyClosings,
+  users,
 } from "@workspace/db";
 import { requireStaff, requirePermission } from "../lib/auth";
 import {
@@ -151,14 +153,14 @@ function serialize(o: typeof salesOrders.$inferSelect) {
 }
 
 router.get("/sales-orders", requirePermission("orders", "read"), async (req, res) => {
-  const { channel, status, fromDate, toDate, limit } = req.query;
+  const { channel, status, dateFrom, dateTo, limit } = req.query;
   const filters = [];
   if (typeof channel === "string")
     filters.push(eq(salesOrders.channel, channel as "pos" | "online"));
   if (typeof status === "string")
     filters.push(eq(salesOrders.status, status as typeof salesOrders.$inferSelect.status));
-  if (typeof fromDate === "string") filters.push(gte(salesOrders.placedAt, new Date(fromDate)));
-  if (typeof toDate === "string") filters.push(lte(salesOrders.placedAt, new Date(toDate)));
+  if (typeof dateFrom === "string") filters.push(gte(salesOrders.placedAt, new Date(dateFrom)));
+  if (typeof dateTo === "string") filters.push(lte(salesOrders.placedAt, new Date(dateTo)));
   const lim = Math.min(typeof limit === "string" ? parseInt(limit, 10) || 50 : 50, 200);
   const rows = await db
     .select()
@@ -282,6 +284,14 @@ export async function createSalesOrderInternal(args: {
       .returning();
     const created = insertedOrder[0]!;
 
+    await tx.insert(orderStatusHistory).values({
+      orderId: created.id,
+      fromStatus: null,
+      toStatus: created.status,
+      changedByUserId: args.cashierUserId ?? null,
+      noteAr: args.notesAr ?? null,
+    });
+
     for (const r of productRows) {
       await tx.insert(salesOrderItems).values({
         orderId: created.id,
@@ -376,6 +386,21 @@ router.get("/sales-orders/:id", requirePermission("orders", "read"), async (req,
     .select()
     .from(salesOrderItems)
     .where(eq(salesOrderItems.orderId, String(req.params.id)));
+  const history = await db
+    .select({
+      id: orderStatusHistory.id,
+      fromStatus: orderStatusHistory.fromStatus,
+      toStatus: orderStatusHistory.toStatus,
+      changedByUserId: orderStatusHistory.changedByUserId,
+      changedByNameAr: orderStatusHistory.changedByNameAr,
+      changedByUserNameAr: users.nameAr,
+      noteAr: orderStatusHistory.noteAr,
+      changedAt: orderStatusHistory.changedAt,
+    })
+    .from(orderStatusHistory)
+    .leftJoin(users, eq(users.id, orderStatusHistory.changedByUserId))
+    .where(eq(orderStatusHistory.orderId, String(req.params.id)))
+    .orderBy(orderStatusHistory.changedAt);
   res.json({
     ...serialize(rows[0]),
     items: items.map((it) => ({
@@ -385,6 +410,15 @@ router.get("/sales-orders/:id", requirePermission("orders", "read"), async (req,
       quantity: it.quantity,
       unitPriceMinor: it.unitPriceMinor,
       lineTotalMinor: it.totalMinor,
+    })),
+    statusHistory: history.map((h) => ({
+      id: h.id,
+      fromStatus: h.fromStatus,
+      toStatus: h.toStatus,
+      changedByUserId: h.changedByUserId,
+      changedByNameAr: h.changedByNameAr ?? h.changedByUserNameAr ?? null,
+      noteAr: h.noteAr,
+      changedAt: h.changedAt.toISOString(),
     })),
   });
 });
@@ -466,6 +500,15 @@ router.patch("/sales-orders/:id/status", requirePermission("orders", "write"), a
         })
         .where(eq(salesOrders.id, cur.id))
         .returning();
+
+      await tx.insert(orderStatusHistory).values({
+        orderId: cur.id,
+        fromStatus: cur.status,
+        toStatus: status,
+        changedByUserId: req.appUser?.id ?? null,
+        changedByNameAr: req.appUser?.nameAr ?? req.appUser?.email ?? null,
+        noteAr: notesAr ?? null,
+      });
 
       if (status === "paid" || status === "completed" || status === "delivered") {
         await postSaleRevenue(tx, updated[0]!, req.appUser?.id ?? null);

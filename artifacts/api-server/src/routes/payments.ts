@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
 import { eq } from "drizzle-orm";
-import { db, payments, salesOrders } from "@workspace/db";
+import { db, payments, salesOrders, orderStatusHistory } from "@workspace/db";
 import { loadAppUser, requirePermission } from "../lib/auth";
 import { postSaleRevenue } from "./salesOrders";
 
@@ -156,6 +156,12 @@ router.patch(
         .where(eq(payments.id, String(req.params.id)))
         .returning();
       if (!updated[0]) return null;
+      const previous = (
+        await tx
+          .select({ status: salesOrders.status })
+          .from(salesOrders)
+          .where(eq(salesOrders.id, updated[0].orderId))
+      )[0];
       const orderRow = (
         await tx
           .update(salesOrders)
@@ -163,6 +169,16 @@ router.patch(
           .where(eq(salesOrders.id, updated[0].orderId))
           .returning()
       )[0];
+      if (orderRow && previous && previous.status !== "paid") {
+        await tx.insert(orderStatusHistory).values({
+          orderId: orderRow.id,
+          fromStatus: previous.status,
+          toStatus: "paid",
+          changedByUserId: req.appUser?.id ?? null,
+          changedByNameAr: req.appUser?.nameAr ?? null,
+          noteAr: "تم تأكيد الدفع",
+        });
+      }
       if (orderRow) {
         await postSaleRevenue(tx, orderRow, req.appUser?.id ?? null);
       }
