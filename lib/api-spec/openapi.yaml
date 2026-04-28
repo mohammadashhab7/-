@@ -3,34 +3,1890 @@ info:
   # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: الدمشقي ERP + e-commerce + POS + manufacturing API
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
-    description: Health operations
+  - name: auth
+  - name: catalog
+  - name: materials
+  - name: recipes
+  - name: inventory
+  - name: production
+  - name: transfers
+  - name: pos
+  - name: orders
+  - name: cart
+  - name: checkout
+  - name: customer
+  - name: financial
+  - name: reports
+  - name: dashboard
+  - name: employees
+  - name: cms
+  - name: media
+  - name: settings
 paths:
   /healthz:
     get:
       operationId: healthCheck
       tags: [health]
       summary: Health check
-      description: Returns server health status
       responses:
         "200":
           description: Healthy
           content:
             application/json:
+              schema: { $ref: "#/components/schemas/HealthStatus" }
+
+  /me:
+    get:
+      operationId: getMe
+      tags: [auth]
+      summary: Current user with role and permissions
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Me" }
+
+  /admin/users:
+    get:
+      operationId: listAdminUsers
+      tags: [auth]
+      summary: List staff users
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
               schema:
-                $ref: "#/components/schemas/HealthStatus"
+                type: array
+                items: { $ref: "#/components/schemas/AdminUser" }
+  /admin/users/{id}:
+    patch:
+      operationId: updateAdminUser
+      tags: [auth]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                role: { $ref: "#/components/schemas/UserRole" }
+                permissions:
+                  type: array
+                  items: { type: string }
+                isActive: { type: boolean }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AdminUser" }
+
+  /categories:
+    get:
+      operationId: listCategories
+      tags: [catalog]
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/Category" }
+    post:
+      operationId: createCategory
+      tags: [catalog]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/CategoryInput" }
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Category" }
+  /categories/{id}:
+    patch:
+      operationId: updateCategory
+      tags: [catalog]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/CategoryInput" }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Category" }
+    delete:
+      operationId: deleteCategory
+      tags: [catalog]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "204": { description: Deleted }
+
+  /products:
+    get:
+      operationId: listProducts
+      tags: [catalog]
+      parameters:
+        - name: categoryId
+          in: query
+          required: false
+          schema: { type: string }
+        - name: search
+          in: query
+          required: false
+          schema: { type: string }
+        - name: isActive
+          in: query
+          required: false
+          schema: { type: boolean }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/Product" }
+    post:
+      operationId: createProduct
+      tags: [catalog]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ProductInput" }
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Product" }
+  /products/{id}:
+    get:
+      operationId: getProduct
+      tags: [catalog]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Product" }
+    patch:
+      operationId: updateProduct
+      tags: [catalog]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ProductInput" }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Product" }
+    delete:
+      operationId: deleteProduct
+      tags: [catalog]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "204": { description: Deleted }
+
+  /public/products:
+    get:
+      operationId: listPublicProducts
+      tags: [catalog]
+      summary: Public storefront products
+      parameters:
+        - name: categoryId
+          in: query
+          required: false
+          schema: { type: string }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/PublicProduct" }
+  /public/products/{slug}:
+    get:
+      operationId: getPublicProduct
+      tags: [catalog]
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/PublicProduct" }
+  /public/categories:
+    get:
+      operationId: listPublicCategories
+      tags: [catalog]
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/Category" }
+  /public/featured:
+    get:
+      operationId: listFeaturedProducts
+      tags: [catalog]
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/PublicProduct" }
+
+  /raw-materials:
+    get:
+      operationId: listRawMaterials
+      tags: [materials]
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/RawMaterial" }
+    post:
+      operationId: createRawMaterial
+      tags: [materials]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/RawMaterialInput" }
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/RawMaterial" }
+  /raw-materials/{id}:
+    patch:
+      operationId: updateRawMaterial
+      tags: [materials]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/RawMaterialInput" }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/RawMaterial" }
+    delete:
+      operationId: deleteRawMaterial
+      tags: [materials]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "204": { description: Deleted }
+
+  /recipes:
+    get:
+      operationId: listRecipes
+      tags: [recipes]
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/Recipe" }
+    post:
+      operationId: createRecipe
+      tags: [recipes]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/RecipeInput" }
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Recipe" }
+  /recipes/{id}:
+    get:
+      operationId: getRecipe
+      tags: [recipes]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Recipe" }
+    patch:
+      operationId: updateRecipe
+      tags: [recipes]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/RecipeInput" }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Recipe" }
+    delete:
+      operationId: deleteRecipe
+      tags: [recipes]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "204": { description: Deleted }
+
+  /inventory/locations:
+    get:
+      operationId: listInventoryLocations
+      tags: [inventory]
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/InventoryLocation" }
+
+  /inventory/stock:
+    get:
+      operationId: listStock
+      tags: [inventory]
+      parameters:
+        - name: locationId
+          in: query
+          required: false
+          schema: { type: string }
+        - name: itemType
+          in: query
+          required: false
+          schema: { type: string, enum: [product, material] }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/StockLevel" }
+
+  /inventory/ledger:
+    get:
+      operationId: listInventoryLedger
+      tags: [inventory]
+      parameters:
+        - name: locationId
+          in: query
+          required: false
+          schema: { type: string }
+        - name: itemType
+          in: query
+          required: false
+          schema: { type: string, enum: [product, material] }
+        - name: itemId
+          in: query
+          required: false
+          schema: { type: string }
+        - name: limit
+          in: query
+          required: false
+          schema: { type: integer, minimum: 1, maximum: 500 }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/LedgerEntry" }
+
+  /inventory/adjustments:
+    post:
+      operationId: createInventoryAdjustment
+      tags: [inventory]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/InventoryAdjustmentInput" }
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/LedgerEntry" }
+
+  /inventory/low-stock:
+    get:
+      operationId: listLowStock
+      tags: [inventory]
+      summary: Low-stock alerts (item levels at or below reorder threshold)
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/LowStockAlert" }
+
+  /production-orders:
+    get:
+      operationId: listProductionOrders
+      tags: [production]
+      parameters:
+        - name: status
+          in: query
+          required: false
+          schema: { type: string }
+        - name: limit
+          in: query
+          required: false
+          schema: { type: integer, minimum: 1, maximum: 200 }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/ProductionOrder" }
+    post:
+      operationId: createProductionOrder
+      tags: [production]
+      summary: Run production (consume materials, produce finished goods at production location)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ProductionOrderInput" }
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ProductionOrder" }
+  /production-orders/{id}:
+    get:
+      operationId: getProductionOrder
+      tags: [production]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ProductionOrder" }
+
+  /transfers:
+    get:
+      operationId: listTransfers
+      tags: [transfers]
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/Transfer" }
+    post:
+      operationId: createTransfer
+      tags: [transfers]
+      summary: Transfer finished goods from production to store
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/TransferInput" }
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Transfer" }
+
+  /sales-orders:
+    get:
+      operationId: listSalesOrders
+      tags: [orders]
+      parameters:
+        - name: channel
+          in: query
+          required: false
+          schema: { type: string, enum: [pos, online] }
+        - name: status
+          in: query
+          required: false
+          schema: { type: string }
+        - name: dateFrom
+          in: query
+          required: false
+          schema: { type: string, format: date }
+        - name: dateTo
+          in: query
+          required: false
+          schema: { type: string, format: date }
+        - name: limit
+          in: query
+          required: false
+          schema: { type: integer, minimum: 1, maximum: 500 }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/SalesOrder" }
+    post:
+      operationId: createSalesOrder
+      tags: [orders, pos]
+      summary: Create POS sale (immediate fulfillment)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/PosOrderInput" }
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/SalesOrder" }
+  /sales-orders/{id}:
+    get:
+      operationId: getSalesOrder
+      tags: [orders]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/SalesOrder" }
+  /sales-orders/{id}/status:
+    patch:
+      operationId: updateSalesOrderStatus
+      tags: [orders]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [status]
+              properties:
+                status: { $ref: "#/components/schemas/OrderStatus" }
+                note: { type: string }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/SalesOrder" }
+
+  /pos/daily-closing/{date}:
+    get:
+      operationId: getDailyClosing
+      tags: [pos]
+      parameters:
+        - name: date
+          in: path
+          required: true
+          schema: { type: string, format: date }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DailyClosing" }
+    post:
+      operationId: closeDailyClosing
+      tags: [pos]
+      parameters:
+        - name: date
+          in: path
+          required: true
+          schema: { type: string, format: date }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                countedCash: { type: integer }
+                note: { type: string }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DailyClosing" }
+
+  /cart:
+    get:
+      operationId: getCart
+      tags: [cart]
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Cart" }
+    delete:
+      operationId: clearCart
+      tags: [cart]
+      responses:
+        "204": { description: Cleared }
+  /cart/items:
+    post:
+      operationId: addCartItem
+      tags: [cart]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [productId, quantity]
+              properties:
+                productId: { type: string }
+                quantity: { type: integer, minimum: 1 }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Cart" }
+  /cart/items/{itemId}:
+    patch:
+      operationId: updateCartItem
+      tags: [cart]
+      parameters:
+        - name: itemId
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [quantity]
+              properties:
+                quantity: { type: integer, minimum: 0 }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Cart" }
+    delete:
+      operationId: removeCartItem
+      tags: [cart]
+      parameters:
+        - name: itemId
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Cart" }
+
+  /checkout:
+    post:
+      operationId: checkout
+      tags: [checkout]
+      summary: Convert cart into an online sales order (cash on delivery)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/CheckoutInput" }
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/SalesOrder" }
+
+  /customer/orders:
+    get:
+      operationId: listMyOrders
+      tags: [customer]
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/SalesOrder" }
+
+  /financial-entries:
+    get:
+      operationId: listFinancialEntries
+      tags: [financial]
+      parameters:
+        - name: module
+          in: query
+          required: false
+          schema: { type: string, enum: [production, store] }
+        - name: type
+          in: query
+          required: false
+          schema: { type: string, enum: [income, expense] }
+        - name: dateFrom
+          in: query
+          required: false
+          schema: { type: string, format: date }
+        - name: dateTo
+          in: query
+          required: false
+          schema: { type: string, format: date }
+        - name: limit
+          in: query
+          required: false
+          schema: { type: integer, minimum: 1, maximum: 500 }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/FinancialEntry" }
+    post:
+      operationId: createFinancialEntry
+      tags: [financial]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/FinancialEntryInput" }
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/FinancialEntry" }
+
+  /reports/financial:
+    get:
+      operationId: getFinancialReport
+      tags: [reports]
+      parameters:
+        - name: dateFrom
+          in: query
+          required: false
+          schema: { type: string, format: date }
+        - name: dateTo
+          in: query
+          required: false
+          schema: { type: string, format: date }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/FinancialReport" }
+  /reports/sales-trend:
+    get:
+      operationId: getSalesTrend
+      tags: [reports]
+      parameters:
+        - name: days
+          in: query
+          required: false
+          schema: { type: integer, minimum: 1, maximum: 90 }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/SalesTrendPoint" }
+  /reports/top-products:
+    get:
+      operationId: getTopProducts
+      tags: [reports]
+      parameters:
+        - name: limit
+          in: query
+          required: false
+          schema: { type: integer, minimum: 1, maximum: 50 }
+        - name: days
+          in: query
+          required: false
+          schema: { type: integer, minimum: 1, maximum: 90 }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/TopProduct" }
+
+  /dashboard/kpis:
+    get:
+      operationId: getDashboardKpis
+      tags: [dashboard]
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DashboardKpis" }
+  /dashboard/recent-activity:
+    get:
+      operationId: getRecentActivity
+      tags: [dashboard]
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/ActivityItem" }
+
+  /employees:
+    get:
+      operationId: listEmployees
+      tags: [employees]
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/Employee" }
+    post:
+      operationId: createEmployee
+      tags: [employees]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/EmployeeInput" }
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Employee" }
+  /employees/{id}:
+    get:
+      operationId: getEmployee
+      tags: [employees]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Employee" }
+    patch:
+      operationId: updateEmployee
+      tags: [employees]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/EmployeeInput" }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Employee" }
+  /employees/{id}/attendance:
+    get:
+      operationId: listAttendance
+      tags: [employees]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+        - name: month
+          in: query
+          required: false
+          schema: { type: string, description: "YYYY-MM" }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/AttendanceRecord" }
+    post:
+      operationId: createAttendance
+      tags: [employees]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/AttendanceInput" }
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AttendanceRecord" }
+  /employees/salaries:
+    get:
+      operationId: listSalaries
+      tags: [employees]
+      parameters:
+        - name: month
+          in: query
+          required: false
+          schema: { type: string, description: "YYYY-MM" }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/SalaryRecord" }
+    post:
+      operationId: paySalary
+      tags: [employees]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [employeeId, month, amount]
+              properties:
+                employeeId: { type: string }
+                month: { type: string }
+                amount: { type: integer }
+                bonus: { type: integer }
+                deduction: { type: integer }
+                note: { type: string }
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/SalaryRecord" }
+
+  /content-blocks:
+    get:
+      operationId: listContentBlocks
+      tags: [cms]
+      parameters:
+        - name: page
+          in: query
+          required: false
+          schema: { type: string }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/ContentBlock" }
+  /content-blocks/{key}:
+    get:
+      operationId: getContentBlock
+      tags: [cms]
+      parameters:
+        - name: key
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ContentBlock" }
+    put:
+      operationId: upsertContentBlock
+      tags: [cms]
+      parameters:
+        - name: key
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ContentBlockInput" }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ContentBlock" }
+
+  /media:
+    get:
+      operationId: listMedia
+      tags: [media]
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/MediaAsset" }
+    post:
+      operationId: createMedia
+      tags: [media]
+      summary: Register an uploaded object as a media asset
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/MediaInput" }
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/MediaAsset" }
+  /media/{id}:
+    delete:
+      operationId: deleteMedia
+      tags: [media]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "204": { description: Deleted }
+  /media/upload-url:
+    post:
+      operationId: getMediaUploadUrl
+      tags: [media]
+      summary: Returns a presigned URL the client can PUT to
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [uploadURL]
+                properties:
+                  uploadURL: { type: string }
+
+  /settings:
+    get:
+      operationId: getSettings
+      tags: [settings]
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Settings" }
+    put:
+      operationId: updateSettings
+      tags: [settings]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/SettingsInput" }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Settings" }
+
 components:
   schemas:
     HealthStatus:
       type: object
+      required: [status]
       properties:
-        status:
-          type: string
-      required:
-        - status
+        status: { type: string }
 
+    UserRole:
+      type: string
+      enum: [admin, manager, production, store, cashier, customer]
+
+    Me:
+      type: object
+      required: [isAuthenticated]
+      properties:
+        isAuthenticated: { type: boolean }
+        id: { type: string }
+        email: { type: string }
+        name: { type: string }
+        imageUrl: { type: string }
+        role: { $ref: "#/components/schemas/UserRole" }
+        permissions:
+          type: array
+          items: { type: string }
+
+    AdminUser:
+      type: object
+      required: [id, email, role, isActive, createdAt]
+      properties:
+        id: { type: string }
+        email: { type: string }
+        name: { type: string }
+        imageUrl: { type: string }
+        role: { $ref: "#/components/schemas/UserRole" }
+        permissions:
+          type: array
+          items: { type: string }
+        isActive: { type: boolean }
+        createdAt: { type: string, format: date-time }
+
+    Category:
+      type: object
+      required: [id, slug, nameAr, sortOrder, createdAt]
+      properties:
+        id: { type: string }
+        slug: { type: string }
+        nameAr: { type: string }
+        nameEn: { type: string }
+        descriptionAr: { type: string }
+        imageUrl: { type: string }
+        sortOrder: { type: integer }
+        createdAt: { type: string, format: date-time }
+    CategoryInput:
+      type: object
+      required: [slug, nameAr]
+      properties:
+        slug: { type: string }
+        nameAr: { type: string }
+        nameEn: { type: string }
+        descriptionAr: { type: string }
+        imageUrl: { type: string }
+        sortOrder: { type: integer }
+
+    Product:
+      type: object
+      required: [id, slug, nameAr, priceMinor, currency, unit, isActive, isFeatured, createdAt]
+      properties:
+        id: { type: string }
+        slug: { type: string }
+        sku: { type: string }
+        nameAr: { type: string }
+        nameEn: { type: string }
+        descriptionAr: { type: string }
+        descriptionEn: { type: string }
+        categoryId: { type: string }
+        categoryNameAr: { type: string }
+        priceMinor: { type: integer, description: Price in minor units (SYP) }
+        currency: { type: string }
+        unit: { type: string, description: "kg, piece, box" }
+        weightGrams: { type: integer }
+        imageUrl: { type: string }
+        galleryUrls:
+          type: array
+          items: { type: string }
+        isActive: { type: boolean }
+        isFeatured: { type: boolean }
+        reorderThreshold: { type: integer }
+        createdAt: { type: string, format: date-time }
+    ProductInput:
+      type: object
+      required: [slug, nameAr, priceMinor, unit]
+      properties:
+        slug: { type: string }
+        sku: { type: string }
+        nameAr: { type: string }
+        nameEn: { type: string }
+        descriptionAr: { type: string }
+        descriptionEn: { type: string }
+        categoryId: { type: string }
+        priceMinor: { type: integer }
+        currency: { type: string }
+        unit: { type: string }
+        weightGrams: { type: integer }
+        imageUrl: { type: string }
+        galleryUrls:
+          type: array
+          items: { type: string }
+        isActive: { type: boolean }
+        isFeatured: { type: boolean }
+        reorderThreshold: { type: integer }
+
+    PublicProduct:
+      type: object
+      required: [id, slug, nameAr, priceMinor, currency, unit]
+      properties:
+        id: { type: string }
+        slug: { type: string }
+        nameAr: { type: string }
+        nameEn: { type: string }
+        descriptionAr: { type: string }
+        priceMinor: { type: integer }
+        currency: { type: string }
+        unit: { type: string }
+        imageUrl: { type: string }
+        galleryUrls:
+          type: array
+          items: { type: string }
+        categoryId: { type: string }
+        categoryNameAr: { type: string }
+        inStock: { type: boolean }
+
+    RawMaterial:
+      type: object
+      required: [id, sku, nameAr, unit, costPerUnitMinor, currency, createdAt]
+      properties:
+        id: { type: string }
+        sku: { type: string }
+        nameAr: { type: string }
+        unit: { type: string, description: "kg, g, l, ml, piece" }
+        costPerUnitMinor: { type: integer }
+        currency: { type: string }
+        reorderThreshold: { type: integer }
+        createdAt: { type: string, format: date-time }
+    RawMaterialInput:
+      type: object
+      required: [sku, nameAr, unit, costPerUnitMinor]
+      properties:
+        sku: { type: string }
+        nameAr: { type: string }
+        unit: { type: string }
+        costPerUnitMinor: { type: integer }
+        currency: { type: string }
+        reorderThreshold: { type: integer }
+
+    Recipe:
+      type: object
+      required: [id, productId, productNameAr, yieldQuantity, createdAt, items]
+      properties:
+        id: { type: string }
+        productId: { type: string }
+        productNameAr: { type: string }
+        yieldQuantity: { type: integer, description: "Units produced per batch" }
+        notesAr: { type: string }
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/RecipeItem" }
+        unitCostMinor: { type: integer, description: "Computed cost per produced unit" }
+        createdAt: { type: string, format: date-time }
+    RecipeItem:
+      type: object
+      required: [materialId, materialNameAr, quantity, unit]
+      properties:
+        materialId: { type: string }
+        materialNameAr: { type: string }
+        quantity: { type: integer, description: "Quantity in material's base unit, integer scaled (use grams or ml)" }
+        unit: { type: string }
+    RecipeInput:
+      type: object
+      required: [productId, yieldQuantity, items]
+      properties:
+        productId: { type: string }
+        yieldQuantity: { type: integer }
+        notesAr: { type: string }
+        items:
+          type: array
+          items:
+            type: object
+            required: [materialId, quantity]
+            properties:
+              materialId: { type: string }
+              quantity: { type: integer }
+
+    InventoryLocation:
+      type: object
+      required: [id, code, nameAr, kind]
+      properties:
+        id: { type: string }
+        code: { type: string }
+        nameAr: { type: string }
+        kind: { type: string, enum: [production, store] }
+
+    StockLevel:
+      type: object
+      required: [locationId, locationNameAr, itemType, itemId, itemNameAr, quantity, unit]
+      properties:
+        locationId: { type: string }
+        locationNameAr: { type: string }
+        itemType: { type: string, enum: [product, material] }
+        itemId: { type: string }
+        itemNameAr: { type: string }
+        quantity: { type: integer }
+        unit: { type: string }
+        valueMinor: { type: integer, description: "Stock value at last cost" }
+
+    LedgerEntry:
+      type: object
+      required: [id, locationId, itemType, itemId, quantityChange, reason, createdAt]
+      properties:
+        id: { type: string }
+        locationId: { type: string }
+        locationNameAr: { type: string }
+        itemType: { type: string, enum: [product, material] }
+        itemId: { type: string }
+        itemNameAr: { type: string }
+        quantityChange: { type: integer }
+        reason:
+          type: string
+          enum: [production_consume, production_output, transfer_out, transfer_in, sale, return, adjustment, initial]
+        refType: { type: string }
+        refId: { type: string }
+        unitCostMinor: { type: integer }
+        note: { type: string }
+        createdAt: { type: string, format: date-time }
+
+    InventoryAdjustmentInput:
+      type: object
+      required: [locationId, itemType, itemId, quantityChange]
+      properties:
+        locationId: { type: string }
+        itemType: { type: string, enum: [product, material] }
+        itemId: { type: string }
+        quantityChange: { type: integer }
+        note: { type: string }
+
+    LowStockAlert:
+      type: object
+      required: [itemType, itemId, itemNameAr, totalQuantity, reorderThreshold, unit]
+      properties:
+        itemType: { type: string, enum: [product, material] }
+        itemId: { type: string }
+        itemNameAr: { type: string }
+        totalQuantity: { type: integer }
+        reorderThreshold: { type: integer }
+        unit: { type: string }
+
+    ProductionOrder:
+      type: object
+      required: [id, recipeId, productNameAr, batchCount, unitsProduced, totalCostMinor, status, createdAt]
+      properties:
+        id: { type: string }
+        recipeId: { type: string }
+        productId: { type: string }
+        productNameAr: { type: string }
+        batchCount: { type: integer }
+        unitsProduced: { type: integer }
+        unitCostMinor: { type: integer }
+        totalCostMinor: { type: integer }
+        status: { type: string, enum: [completed, failed] }
+        notesAr: { type: string }
+        createdById: { type: string }
+        createdAt: { type: string, format: date-time }
+    ProductionOrderInput:
+      type: object
+      required: [recipeId, batchCount]
+      properties:
+        recipeId: { type: string }
+        batchCount: { type: integer, minimum: 1 }
+        notesAr: { type: string }
+
+    Transfer:
+      type: object
+      required: [id, fromLocationId, toLocationId, items, createdAt]
+      properties:
+        id: { type: string }
+        fromLocationId: { type: string }
+        toLocationId: { type: string }
+        notesAr: { type: string }
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/TransferItem" }
+        createdAt: { type: string, format: date-time }
+    TransferItem:
+      type: object
+      required: [productId, productNameAr, quantity]
+      properties:
+        productId: { type: string }
+        productNameAr: { type: string }
+        quantity: { type: integer }
+        unitCostMinor: { type: integer }
+    TransferInput:
+      type: object
+      required: [fromLocationId, toLocationId, items]
+      properties:
+        fromLocationId: { type: string }
+        toLocationId: { type: string }
+        notesAr: { type: string }
+        items:
+          type: array
+          items:
+            type: object
+            required: [productId, quantity]
+            properties:
+              productId: { type: string }
+              quantity: { type: integer }
+
+    OrderStatus:
+      type: string
+      enum: [pending, confirmed, preparing, ready, out_for_delivery, completed, cancelled]
+
+    SalesOrder:
+      type: object
+      required: [id, orderNumber, channel, status, subtotalMinor, totalMinor, currency, items, createdAt]
+      properties:
+        id: { type: string }
+        orderNumber: { type: string }
+        channel: { type: string, enum: [pos, online] }
+        status: { $ref: "#/components/schemas/OrderStatus" }
+        customerId: { type: string }
+        customerName: { type: string }
+        customerPhone: { type: string }
+        customerEmail: { type: string }
+        deliveryAddress: { type: string }
+        deliveryNotes: { type: string }
+        paymentMethod: { type: string, enum: [cash, card, cod, online] }
+        subtotalMinor: { type: integer }
+        discountMinor: { type: integer }
+        deliveryFeeMinor: { type: integer }
+        totalMinor: { type: integer }
+        currency: { type: string }
+        cashierId: { type: string }
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/SalesOrderItem" }
+        createdAt: { type: string, format: date-time }
+    SalesOrderItem:
+      type: object
+      required: [id, productId, productNameAr, quantity, unitPriceMinor, lineTotalMinor]
+      properties:
+        id: { type: string }
+        productId: { type: string }
+        productNameAr: { type: string }
+        quantity: { type: integer }
+        unitPriceMinor: { type: integer }
+        lineTotalMinor: { type: integer }
+
+    PosOrderInput:
+      type: object
+      required: [items, paymentMethod]
+      properties:
+        customerName: { type: string }
+        customerPhone: { type: string }
+        paymentMethod: { type: string, enum: [cash, card] }
+        discountMinor: { type: integer }
+        items:
+          type: array
+          items:
+            type: object
+            required: [productId, quantity]
+            properties:
+              productId: { type: string }
+              quantity: { type: integer, minimum: 1 }
+
+    CheckoutInput:
+      type: object
+      required: [customerName, customerPhone, deliveryAddress]
+      properties:
+        customerName: { type: string }
+        customerPhone: { type: string }
+        customerEmail: { type: string }
+        deliveryAddress: { type: string }
+        deliveryNotes: { type: string }
+        paymentMethod: { type: string, enum: [cod, card] }
+
+    Cart:
+      type: object
+      required: [items, subtotalMinor, currency]
+      properties:
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/CartItem" }
+        subtotalMinor: { type: integer }
+        currency: { type: string }
+    CartItem:
+      type: object
+      required: [id, productId, productNameAr, quantity, unitPriceMinor, lineTotalMinor]
+      properties:
+        id: { type: string }
+        productId: { type: string }
+        productSlug: { type: string }
+        productNameAr: { type: string }
+        productImageUrl: { type: string }
+        quantity: { type: integer }
+        unitPriceMinor: { type: integer }
+        lineTotalMinor: { type: integer }
+        unit: { type: string }
+
+    DailyClosing:
+      type: object
+      required: [date, openCount, completedCount, salesTotalMinor, cashTotalMinor, cardTotalMinor, isClosed]
+      properties:
+        date: { type: string, format: date }
+        openCount: { type: integer }
+        completedCount: { type: integer }
+        salesTotalMinor: { type: integer }
+        cashTotalMinor: { type: integer }
+        cardTotalMinor: { type: integer }
+        countedCashMinor: { type: integer }
+        varianceMinor: { type: integer }
+        isClosed: { type: boolean }
+        closedAt: { type: string, format: date-time }
+        note: { type: string }
+
+    FinancialEntry:
+      type: object
+      required: [id, module, type, category, amountMinor, currency, occurredOn, createdAt]
+      properties:
+        id: { type: string }
+        module: { type: string, enum: [production, store] }
+        type: { type: string, enum: [income, expense] }
+        category: { type: string }
+        descriptionAr: { type: string }
+        amountMinor: { type: integer }
+        currency: { type: string }
+        refType: { type: string }
+        refId: { type: string }
+        occurredOn: { type: string, format: date }
+        createdById: { type: string }
+        createdAt: { type: string, format: date-time }
+    FinancialEntryInput:
+      type: object
+      required: [module, type, category, amountMinor, occurredOn]
+      properties:
+        module: { type: string, enum: [production, store] }
+        type: { type: string, enum: [income, expense] }
+        category: { type: string }
+        descriptionAr: { type: string }
+        amountMinor: { type: integer }
+        occurredOn: { type: string, format: date }
+
+    FinancialReport:
+      type: object
+      required: [production, store, combined]
+      properties:
+        production: { $ref: "#/components/schemas/FinancialBookSummary" }
+        store: { $ref: "#/components/schemas/FinancialBookSummary" }
+        combined: { $ref: "#/components/schemas/FinancialBookSummary" }
+    FinancialBookSummary:
+      type: object
+      required: [incomeMinor, expenseMinor, netMinor, currency, byCategory]
+      properties:
+        incomeMinor: { type: integer }
+        expenseMinor: { type: integer }
+        netMinor: { type: integer }
+        currency: { type: string }
+        byCategory:
+          type: array
+          items:
+            type: object
+            required: [category, type, amountMinor]
+            properties:
+              category: { type: string }
+              type: { type: string, enum: [income, expense] }
+              amountMinor: { type: integer }
+
+    SalesTrendPoint:
+      type: object
+      required: [date, salesMinor, orders]
+      properties:
+        date: { type: string, format: date }
+        salesMinor: { type: integer }
+        orders: { type: integer }
+
+    TopProduct:
+      type: object
+      required: [productId, productNameAr, unitsSold, revenueMinor]
+      properties:
+        productId: { type: string }
+        productNameAr: { type: string }
+        unitsSold: { type: integer }
+        revenueMinor: { type: integer }
+
+    DashboardKpis:
+      type: object
+      required: [todaySalesMinor, todayOrders, monthSalesMinor, monthOrders, pendingOnlineOrders, lowStockCount, openProductionToday, currency]
+      properties:
+        currency: { type: string }
+        todaySalesMinor: { type: integer }
+        todayOrders: { type: integer }
+        monthSalesMinor: { type: integer }
+        monthOrders: { type: integer }
+        pendingOnlineOrders: { type: integer }
+        lowStockCount: { type: integer }
+        openProductionToday: { type: integer }
+        cashOnHandMinor: { type: integer }
+
+    ActivityItem:
+      type: object
+      required: [id, kind, titleAr, occurredAt]
+      properties:
+        id: { type: string }
+        kind: { type: string, enum: [order, production, transfer, adjustment, financial] }
+        titleAr: { type: string }
+        subtitleAr: { type: string }
+        amountMinor: { type: integer }
+        occurredAt: { type: string, format: date-time }
+
+    Employee:
+      type: object
+      required: [id, fullNameAr, role, baseSalaryMinor, currency, hiredOn, isActive, createdAt]
+      properties:
+        id: { type: string }
+        fullNameAr: { type: string }
+        role: { type: string }
+        phone: { type: string }
+        nationalId: { type: string }
+        baseSalaryMinor: { type: integer }
+        currency: { type: string }
+        hiredOn: { type: string, format: date }
+        notesAr: { type: string }
+        isActive: { type: boolean }
+        createdAt: { type: string, format: date-time }
+    EmployeeInput:
+      type: object
+      required: [fullNameAr, role, baseSalaryMinor, hiredOn]
+      properties:
+        fullNameAr: { type: string }
+        role: { type: string }
+        phone: { type: string }
+        nationalId: { type: string }
+        baseSalaryMinor: { type: integer }
+        hiredOn: { type: string, format: date }
+        notesAr: { type: string }
+        isActive: { type: boolean }
+
+    AttendanceRecord:
+      type: object
+      required: [id, employeeId, date, status, createdAt]
+      properties:
+        id: { type: string }
+        employeeId: { type: string }
+        date: { type: string, format: date }
+        status: { type: string, enum: [present, absent, late, leave] }
+        hoursWorked: { type: integer }
+        note: { type: string }
+        createdAt: { type: string, format: date-time }
+    AttendanceInput:
+      type: object
+      required: [date, status]
+      properties:
+        date: { type: string, format: date }
+        status: { type: string, enum: [present, absent, late, leave] }
+        hoursWorked: { type: integer }
+        note: { type: string }
+
+    SalaryRecord:
+      type: object
+      required: [id, employeeId, employeeNameAr, month, baseAmountMinor, totalAmountMinor, currency, isPaid, createdAt]
+      properties:
+        id: { type: string }
+        employeeId: { type: string }
+        employeeNameAr: { type: string }
+        month: { type: string }
+        baseAmountMinor: { type: integer }
+        bonusMinor: { type: integer }
+        deductionMinor: { type: integer }
+        totalAmountMinor: { type: integer }
+        currency: { type: string }
+        isPaid: { type: boolean }
+        paidAt: { type: string, format: date-time }
+        note: { type: string }
+        createdAt: { type: string, format: date-time }
+
+    ContentBlock:
+      type: object
+      required: [id, key, page, contentAr, updatedAt]
+      properties:
+        id: { type: string }
+        key: { type: string }
+        page: { type: string }
+        titleAr: { type: string }
+        contentAr: { type: string }
+        imageUrl: { type: string }
+        ctaLabel: { type: string }
+        ctaHref: { type: string }
+        updatedAt: { type: string, format: date-time }
+    ContentBlockInput:
+      type: object
+      required: [page, contentAr]
+      properties:
+        page: { type: string }
+        titleAr: { type: string }
+        contentAr: { type: string }
+        imageUrl: { type: string }
+        ctaLabel: { type: string }
+        ctaHref: { type: string }
+
+    MediaAsset:
+      type: object
+      required: [id, name, url, kind, createdAt]
+      properties:
+        id: { type: string }
+        name: { type: string }
+        url: { type: string }
+        objectPath: { type: string }
+        kind: { type: string, enum: [image, document] }
+        sizeBytes: { type: integer }
+        createdAt: { type: string, format: date-time }
+    MediaInput:
+      type: object
+      required: [name, uploadURL]
+      properties:
+        name: { type: string }
+        uploadURL: { type: string }
+        kind: { type: string, enum: [image, document] }
+
+    Settings:
+      type: object
+      required: [storeNameAr, currency, currencySymbol, taxPercent]
+      properties:
+        storeNameAr: { type: string }
+        storeNameEn: { type: string }
+        taglineAr: { type: string }
+        addressAr: { type: string }
+        phone: { type: string }
+        email: { type: string }
+        currency: { type: string }
+        currencySymbol: { type: string }
+        taxPercent: { type: integer }
+        deliveryFeeMinor: { type: integer }
+        freeDeliveryThresholdMinor: { type: integer }
+        instagramUrl: { type: string }
+        facebookUrl: { type: string }
+        whatsappNumber: { type: string }
+    SettingsInput:
+      type: object
+      properties:
+        storeNameAr: { type: string }
+        storeNameEn: { type: string }
+        taglineAr: { type: string }
+        addressAr: { type: string }
+        phone: { type: string }
+        email: { type: string }
+        currency: { type: string }
+        currencySymbol: { type: string }
+        taxPercent: { type: integer }
+        deliveryFeeMinor: { type: integer }
+        freeDeliveryThresholdMinor: { type: integer }
+        instagramUrl: { type: string }
+        facebookUrl: { type: string }
+        whatsappNumber: { type: string }

@@ -1,0 +1,50 @@
+uploads = []
+outputs = []
+
+[[generated]]
+id = "L-z0VQ-Kvprs_eW2sgLee"
+uri = "file://artifacts/damascene/src/assets/hero.png"
+type = "image"
+title = "cinematic hero image of damascene sweets"
+
+[[generated]]
+id = "uPp1cX8FOork-lhLNC1dU"
+uri = "file://artifacts/damascene/src/assets/atelier.png"
+type = "image"
+title = "brand atelier shot of sweet making"
+
+[[generated]]
+id = "73D7qkl-l-AEFDmEAeu5k"
+uri = "file://artifacts/damascene/src/assets/cat-baklava.png"
+type = "image"
+title = "baklava category image"
+
+[[generated]]
+id = "6xMCsiBldphoNbbNc_RY-"
+uri = "file://artifacts/damascene/src/assets/cat-maamoul.png"
+type = "image"
+title = "ma'amoul category image"
+
+[[generated]]
+id = "OdlrMQ0M8zjWEe2Ff5Mjb"
+uri = "file://artifacts/damascene/src/assets/cat-kunafa.png"
+type = "image"
+title = "kunafa category image"
+
+[[generated]]
+id = "ynzmlo5UAHaC39seYsVQy"
+uri = "file://artifacts/damascene/src/assets/cat-barazek.png"
+type = "image"
+title = "barazek category image"
+
+[[generated]]
+id = "M58zaWYCXdMmelzWk6aHB"
+uri = "file://artifacts/damascene/src/assets/prod-halawat-jibn.png"
+type = "image"
+title = "halawat el jibn product image"
+
+[[generated]]
+id = "KBF5r_0nAVChzDEc8_hWb"
+uri = "file://artifacts/damascene/src/assets/prod-mabroumeh.png"
+type = "image"
+title = "premium mabroumeh product image"
