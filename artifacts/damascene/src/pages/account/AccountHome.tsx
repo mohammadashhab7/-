@@ -20,7 +20,7 @@ export default function AccountHomePage() {
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle>أحدث الطلبات</CardTitle>
-          <Link href="/account/orders"><Button variant="ghost" size="sm">عرض الكل</Button></Link>
+          <Link href="/orders"><Button variant="ghost" size="sm">عرض الكل</Button></Link>
         </CardHeader>
         <CardContent>
           {recent.length === 0 ? (

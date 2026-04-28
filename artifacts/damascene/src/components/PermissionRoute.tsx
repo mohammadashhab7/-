@@ -54,7 +54,7 @@ export function PermissionRoute({
   }
   const ok = hasModulePerm(me?.permissions as string[] | undefined, me?.role, module, action);
   if (!ok) {
-    return <Redirect to="/unauthorized" />;
+    return <Redirect to="~/unauthorized" />;
   }
   return <>{children}</>;
 }

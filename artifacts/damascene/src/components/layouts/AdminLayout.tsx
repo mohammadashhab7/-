@@ -44,23 +44,23 @@ interface AdminLayoutProps {
 type NavItem = { title: string; href: string; icon: typeof LayoutDashboard; module: ModuleName | null };
 
 const SIDEBAR_NAV: NavItem[] = [
-  { title: "الرئيسية", href: "/admin", icon: LayoutDashboard, module: null },
-  { title: "نقطة البيع (POS)", href: "/admin/pos", icon: MonitorSmartphone, module: "pos" },
-  { title: "الطلبات", href: "/admin/orders", icon: ShoppingCart, module: "orders" },
-  { title: "المنتجات", href: "/admin/products", icon: Package, module: "products" },
-  { title: "التصنيفات", href: "/admin/categories", icon: Tags, module: "categories" },
-  { title: "المواد الأولية", href: "/admin/raw-materials", icon: FlaskConical, module: "raw_materials" },
-  { title: "الوصفات", href: "/admin/recipes", icon: ChefHat, module: "recipes" },
-  { title: "المخزون", href: "/admin/inventory", icon: Warehouse, module: "inventory" },
-  { title: "التصنيع", href: "/admin/production", icon: Factory, module: "production" },
-  { title: "التحويلات", href: "/admin/transfers", icon: ArrowRightLeft, module: "transfers" },
-  { title: "المالية", href: "/admin/financials", icon: Wallet, module: "financial" },
-  { title: "التقارير", href: "/admin/reports", icon: BarChart3, module: "reports" },
-  { title: "الموظفين", href: "/admin/employees", icon: Users, module: "employees" },
-  { title: "المستخدمين", href: "/admin/users", icon: ShieldCheck, module: "users" },
-  { title: "المحتوى (CMS)", href: "/admin/cms", icon: FileText, module: "cms" },
-  { title: "الوسائط", href: "/admin/media", icon: ImageIcon, module: "media" },
-  { title: "الإعدادات", href: "/admin/settings", icon: Settings, module: "settings" },
+  { title: "الرئيسية", href: "/", icon: LayoutDashboard, module: null },
+  { title: "نقطة البيع (POS)", href: "/pos", icon: MonitorSmartphone, module: "pos" },
+  { title: "الطلبات", href: "/orders", icon: ShoppingCart, module: "orders" },
+  { title: "المنتجات", href: "/products", icon: Package, module: "products" },
+  { title: "التصنيفات", href: "/categories", icon: Tags, module: "categories" },
+  { title: "المواد الأولية", href: "/raw-materials", icon: FlaskConical, module: "raw_materials" },
+  { title: "الوصفات", href: "/recipes", icon: ChefHat, module: "recipes" },
+  { title: "المخزون", href: "/inventory", icon: Warehouse, module: "inventory" },
+  { title: "التصنيع", href: "/production", icon: Factory, module: "production" },
+  { title: "التحويلات", href: "/transfers", icon: ArrowRightLeft, module: "transfers" },
+  { title: "المالية", href: "/financials", icon: Wallet, module: "financial" },
+  { title: "التقارير", href: "/reports", icon: BarChart3, module: "reports" },
+  { title: "الموظفين", href: "/employees", icon: Users, module: "employees" },
+  { title: "المستخدمين", href: "/users", icon: ShieldCheck, module: "users" },
+  { title: "المحتوى (CMS)", href: "/cms", icon: FileText, module: "cms" },
+  { title: "الوسائط", href: "/media", icon: ImageIcon, module: "media" },
+  { title: "الإعدادات", href: "/settings", icon: Settings, module: "settings" },
 ];
 
 export default function AdminLayout({ children }: AdminLayoutProps) {
@@ -69,7 +69,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
   const { signOut } = useClerk();
   const { data: me } = useGetMe();
 
-  const isPos = location.startsWith("/admin/pos");
+  const isPos = location.startsWith("/pos");
 
   const visibleNav = SIDEBAR_NAV.filter((item) => {
     if (item.module === null) return true;
@@ -84,7 +84,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
   const NavItems = () => (
     <nav className="flex flex-col gap-1 p-4">
       {visibleNav.map((item) => {
-        const isActive = location === item.href || (location.startsWith(item.href) && item.href !== "/admin");
+        const isActive = location === item.href || (item.href !== "/" && location.startsWith(item.href));
         return (
           <Link 
             key={item.href} 
@@ -94,7 +94,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                 ? "bg-primary text-primary-foreground" 
                 : "text-muted-foreground hover:bg-muted hover:text-foreground"
             }`}
-            data-testid={`admin-nav-${item.href.replace('/admin', '') || 'home'}`}
+            data-testid={`admin-nav-${item.href === "/" ? "home" : item.href.slice(1)}`}
           >
             <item.icon className="h-4 w-4" />
             {item.title}
@@ -113,7 +113,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
           </div>
           <div className="flex items-center gap-4">
              <Button variant="outline" size="sm" asChild data-testid="button-exit-pos">
-               <Link href="/admin">العودة للوحة التحكم</Link>
+               <Link href="/">العودة للوحة التحكم</Link>
              </Button>
           </div>
         </header>
@@ -129,7 +129,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
       {/* Desktop Sidebar */}
       <aside className="hidden md:flex w-64 flex-col border-l border-border bg-card shrink-0 h-screen sticky top-0">
         <div className="h-16 flex items-center px-6 border-b border-border">
-          <Link href="/admin" className="font-serif text-2xl font-bold text-primary" data-testid="link-admin-logo">
+          <Link href="/" className="font-serif text-2xl font-bold text-primary" data-testid="link-admin-logo">
             الدمشقي
           </Link>
         </div>
@@ -154,7 +154,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
               <DropdownMenuLabel>حسابي</DropdownMenuLabel>
               <DropdownMenuSeparator />
               <DropdownMenuItem asChild>
-                <Link href="/" className="cursor-pointer w-full" data-testid="link-public-site">
+                <Link href="~/" className="cursor-pointer w-full" data-testid="link-public-site">
                   الذهاب للمتجر العام
                 </Link>
               </DropdownMenuItem>

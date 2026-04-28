@@ -11,7 +11,7 @@ export default function AccountLayout({ children }: { children: ReactNode }) {
     <div className="min-h-screen bg-[hsl(40_33%_97%)]">
       <header className="border-b border-border/40 bg-background">
         <div className="container mx-auto flex h-16 items-center justify-between px-4">
-          <Link href="/" className="text-xl font-serif text-primary">
+          <Link href="~/" className="text-xl font-serif text-primary">
             الدمشقي
           </Link>
           <Button
@@ -19,7 +19,7 @@ export default function AccountLayout({ children }: { children: ReactNode }) {
             size="sm"
             onClick={() =>
               void signOut().then(() => {
-                window.location.href = "/";
+                window.location.assign(import.meta.env.BASE_URL || "/");
               })
             }
           >
@@ -31,17 +31,17 @@ export default function AccountLayout({ children }: { children: ReactNode }) {
       <div className="container mx-auto grid grid-cols-1 gap-6 px-4 py-8 md:grid-cols-[220px_1fr]">
         <nav className="space-y-1">
           <Link
-            href="/account"
+            href="/"
             className={`flex items-center gap-2 rounded-md px-3 py-2 text-sm transition-colors ${
-              location === "/account" ? "bg-primary/10 text-primary" : "hover:bg-accent"
+              location === "/" ? "bg-primary/10 text-primary" : "hover:bg-accent"
             }`}
           >
             <User className="h-4 w-4" /> حسابي
           </Link>
           <Link
-            href="/account/orders"
+            href="/orders"
             className={`flex items-center gap-2 rounded-md px-3 py-2 text-sm transition-colors ${
-              location.startsWith("/account/orders") ? "bg-primary/10 text-primary" : "hover:bg-accent"
+              location.startsWith("/orders") ? "bg-primary/10 text-primary" : "hover:bg-accent"
             }`}
           >
             <Package className="h-4 w-4" /> طلباتي

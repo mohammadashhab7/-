@@ -101,7 +101,7 @@ export default function AdminRecipesPage() {
                 <TableRow key={r.id}>
                   <TableCell className="font-medium">{r.productNameAr}</TableCell>
                   <TableCell>{r.yieldQuantity}</TableCell>
-                  <TableCell className="text-sm text-foreground/70">{r.items.length} مكوّن</TableCell>
+                  <TableCell className="text-sm text-foreground/70">{r.items?.length ?? 0} مكوّن</TableCell>
                   <TableCell>{r.unitCostMinor != null ? formatSyp(r.unitCostMinor) : "-"}</TableCell>
                   <TableCell className="text-left"><Button variant="ghost" size="icon" onClick={() => remove(r.id)}><Trash2 className="h-4 w-4 text-destructive" /></Button></TableCell>
                 </TableRow>

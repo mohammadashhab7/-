@@ -63,7 +63,7 @@ function StaffRoute({ children }: { children: React.ReactNode }) {
     return <RedirectToSignIn />;
   }
   if (me.role === "customer") {
-    return <Redirect to="/unauthorized" />;
+    return <Redirect to="~/unauthorized" />;
   }
   return <>{children}</>;
 }
@@ -108,7 +108,7 @@ function Router() {
               <Route path="/production/orders"><PermissionRoute module="production"><AdminProductionPage /></PermissionRoute></Route>
 
               {/* Store sub-section aliases */}
-              <Route path="/store"><Redirect to="/admin/inventory" /></Route>
+              <Route path="/store"><Redirect to="/inventory" /></Route>
               <Route path="/store/inventory"><PermissionRoute module="inventory"><AdminInventoryPage /></PermissionRoute></Route>
               <Route path="/store/transfers"><PermissionRoute module="transfers"><AdminTransfersPage /></PermissionRoute></Route>
 
