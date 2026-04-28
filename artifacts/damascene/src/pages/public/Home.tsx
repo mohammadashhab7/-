@@ -11,16 +11,17 @@ import { Card, CardContent } from "@/components/ui/card";
 import heroImg from "@/assets/hero.png";
 import { imgSrc } from "@/lib/imgSrc";
 
-interface Block {
-  key: string;
-  titleAr?: string | null;
-  bodyAr?: string | null;
-  imageUrl?: string | null;
-  metadata?: Record<string, unknown> | null;
+import type { ContentBlock } from "@workspace/api-client-react";
+
+type BlockMeta = Record<string, unknown>;
+
+function pickBlock(blocks: ContentBlock[] | undefined, key: string): ContentBlock | undefined {
+  return blocks?.find((b) => b.key === key);
 }
 
-function pickBlock(blocks: Block[] | undefined, key: string): Block | undefined {
-  return blocks?.find((b) => b.key === key);
+function metaString(meta: BlockMeta, k: string): string | undefined {
+  const v = meta[k];
+  return typeof v === "string" && v.length > 0 ? v : undefined;
 }
 
 export default function HomePage() {
@@ -28,21 +29,21 @@ export default function HomePage() {
   const { data: featuredProducts } = useListFeaturedProducts();
   const { data: blocks } = useListContentBlocks({ page: "home" });
 
-  const hero = useMemo(() => pickBlock(blocks as Block[] | undefined, "home_hero"), [blocks]);
-  const story = useMemo(() => pickBlock(blocks as Block[] | undefined, "home_story_excerpt"), [blocks]);
-  const quality = useMemo(() => pickBlock(blocks as Block[] | undefined, "home_quality_strip"), [blocks]);
+  const hero = useMemo(() => pickBlock(blocks, "home_hero"), [blocks]);
+  const story = useMemo(() => pickBlock(blocks, "home_story_excerpt"), [blocks]);
+  const quality = useMemo(() => pickBlock(blocks, "home_quality_strip"), [blocks]);
 
-  const heroMeta = (hero?.metadata ?? {}) as Record<string, string>;
-  const heroVideoUrl = typeof heroMeta.videoUrl === "string" ? heroMeta.videoUrl : null;
+  const heroMeta = ((hero as unknown as { metadata?: BlockMeta })?.metadata ?? {}) as BlockMeta;
+  const heroVideoUrl = metaString(heroMeta, "videoUrl") ?? null;
   const heroImage = hero?.imageUrl ? imgSrc(hero.imageUrl) : heroImg;
   const heroTitle = hero?.titleAr || "إرث دمشقي أصيل";
   const heroBody =
-    hero?.bodyAr ||
+    hero?.contentAr ||
     "نصنع الحلويات الشرقية بشغف وإتقان. ننتقي أفضل حبات الفستق الحلبي، ونعجنها بماء الزهر والسمن العربي الأصيل لنقدم لك طعماً لا ينسى.";
-  const ctaPrimaryLabel = heroMeta.ctaPrimary || "تسوق الآن";
-  const ctaPrimaryHref = heroMeta.ctaPrimaryHref || "/shop";
-  const ctaSecondaryLabel = heroMeta.ctaSecondary || "";
-  const ctaSecondaryHref = heroMeta.ctaSecondaryHref || "/story";
+  const ctaPrimaryLabel = hero?.ctaLabel || "تسوق الآن";
+  const ctaPrimaryHref = hero?.ctaHref || "/shop";
+  const ctaSecondaryLabel = metaString(heroMeta, "ctaSecondary") ?? "";
+  const ctaSecondaryHref = metaString(heroMeta, "ctaSecondaryHref") ?? "/about";
 
   return (
     <div className="w-full">
@@ -112,7 +113,7 @@ export default function HomePage() {
       </section>
 
       {/* Quality strip (CMS) */}
-      {quality && (quality.titleAr || quality.bodyAr) && (
+      {quality && (quality.titleAr || quality.contentAr) && (
         <section className="bg-primary/10 border-y border-primary/20 py-4">
           <div className="container mx-auto px-4 text-center">
             {quality.titleAr && (
@@ -121,7 +122,7 @@ export default function HomePage() {
               </span>
             )}
             <span className="text-foreground/80 text-sm" data-testid="text-quality-body">
-              {quality.bodyAr}
+              {quality.contentAr}
             </span>
           </div>
         </section>
@@ -163,7 +164,7 @@ export default function HomePage() {
       </section>
 
       {/* Story excerpt (CMS) */}
-      {story && (story.titleAr || story.bodyAr) && (
+      {story && (story.titleAr || story.contentAr) && (
         <section className="py-20 bg-card">
           <div className="container mx-auto px-4 sm:px-8 max-w-3xl text-center">
             {story.titleAr && (
@@ -175,12 +176,12 @@ export default function HomePage() {
               </h2>
             )}
             <div className="h-1 w-20 bg-primary mx-auto rounded-full mb-6" />
-            {story.bodyAr && (
+            {story.contentAr && (
               <p
                 className="text-foreground/80 leading-relaxed text-base md:text-lg whitespace-pre-line"
                 data-testid="text-story-body"
               >
-                {story.bodyAr}
+                {story.contentAr}
               </p>
             )}
             <div className="mt-8">
@@ -189,7 +190,7 @@ export default function HomePage() {
                 className="rounded-none"
                 asChild
               >
-                <Link href="/story">
+                <Link href="/about">
                   اقرأ القصة كاملة
                   <ArrowLeft className="mr-2 h-4 w-4" />
                 </Link>

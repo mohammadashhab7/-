@@ -36,7 +36,7 @@ export default function PublicLayout({ children }: PublicLayoutProps) {
       <Link href="/shop" className={`text-sm font-medium transition-colors hover:text-primary ${location.startsWith("/shop") ? "text-primary" : "text-foreground/80"}`} data-testid="link-shop">
         المتجر
       </Link>
-      <Link href="/story" className={`text-sm font-medium transition-colors hover:text-primary ${location === "/story" ? "text-primary" : "text-foreground/80"}`} data-testid="link-story">
+      <Link href="/about" className={`text-sm font-medium transition-colors hover:text-primary ${location === "/about" ? "text-primary" : "text-foreground/80"}`} data-testid="link-story">
         قصتنا
       </Link>
       <Link href="/contact" className={`text-sm font-medium transition-colors hover:text-primary ${location === "/contact" ? "text-primary" : "text-foreground/80"}`} data-testid="link-contact">
@@ -149,7 +149,7 @@ export default function PublicLayout({ children }: PublicLayoutProps) {
               <h3 className="font-semibold mb-4 text-foreground">روابط سريعة</h3>
               <ul className="space-y-3 text-sm text-muted-foreground">
                 <li><Link href="/shop" className="hover:text-primary transition-colors">المتجر</Link></li>
-                <li><Link href="/story" className="hover:text-primary transition-colors">قصتنا</Link></li>
+                <li><Link href="/about" className="hover:text-primary transition-colors">قصتنا</Link></li>
                 <li><Link href="/contact" className="hover:text-primary transition-colors">اتصل بنا</Link></li>
               </ul>
             </div>

@@ -4,6 +4,7 @@ import {
   useListMedia, useDeleteMedia, useGetMediaUploadUrl, useCreateMedia,
   getListContentBlocksQueryKey, getListMediaQueryKey,
 } from "@workspace/api-client-react";
+import type { ContentBlock } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
@@ -39,8 +40,16 @@ function ContentTab() {
     });
   };
 
-  const openEdit = (b: any) => {
-    setForm({ key: b.key, page: b.page, titleAr: b.titleAr || "", contentAr: b.contentAr || "", imageUrl: b.imageUrl || "", ctaLabel: b.ctaLabel || "", ctaHref: b.ctaHref || "" });
+  const openEdit = (b: ContentBlock) => {
+    setForm({
+      key: b.key,
+      page: b.page,
+      titleAr: b.titleAr ?? "",
+      contentAr: b.contentAr ?? "",
+      imageUrl: b.imageUrl ?? "",
+      ctaLabel: b.ctaLabel ?? "",
+      ctaHref: b.ctaHref ?? "",
+    });
     setOpen(true);
   };
   const openNew = () => {
@@ -126,14 +135,15 @@ function MediaTab() {
   const handleUpload = async (file: File) => {
     setUploading(true);
     try {
-      const { uploadURL } = await getUrl.mutateAsync(undefined as any) as any;
+      const { uploadURL } = await getUrl.mutateAsync();
       await fetch(uploadURL, { method: "PUT", body: file, headers: { "Content-Type": file.type } });
       await create.mutateAsync({ data: { name: name || file.name, uploadURL, kind: file.type.startsWith("image/") ? "image" : "document" } });
       qc.invalidateQueries({ queryKey: getListMediaQueryKey() });
       toast({ title: "تم رفع الملف" });
       setName("");
-    } catch (e: any) {
-      toast({ title: "تعذّر الرفع", description: e?.message, variant: "destructive" });
+    } catch (e: unknown) {
+      const description = e instanceof Error ? e.message : undefined;
+      toast({ title: "تعذّر الرفع", description, variant: "destructive" });
     } finally { setUploading(false); }
   };
 

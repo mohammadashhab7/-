@@ -451,7 +451,7 @@ async function seedContent() {
       titleAr: "حلويات شامية أصيلة منذ ١٩٧٢",
       bodyAr: "أكثر من نصف قرن من التراث الدمشقي. مكونات منتقاة، صناعة يومية بأيدي المعلمين، ومذاق لا يُنسى.",
       imageUrl: null,
-      metadata: { ctaPrimary: "تسوق الآن", ctaPrimaryHref: "/shop", ctaSecondary: "قصتنا", ctaSecondaryHref: "/story" },
+      metadata: { ctaLabel: "تسوق الآن", ctaHref: "/shop", ctaSecondary: "قصتنا", ctaSecondaryHref: "/about" },
     },
     {
       key: "home_story_excerpt",

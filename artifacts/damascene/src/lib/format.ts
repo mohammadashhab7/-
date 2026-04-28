@@ -41,6 +41,8 @@ export function formatDateTime(input: string | Date | undefined | null): string 
 }
 
 export const ORDER_STATUS_AR: Record<string, string> = {
+  pending_payment: "بانتظار الدفع",
+  paid: "مدفوع",
   pending: "قيد الانتظار",
   confirmed: "مؤكد",
   preparing: "قيد التحضير",

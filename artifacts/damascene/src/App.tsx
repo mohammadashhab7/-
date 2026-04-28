@@ -137,6 +137,7 @@ function Router() {
               {(params) => <OrderConfirmationPage orderNumber={params.orderNumber} />}
             </Route>
             <Route path="/story" component={StoryPage} />
+            <Route path="/about" component={StoryPage} />
             <Route path="/contact" component={ContactPage} />
             <Route path="/sign-in" component={SignInPage} />
             <Route path="/sign-in/*?" component={SignInPage} />
