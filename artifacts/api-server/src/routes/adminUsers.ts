@@ -25,11 +25,29 @@ router.get("/admin/users", requireOwnerOrAdmin(), async (_req, res) => {
   res.json(rows.map(serialize));
 });
 
+const ALLOWED_ROLES = [
+  "owner",
+  "admin",
+  "manager",
+  "production_lead",
+  "store_clerk",
+  "cashier",
+  "accountant",
+  "customer",
+] as const;
+type AllowedRole = (typeof ALLOWED_ROLES)[number];
+
 router.patch("/admin/users/:id", requireOwnerOrAdmin(), async (req, res) => {
   const id = String(req.params.id);
   const { role, permissions, isActive } = req.body ?? {};
   const updates: Partial<typeof users.$inferInsert> = { updatedAt: new Date() };
-  if (typeof role === "string") updates.role = role as typeof users.$inferSelect.role;
+  if (role !== undefined) {
+    if (typeof role !== "string" || !ALLOWED_ROLES.includes(role as AllowedRole)) {
+      res.status(400).json({ error: "INVALID_ROLE", allowed: ALLOWED_ROLES });
+      return;
+    }
+    updates.role = role as AllowedRole;
+  }
   if (Array.isArray(permissions)) updates.permissions = permissions as string[];
   if (typeof isActive === "boolean") updates.isActive = isActive;
   const updated = await db
