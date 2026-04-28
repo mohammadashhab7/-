@@ -17,6 +17,7 @@ import { PermissionRoute } from "@/components/PermissionRoute";
 import HomePage from "@/pages/public/Home";
 import ShopPage from "@/pages/public/Shop";
 import ProductDetailPage from "@/pages/public/ProductDetail";
+import CartPage from "@/pages/public/Cart";
 import CheckoutPage from "@/pages/public/Checkout";
 import OrderConfirmationPage from "@/pages/public/OrderConfirmation";
 import StoryPage from "@/pages/public/Story";
@@ -90,18 +91,37 @@ function Router() {
           <AdminLayout>
             <Switch>
               <Route path="/" component={DashboardPage} />
+              <Route path="/dashboard" component={DashboardPage} />
+
               <Route path="/products"><PermissionRoute module="products"><AdminProductsPage /></PermissionRoute></Route>
               <Route path="/categories"><PermissionRoute module="categories"><AdminCategoriesPage /></PermissionRoute></Route>
+
               <Route path="/raw-materials"><PermissionRoute module="raw_materials"><AdminRawMaterialsPage /></PermissionRoute></Route>
               <Route path="/recipes"><PermissionRoute module="recipes"><AdminRecipesPage /></PermissionRoute></Route>
               <Route path="/inventory"><PermissionRoute module="inventory"><AdminInventoryPage /></PermissionRoute></Route>
               <Route path="/production"><PermissionRoute module="production"><AdminProductionPage /></PermissionRoute></Route>
               <Route path="/transfers"><PermissionRoute module="transfers"><AdminTransfersPage /></PermissionRoute></Route>
+
+              {/* Production sub-section aliases */}
+              <Route path="/production/materials"><PermissionRoute module="raw_materials"><AdminRawMaterialsPage /></PermissionRoute></Route>
+              <Route path="/production/recipes"><PermissionRoute module="recipes"><AdminRecipesPage /></PermissionRoute></Route>
+              <Route path="/production/orders"><PermissionRoute module="production"><AdminProductionPage /></PermissionRoute></Route>
+
+              {/* Store sub-section aliases */}
+              <Route path="/store"><Redirect to="/admin/inventory" /></Route>
+              <Route path="/store/inventory"><PermissionRoute module="inventory"><AdminInventoryPage /></PermissionRoute></Route>
+              <Route path="/store/transfers"><PermissionRoute module="transfers"><AdminTransfersPage /></PermissionRoute></Route>
+
               <Route path="/pos"><PermissionRoute module="pos"><AdminPosPage /></PermissionRoute></Route>
               <Route path="/daily-closing"><PermissionRoute module="pos"><AdminClosingPage /></PermissionRoute></Route>
               <Route path="/pos/closing"><PermissionRoute module="pos"><AdminClosingPage /></PermissionRoute></Route>
+
               <Route path="/orders"><PermissionRoute module="orders"><AdminOrdersPage /></PermissionRoute></Route>
+              <Route path="/sales/orders"><PermissionRoute module="orders"><AdminOrdersPage /></PermissionRoute></Route>
+
               <Route path="/financials"><PermissionRoute module="financial"><AdminFinancialsPage /></PermissionRoute></Route>
+              <Route path="/finance"><PermissionRoute module="financial"><AdminFinancialsPage /></PermissionRoute></Route>
+
               <Route path="/reports"><PermissionRoute module="reports"><AdminReportsPage /></PermissionRoute></Route>
               <Route path="/employees"><PermissionRoute module="employees"><AdminEmployeesPage /></PermissionRoute></Route>
               <Route path="/users"><PermissionRoute module="users"><AdminUsersPage /></PermissionRoute></Route>
@@ -130,14 +150,25 @@ function Router() {
         <PublicLayout>
           <Switch>
             <Route path="/" component={HomePage} />
+
+            {/* Shop / Products (both URL conventions supported) */}
             <Route path="/shop" component={ShopPage} />
+            <Route path="/products" component={ShopPage} />
             <Route path="/product/:slug">
               {(params) => <ProductDetailPage slug={params.slug} />}
             </Route>
+            <Route path="/products/:slug">
+              {(params) => <ProductDetailPage slug={params.slug} />}
+            </Route>
+
+            <Route path="/cart" component={CartPage} />
             <Route path="/checkout" component={CheckoutPage} />
             <Route path="/order/:orderNumber">
               {(params) => <OrderConfirmationPage orderNumber={params.orderNumber} />}
             </Route>
+            {/* Generic confirmation landing → users find their order in account */}
+            <Route path="/order-confirmation"><Redirect to="/account/orders" /></Route>
+
             <Route path="/story" component={StoryPage} />
             <Route path="/about" component={StoryPage} />
             <Route path="/contact" component={ContactPage} />
