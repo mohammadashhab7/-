@@ -34,7 +34,38 @@ app.use(
 
 app.use(CLERK_PROXY_PATH, clerkProxyMiddleware());
 
-app.use(cors({ credentials: true, origin: true }));
+const allowedOrigins = (() => {
+  const list = new Set<string>();
+  if (process.env.REPLIT_DEV_DOMAIN) {
+    list.add(`https://${process.env.REPLIT_DEV_DOMAIN}`);
+  }
+  if (process.env.REPLIT_DEPLOYMENT_DOMAIN) {
+    list.add(`https://${process.env.REPLIT_DEPLOYMENT_DOMAIN}`);
+  }
+  if (process.env.PUBLIC_APP_ORIGINS) {
+    for (const o of process.env.PUBLIC_APP_ORIGINS.split(",")) {
+      const t = o.trim();
+      if (t) list.add(t);
+    }
+  }
+  if (process.env.NODE_ENV !== "production") {
+    list.add("http://localhost:5173");
+    list.add("http://localhost:3000");
+    list.add("http://localhost:80");
+  }
+  return list;
+})();
+
+app.use(
+  cors({
+    credentials: true,
+    origin(origin, cb) {
+      if (!origin) return cb(null, true);
+      if (allowedOrigins.has(origin)) return cb(null, true);
+      cb(new Error(`Origin not allowed: ${origin}`));
+    },
+  }),
+);
 app.use(cookieParser());
 app.use(express.json({ limit: "5mb" }));
 app.use(express.urlencoded({ extended: true }));

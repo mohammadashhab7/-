@@ -671,6 +671,11 @@ export const settings = pgTable("settings", {
   updatedAt,
 });
 
+export const idCounters = pgTable("id_counters", {
+  prefix: varchar("prefix", { length: 64 }).primaryKey(),
+  value: integer("value").notNull().default(0),
+});
+
 export const activityLog = pgTable(
   "activity_log",
   {

@@ -35,11 +35,18 @@ router.post("/media", requirePermission("media", "write"), async (req, res) => {
     res.status(400).json({ error: "VALIDATION" });
     return;
   }
-  const normalized =
+  let normalized: string;
+  if (
     typeof sourceUrl === "string" &&
     sourceUrl.startsWith("https://storage.googleapis.com")
-      ? objectStorage.normalizeObjectEntityPath(sourceUrl)
-      : sourceUrl;
+  ) {
+    normalized = await objectStorage.trySetObjectEntityAclPolicy(sourceUrl, {
+      owner: req.appUser?.id ?? "system",
+      visibility: "public",
+    });
+  } else {
+    normalized = sourceUrl;
+  }
   const inserted = await db
     .insert(mediaAssets)
     .values({
