@@ -12,13 +12,22 @@ const COOKIE = "dms_cart";
 
 router.post("/checkout", async (req, res) => {
   const user = await loadAppUser(req);
-  const token = req.cookies?.[COOKIE];
-  let cart = null as typeof carts.$inferSelect | null;
-  if (user) {
-    cart = (await db.select().from(carts).where(eq(carts.userId, user.id)).limit(1))[0] ?? null;
+  if (!user) {
+    res.status(401).json({ error: "UNAUTHENTICATED" });
+    return;
   }
+  const token = req.cookies?.[COOKIE];
+  let cart = (await db.select().from(carts).where(eq(carts.userId, user.id)).limit(1))[0] ?? null;
   if (!cart && token) {
-    cart = (await db.select().from(carts).where(eq(carts.sessionToken, token)).limit(1))[0] ?? null;
+    const guestCart = (await db.select().from(carts).where(eq(carts.sessionToken, token)).limit(1))[0] ?? null;
+    if (guestCart) {
+      const claimed = await db
+        .update(carts)
+        .set({ userId: user.id, updatedAt: new Date() })
+        .where(eq(carts.id, guestCart.id))
+        .returning();
+      cart = claimed[0] ?? guestCart;
+    }
   }
   if (!cart) {
     res.status(400).json({ error: "EMPTY_CART" });

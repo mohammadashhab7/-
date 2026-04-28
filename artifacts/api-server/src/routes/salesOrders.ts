@@ -41,6 +41,88 @@ const STATUS_TRANSITIONS: Record<OrderStatus, OrderStatus[]> = {
 
 const router: IRouter = Router();
 
+export type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
+
+export async function postSaleRevenue(
+  tx: Tx,
+  order: typeof salesOrders.$inferSelect,
+  byUserId: string | null,
+) {
+  const existing = await tx
+    .select({ id: financialEntries.id })
+    .from(financialEntries)
+    .where(
+      and(
+        eq(financialEntries.referenceType, "sales_order"),
+        eq(financialEntries.referenceId, order.id),
+        eq(financialEntries.type, "income"),
+      ),
+    )
+    .limit(1);
+  if (existing[0]) return;
+  await tx.insert(financialEntries).values({
+    module: "store",
+    type: "income",
+    category: order.channel === "pos" ? "مبيعات نقطة البيع" : "مبيعات الموقع",
+    descriptionAr: `طلب ${order.orderNumber}`,
+    amountMinor: order.totalMinor,
+    referenceType: "sales_order",
+    referenceId: order.id,
+    createdByUserId: byUserId,
+  });
+}
+
+async function reverseSaleRevenue(
+  tx: Tx,
+  order: typeof salesOrders.$inferSelect,
+  refType: "sales_order_cancel" | "sales_order_refund",
+  byUserId: string | null,
+) {
+  const incomeExisting = await tx
+    .select({ id: financialEntries.id })
+    .from(financialEntries)
+    .where(
+      and(
+        eq(financialEntries.referenceType, "sales_order"),
+        eq(financialEntries.referenceId, order.id),
+        eq(financialEntries.type, "income"),
+      ),
+    )
+    .limit(1);
+  if (!incomeExisting[0]) return;
+  const reversedExisting = await tx
+    .select({ id: financialEntries.id })
+    .from(financialEntries)
+    .where(
+      and(
+        eq(financialEntries.referenceType, refType),
+        eq(financialEntries.referenceId, order.id),
+      ),
+    )
+    .limit(1);
+  if (reversedExisting[0]) return;
+  const categoryAr =
+    refType === "sales_order_refund"
+      ? "استرداد طلب"
+      : order.channel === "pos"
+        ? "إلغاء بيع نقطة البيع"
+        : "إلغاء طلب أونلاين";
+  const titleAr =
+    refType === "sales_order_refund"
+      ? `استرداد طلب ${order.orderNumber}`
+      : `إلغاء طلب ${order.orderNumber}`;
+  await tx.insert(financialEntries).values({
+    module: "store",
+    type: "expense",
+    category: categoryAr,
+    descriptionAr: titleAr,
+    amountMinor: order.totalMinor,
+    referenceType: refType,
+    referenceId: order.id,
+    createdByUserId: byUserId,
+  });
+}
+
 function serialize(o: typeof salesOrders.$inferSelect) {
   const placedAtIso = o.placedAt.toISOString();
   return {
@@ -225,16 +307,9 @@ export async function createSalesOrderInternal(args: {
       );
     }
 
-    await tx.insert(financialEntries).values({
-      module: "store",
-      type: "income",
-      category: args.channel === "pos" ? "مبيعات نقطة البيع" : "مبيعات الموقع",
-      descriptionAr: `طلب ${orderNumber}`,
-      amountMinor: total,
-      referenceType: "sales_order",
-      referenceId: created.id,
-      createdByUserId: args.cashierUserId ?? null,
-    });
+    if (created.status === "completed" || created.status === "paid") {
+      await postSaleRevenue(tx, created, args.cashierUserId ?? null);
+    }
 
     return created;
   });
@@ -352,10 +427,6 @@ router.patch("/sales-orders/:id/status", requirePermission("orders", "write"), a
         throw e;
       }
 
-      // On cancellation or refund: append reversing inventory entries
-      // (re-stock STORE) and reversing financial entry. Inventory is deducted
-      // at order creation regardless of payment state, so all transitions to
-      // cancelled/refunded must reverse it.
       if (status === "cancelled" || status === "refunded") {
         const sourceLoc = await getLocationByCode("STORE");
         if (!sourceLoc) throw new Error("LOCATIONS_NOT_SEEDED");
@@ -380,23 +451,7 @@ router.patch("/sales-orders/:id/status", requirePermission("orders", "write"), a
             tx,
           );
         }
-        const categoryAr =
-          status === "refunded"
-            ? "استرداد طلب"
-            : cur.channel === "pos"
-              ? "إلغاء بيع نقطة البيع"
-              : "إلغاء طلب أونلاين";
-        const titleAr = status === "refunded" ? `استرداد طلب ${cur.orderNumber}` : `إلغاء طلب ${cur.orderNumber}`;
-        await tx.insert(financialEntries).values({
-          module: "store",
-          type: "expense",
-          category: categoryAr,
-          descriptionAr: titleAr,
-          amountMinor: cur.totalMinor,
-          referenceType: refType,
-          referenceId: cur.id,
-          createdByUserId: req.appUser?.id ?? null,
-        });
+        await reverseSaleRevenue(tx, cur, refType, req.appUser?.id ?? null);
       }
 
       const updated = await tx
@@ -409,6 +464,11 @@ router.patch("/sales-orders/:id/status", requirePermission("orders", "write"), a
         })
         .where(eq(salesOrders.id, cur.id))
         .returning();
+
+      if (status === "paid" || status === "completed") {
+        await postSaleRevenue(tx, updated[0]!, req.appUser?.id ?? null);
+      }
+
       return updated[0]!;
     });
 

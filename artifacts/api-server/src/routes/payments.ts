@@ -2,17 +2,12 @@ import { Router, type IRouter } from "express";
 import { eq } from "drizzle-orm";
 import { db, payments, salesOrders } from "@workspace/db";
 import { loadAppUser, requirePermission } from "../lib/auth";
+import { postSaleRevenue } from "./salesOrders";
 
 const router: IRouter = Router();
 
 type ProviderName = "stripe" | "paypal" | "cod" | "cash" | "bank_transfer" | "card_terminal";
 
-/**
- * Provider adapter contract.  Each adapter is a thin stub that records the
- * intended provider call.  Real activation requires the corresponding
- * integration (Stripe, PayPal) and environment secrets to be configured —
- * see replit.md "Payments" for setup instructions.
- */
 interface PaymentAdapter {
   name: ProviderName;
   isActive: () => boolean;
@@ -27,23 +22,29 @@ interface PaymentAdapter {
   }>;
 }
 
+function inertAdapter(name: ProviderName): PaymentAdapter {
+  return {
+    name,
+    isActive: () => true,
+    async createIntent({ orderId, amountMinor, currency }) {
+      return {
+        providerIntentId: null,
+        providerClientSecret: null,
+        payload: { provider: name, orderId, amountMinor, currency },
+      };
+    },
+  };
+}
+
 const stripeAdapter: PaymentAdapter = {
   name: "stripe",
   isActive: () => Boolean(process.env.STRIPE_SECRET_KEY),
   async createIntent({ orderId, amountMinor, currency }) {
-    if (!process.env.STRIPE_SECRET_KEY) {
-      return {
-        providerIntentId: null,
-        providerClientSecret: null,
-        payload: { provider: "stripe", activated: false, orderId, amountMinor, currency },
-      };
-    }
-    // Real Stripe call would go here. Stub records intent so order can be
-    // linked once the integration is enabled.
+    const activated = Boolean(process.env.STRIPE_SECRET_KEY);
     return {
-      providerIntentId: `stripe_stub_${orderId}`,
+      providerIntentId: activated ? `stripe_stub_${orderId}` : null,
       providerClientSecret: null,
-      payload: { provider: "stripe", activated: true, stub: true, orderId, amountMinor, currency },
+      payload: { provider: "stripe", activated, stub: activated, orderId, amountMinor, currency },
     };
   },
 };
@@ -52,41 +53,11 @@ const paypalAdapter: PaymentAdapter = {
   name: "paypal",
   isActive: () => Boolean(process.env.PAYPAL_CLIENT_ID && process.env.PAYPAL_SECRET),
   async createIntent({ orderId, amountMinor, currency }) {
-    if (!process.env.PAYPAL_CLIENT_ID || !process.env.PAYPAL_SECRET) {
-      return {
-        providerIntentId: null,
-        providerClientSecret: null,
-        payload: { provider: "paypal", activated: false, orderId, amountMinor, currency },
-      };
-    }
+    const activated = Boolean(process.env.PAYPAL_CLIENT_ID && process.env.PAYPAL_SECRET);
     return {
-      providerIntentId: `paypal_stub_${orderId}`,
+      providerIntentId: activated ? `paypal_stub_${orderId}` : null,
       providerClientSecret: null,
-      payload: { provider: "paypal", activated: true, stub: true, orderId, amountMinor, currency },
-    };
-  },
-};
-
-const codAdapter: PaymentAdapter = {
-  name: "cod",
-  isActive: () => true,
-  async createIntent({ orderId, amountMinor, currency }) {
-    return {
-      providerIntentId: null,
-      providerClientSecret: null,
-      payload: { provider: "cod", orderId, amountMinor, currency, requiresCollection: true },
-    };
-  },
-};
-
-const cashAdapter: PaymentAdapter = {
-  name: "cash",
-  isActive: () => true,
-  async createIntent({ orderId, amountMinor, currency }) {
-    return {
-      providerIntentId: null,
-      providerClientSecret: null,
-      payload: { provider: "cash", orderId, amountMinor, currency },
+      payload: { provider: "paypal", activated, stub: activated, orderId, amountMinor, currency },
     };
   },
 };
@@ -94,37 +65,12 @@ const cashAdapter: PaymentAdapter = {
 export const adapters: Record<ProviderName, PaymentAdapter> = {
   stripe: stripeAdapter,
   paypal: paypalAdapter,
-  cod: codAdapter,
-  cash: cashAdapter,
-  bank_transfer: {
-    name: "bank_transfer",
-    isActive: () => true,
-    async createIntent({ orderId, amountMinor, currency }) {
-      return {
-        providerIntentId: null,
-        providerClientSecret: null,
-        payload: { provider: "bank_transfer", orderId, amountMinor, currency },
-      };
-    },
-  },
-  card_terminal: {
-    name: "card_terminal",
-    isActive: () => true,
-    async createIntent({ orderId, amountMinor, currency }) {
-      return {
-        providerIntentId: null,
-        providerClientSecret: null,
-        payload: { provider: "card_terminal", orderId, amountMinor, currency },
-      };
-    },
-  },
+  cod: inertAdapter("cod"),
+  cash: inertAdapter("cash"),
+  bank_transfer: inertAdapter("bank_transfer"),
+  card_terminal: inertAdapter("card_terminal"),
 };
 
-/**
- * Persist a payment record for an order.  Uses the appropriate provider
- * adapter; for inactive providers, status is set to "pending" with a
- * descriptive payload so the UI can show the activation requirement.
- */
 export async function recordPayment(input: {
   orderId: string;
   provider: ProviderName;
@@ -203,20 +149,30 @@ router.patch(
   "/payments/:id/mark-succeeded",
   requirePermission("financial", "write"),
   async (req, res) => {
-    const updated = await db
-      .update(payments)
-      .set({ status: "succeeded", updatedAt: new Date() })
-      .where(eq(payments.id, String(req.params.id)))
-      .returning();
-    if (!updated[0]) {
+    const result = await db.transaction(async (tx) => {
+      const updated = await tx
+        .update(payments)
+        .set({ status: "succeeded", updatedAt: new Date() })
+        .where(eq(payments.id, String(req.params.id)))
+        .returning();
+      if (!updated[0]) return null;
+      const orderRow = (
+        await tx
+          .update(salesOrders)
+          .set({ paymentStatus: "succeeded", status: "paid", updatedAt: new Date() })
+          .where(eq(salesOrders.id, updated[0].orderId))
+          .returning()
+      )[0];
+      if (orderRow) {
+        await postSaleRevenue(tx, orderRow, req.appUser?.id ?? null);
+      }
+      return { ok: true };
+    });
+    if (!result) {
       res.status(404).json({ error: "NOT_FOUND" });
       return;
     }
-    await db
-      .update(salesOrders)
-      .set({ paymentStatus: "succeeded", status: "paid", updatedAt: new Date() })
-      .where(eq(salesOrders.id, updated[0].orderId));
-    res.json({ ok: true });
+    res.json(result);
   },
 );
 

@@ -778,6 +778,13 @@ async function main() {
   await seedExpenses();
   await seedActivity();
   log("done!");
+  log("------------------------------------------------------------");
+  log("Bootstrap: this app uses Clerk for authentication.");
+  log("The FIRST user to sign up via /sign-in becomes the Super Admin");
+  log("(role: owner) automatically — full access to /admin.");
+  log("Subsequent sign-ups default to the customer role; promote them");
+  log("from /admin/users.");
+  log("------------------------------------------------------------");
   process.exit(0);
 }
 

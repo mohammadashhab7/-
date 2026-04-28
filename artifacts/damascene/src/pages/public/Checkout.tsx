@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useLocation } from "wouter";
+import { Link, useLocation } from "wouter";
 import { useUser } from "@clerk/react";
 import {
   useGetCart,
@@ -35,6 +35,25 @@ export default function CheckoutPage() {
   const [notes, setNotes] = useState("");
   type PaymentMethod = "cod" | "stripe" | "paypal" | "bank_transfer";
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("cod");
+
+  if (!user) {
+    return (
+      <div className="container mx-auto px-4 py-20 text-center max-w-lg">
+        <h1 className="font-serif text-3xl text-primary mb-4">يلزم تسجيل الدخول</h1>
+        <p className="text-foreground/70 mb-6">
+          لإتمام الطلب، يرجى تسجيل الدخول أو إنشاء حساب جديد. سيتم الاحتفاظ بسلة التسوق الخاصة بك.
+        </p>
+        <div className="flex items-center justify-center gap-3">
+          <Button asChild data-testid="button-checkout-signin">
+            <Link href={`/sign-in?redirect_url=${encodeURIComponent("/checkout")}`}>تسجيل الدخول</Link>
+          </Button>
+          <Button asChild variant="outline" data-testid="button-checkout-signup">
+            <Link href={`/sign-up?redirect_url=${encodeURIComponent("/checkout")}`}>إنشاء حساب</Link>
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
   if (!cart || cart.items.length === 0) {
     return (
