@@ -44,7 +44,7 @@ Auth is delegated to **Clerk**, so credentials are not stored in this database a
 
 ### Inventory model
 
-`inventory_movements` is the **append-only event log** (source of truth). `stock_levels` is a **transactional projection** of `SUM(quantity_delta_thousandths)` per `(location, item)`, maintained inside the same transaction as the ledger insert by `lib/inventory.ts → applyLedgerEntry`. Stock is therefore always equal to the ledger sum; the projection only exists for read performance and concurrency-safe stock checks. The endpoint `GET /api/inventory/stock-from-ledger` recomputes stock from movements and reports any drift versus the projection (drift should always be zero).
+`inventory_ledger` is the **append-only event log** (source of truth). `stock_levels` is a **transactional projection** of `SUM(quantity_delta_thousandths)` per `(location, item)`, maintained inside the same transaction as the ledger insert by `lib/inventory.ts → applyLedgerEntry` (using `SELECT ... FOR UPDATE` for race-safe decrements). Stock is therefore always equal to the ledger sum; the projection only exists for read performance and concurrency-safe stock checks. The endpoint `GET /api/inventory/stock-from-ledger` does a `FULL OUTER JOIN` between the ledger sum and the projection and reports any drift in either direction (drift should always be zero).
 
 ### Payments activation
 

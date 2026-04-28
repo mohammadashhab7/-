@@ -86,14 +86,17 @@ router.get(
       bookSummary("production", fromDate, toDate),
       bookSummary("store", fromDate, toDate),
     ]);
+    const safe = (s: string) => `"${(s ?? "").replace(/"/g, '""')}"`;
     const lines = ["module,type,category,amount_minor,currency"];
     for (const row of production.byCategory) {
       lines.push(
-        `production,${row.type},${row.category},${row.amountMinor},SYP`,
+        `production,${safe(row.type)},${safe(row.category)},${row.amountMinor},SYP`,
       );
     }
     for (const row of store.byCategory) {
-      lines.push(`store,${row.type},${row.category},${row.amountMinor},SYP`);
+      lines.push(
+        `store,${safe(row.type)},${safe(row.category)},${row.amountMinor},SYP`,
+      );
     }
     res.setHeader("Content-Type", "text/csv; charset=utf-8");
     res.setHeader(
@@ -141,6 +144,31 @@ router.get(
   },
 );
 
+async function topProducts(days: number, limit: number) {
+  const rows = await db.execute<{
+    product_id: string;
+    name_ar: string;
+    quantity: string;
+    revenue: string;
+  }>(sql`
+    select soi.product_id, soi.product_name_ar as name_ar,
+      sum(soi.quantity)::text as quantity,
+      sum(soi.total_minor)::text as revenue
+    from sales_order_items soi
+    join sales_orders so on so.id = soi.order_id
+    where so.placed_at >= now() - (${days} || ' days')::interval
+    group by soi.product_id, soi.product_name_ar
+    order by sum(soi.quantity) desc
+    limit ${limit}
+  `);
+  return rows.rows.map((r) => ({
+    productId: r.product_id,
+    productNameAr: r.name_ar,
+    unitsSold: Number(r.quantity),
+    revenueMinor: Number(r.revenue),
+  }));
+}
+
 router.get(
   "/reports/top-products",
   requirePermission("reports", "read"),
@@ -155,30 +183,176 @@ router.get(
       typeof req.query.days === "string" ? parseInt(req.query.days, 10) : 30,
       90,
     );
+    res.json(await topProducts(days, limit));
+  },
+);
+
+router.get(
+  "/reports/top-products.csv",
+  requirePermission("reports", "read"),
+  async (req, res) => {
+    const days = Math.min(
+      typeof req.query.days === "string" ? parseInt(req.query.days, 10) : 30,
+      90,
+    );
+    const rows = await topProducts(days, 50);
+    const lines = ["product_id,product_name_ar,units_sold,revenue_minor,currency"];
+    for (const r of rows) {
+      const safe = (s: string) => `"${(s ?? "").replace(/"/g, '""')}"`;
+      lines.push(`${r.productId},${safe(r.productNameAr)},${r.unitsSold},${r.revenueMinor},SYP`);
+    }
+    res.setHeader("Content-Type", "text/csv; charset=utf-8");
+    res.setHeader(
+      "Content-Disposition",
+      `attachment; filename=top-products-${days}d.csv`,
+    );
+    res.send(lines.join("\n"));
+  },
+);
+
+router.get(
+  "/reports/sales-trend.csv",
+  requirePermission("reports", "read"),
+  async (req, res) => {
+    const days = Math.min(
+      Math.max(
+        typeof req.query.days === "string" ? parseInt(req.query.days, 10) : 14,
+        1,
+      ),
+      90,
+    );
     const rows = await db.execute<{
+      date: string;
+      total: string;
+      count: string;
+    }>(sql`
+    with d as (
+      select generate_series((now()::date - (${days - 1})::int), now()::date, '1 day') as day
+    )
+    select to_char(d.day, 'YYYY-MM-DD') as date,
+      coalesce(sum(so.total_minor), 0)::text as total,
+      coalesce(count(so.id), 0)::text as count
+    from d
+    left join sales_orders so on so.placed_at::date = d.day
+    group by d.day
+    order by d.day
+  `);
+    const lines = ["date,sales_minor,orders,currency"];
+    for (const r of rows.rows) {
+      lines.push(`${r.date},${r.total},${r.count},SYP`);
+    }
+    res.setHeader("Content-Type", "text/csv; charset=utf-8");
+    res.setHeader(
+      "Content-Disposition",
+      `attachment; filename=sales-trend-${days}d.csv`,
+    );
+    res.send(lines.join("\n"));
+  },
+);
+
+router.get(
+  "/reports/cogs",
+  requirePermission("reports", "read"),
+  async (req, res) => {
+    const fromDate =
+      typeof req.query.dateFrom === "string" ? req.query.dateFrom : undefined;
+    const toDate =
+      typeof req.query.dateTo === "string" ? req.query.dateTo : undefined;
+    const conds = [sql`so.status in ('paid','completed','delivered')`];
+    if (fromDate) conds.push(sql`so.placed_at >= ${fromDate}::date`);
+    if (toDate) conds.push(sql`so.placed_at < (${toDate}::date + interval '1 day')`);
+    const where = sql.join(conds, sql` and `);
+    const totals = await db.execute<{ revenue: string; cogs: string; orders: string }>(sql`
+      select
+        coalesce(sum(soi.total_minor), 0)::text as revenue,
+        coalesce(sum(soi.unit_cost_minor * soi.quantity), 0)::text as cogs,
+        coalesce(count(distinct so.id), 0)::text as orders
+      from sales_orders so
+      join sales_order_items soi on soi.order_id = so.id
+      where ${where}
+    `);
+    const byProduct = await db.execute<{
       product_id: string;
       name_ar: string;
-      quantity: string;
       revenue: string;
+      cogs: string;
+      units: string;
     }>(sql`
-    select soi.product_id, soi.product_name_ar as name_ar,
-      sum(soi.quantity)::text as quantity,
-      sum(soi.total_minor)::text as revenue
-    from sales_order_items soi
-    join sales_orders so on so.id = soi.order_id
-    where so.placed_at >= now() - (${days} || ' days')::interval
-    group by soi.product_id, soi.product_name_ar
-    order by sum(soi.quantity) desc
-    limit ${limit}
-  `);
-    res.json(
-      rows.rows.map((r) => ({
+      select soi.product_id, soi.product_name_ar as name_ar,
+        coalesce(sum(soi.total_minor), 0)::text as revenue,
+        coalesce(sum(soi.unit_cost_minor * soi.quantity), 0)::text as cogs,
+        coalesce(sum(soi.quantity), 0)::text as units
+      from sales_orders so
+      join sales_order_items soi on soi.order_id = so.id
+      where ${where}
+      group by soi.product_id, soi.product_name_ar
+      order by sum(soi.total_minor) desc
+      limit 50
+    `);
+    const t = totals.rows[0]!;
+    const revenue = Number(t.revenue);
+    const cogs = Number(t.cogs);
+    res.json({
+      revenueMinor: revenue,
+      cogsMinor: cogs,
+      grossProfitMinor: revenue - cogs,
+      grossMarginBasisPoints: revenue > 0 ? Math.round(((revenue - cogs) / revenue) * 10000) : 0,
+      orders: Number(t.orders),
+      currency: "SYP",
+      byProduct: byProduct.rows.map((r) => ({
         productId: r.product_id,
         productNameAr: r.name_ar,
-        unitsSold: Number(r.quantity),
         revenueMinor: Number(r.revenue),
+        cogsMinor: Number(r.cogs),
+        grossProfitMinor: Number(r.revenue) - Number(r.cogs),
+        unitsSold: Number(r.units),
       })),
+    });
+  },
+);
+
+router.get(
+  "/reports/cogs.csv",
+  requirePermission("reports", "read"),
+  async (req, res) => {
+    const fromDate =
+      typeof req.query.dateFrom === "string" ? req.query.dateFrom : undefined;
+    const toDate =
+      typeof req.query.dateTo === "string" ? req.query.dateTo : undefined;
+    const conds = [sql`so.status in ('paid','completed','delivered')`];
+    if (fromDate) conds.push(sql`so.placed_at >= ${fromDate}::date`);
+    if (toDate) conds.push(sql`so.placed_at < (${toDate}::date + interval '1 day')`);
+    const where = sql.join(conds, sql` and `);
+    const byProduct = await db.execute<{
+      product_id: string;
+      name_ar: string;
+      revenue: string;
+      cogs: string;
+      units: string;
+    }>(sql`
+      select soi.product_id, soi.product_name_ar as name_ar,
+        coalesce(sum(soi.total_minor), 0)::text as revenue,
+        coalesce(sum(soi.unit_cost_minor * soi.quantity), 0)::text as cogs,
+        coalesce(sum(soi.quantity), 0)::text as units
+      from sales_orders so
+      join sales_order_items soi on soi.order_id = so.id
+      where ${where}
+      group by soi.product_id, soi.product_name_ar
+      order by sum(soi.total_minor) desc
+    `);
+    const safe = (s: string) => `"${(s ?? "").replace(/"/g, '""')}"`;
+    const lines = ["product_id,product_name_ar,units_sold,revenue_minor,cogs_minor,gross_profit_minor,currency"];
+    for (const r of byProduct.rows) {
+      const rev = Number(r.revenue);
+      const cogs = Number(r.cogs);
+      lines.push(`${r.product_id},${safe(r.name_ar)},${r.units},${rev},${cogs},${rev - cogs},SYP`);
+    }
+    res.setHeader("Content-Type", "text/csv; charset=utf-8");
+    res.setHeader(
+      "Content-Disposition",
+      `attachment; filename=cogs-${fromDate ?? "all"}-${toDate ?? "all"}.csv`,
     );
+    res.send(lines.join("\n"));
   },
 );
 

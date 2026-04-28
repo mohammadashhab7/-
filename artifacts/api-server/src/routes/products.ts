@@ -43,7 +43,7 @@ function serialize(
   };
 }
 
-router.get("/products", async (req, res) => {
+router.get("/products", requirePermission("products", "read"), async (req, res) => {
   const { categoryId, search, isActive, isFeatured } = req.query;
   const filters = [] as ReturnType<typeof eq>[];
   if (typeof categoryId === "string") filters.push(eq(products.categoryId, categoryId));
@@ -103,7 +103,7 @@ router.post("/products", requirePermission("products", "write"), async (req, res
   res.status(201).json(serialize(inserted[0]!));
 });
 
-router.get("/products/:id", async (req, res) => {
+router.get("/products/:id", requirePermission("products", "read"), async (req, res) => {
   const rows = await db
     .select({ p: products, catName: categories.nameAr })
     .from(products)

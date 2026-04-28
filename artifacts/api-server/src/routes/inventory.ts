@@ -221,7 +221,7 @@ router.get(
                material_id,
                product_id,
                sum(quantity_delta_thousandths)::bigint as ledger_quantity
-        from inventory_movements
+        from inventory_ledger
         group by location_id, item_type, material_id, product_id
       ),
       projection as (
@@ -240,8 +240,8 @@ router.get(
       full outer join projection p
         on p.location_id = l.location_id
        and p.item_type = l.item_type
-       and coalesce(p.material_id, '') = coalesce(l.material_id, '')
-       and coalesce(p.product_id, '') = coalesce(l.product_id, '')
+       and p.material_id is not distinct from l.material_id
+       and p.product_id is not distinct from l.product_id
     `);
     res.json(
       rows.rows.map((r) => ({

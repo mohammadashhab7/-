@@ -458,7 +458,7 @@ async function seedContent() {
       page: "home",
       titleAr: "تراث ثلاثة أجيال",
       bodyAr: "في قلب دمشق القديمة، بدأت الحكاية بفرن صغير في حي الميدان. اليوم، يواصل أبناء الجيل الثالث صناعة الحلويات بنفس الوصفات الأصلية ونفس الشغف.",
-      metadata: {},
+      metadata: { ctaLabel: "اقرأ القصة كاملة", ctaHref: "/about" },
     },
     {
       key: "home_quality_strip",
@@ -466,6 +466,20 @@ async function seedContent() {
       titleAr: "ضمان الجودة",
       bodyAr: "صناعة يومية • مكونات طبيعية ١٠٠٪ • بدون مواد حافظة • فستق حلبي أصلي • سمن بلدي",
       metadata: {},
+    },
+    {
+      key: "home_categories_section",
+      page: "home",
+      titleAr: "تشكيلتنا الفاخرة",
+      bodyAr: null,
+      metadata: {},
+    },
+    {
+      key: "home_featured_section",
+      page: "home",
+      titleAr: "الأكثر طلباً",
+      bodyAr: null,
+      metadata: { ctaLabel: "عرض الكل", ctaHref: "/shop" },
     },
     {
       key: "story_hero",

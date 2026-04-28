@@ -107,28 +107,31 @@ router.post("/employees/salaries", requirePermission("employees", "write"), asyn
   const bonus = typeof b.bonusMinor === "number" ? b.bonusMinor : 0;
   const deductions = typeof b.deductionsMinor === "number" ? b.deductionsMinor : 0;
   const net = base + bonus - deductions;
-  const inserted = await db
-    .insert(salaryRecords)
-    .values({
-      employeeId: b.employeeId,
-      periodMonth: b.periodMonth,
-      baseAmountMinor: base,
-      bonusMinor: bonus,
-      deductionsMinor: deductions,
-      netAmountMinor: net,
-      paidAt: new Date(),
-      notesAr: b.notesAr ?? null,
-    })
-    .returning();
-  await db.insert(financialEntries).values({
-    module: emp.department === "store" ? "store" : "production",
-    type: "expense",
-    category: "رواتب",
-    descriptionAr: `راتب ${emp.nameAr} عن ${b.periodMonth}`,
-    amountMinor: net,
-    referenceType: "salary",
-    referenceId: inserted[0]!.id,
-    createdByUserId: req.appUser?.id ?? null,
+  const inserted = await db.transaction(async (tx) => {
+    const rows = await tx
+      .insert(salaryRecords)
+      .values({
+        employeeId: b.employeeId,
+        periodMonth: b.periodMonth,
+        baseAmountMinor: base,
+        bonusMinor: bonus,
+        deductionsMinor: deductions,
+        netAmountMinor: net,
+        paidAt: new Date(),
+        notesAr: b.notesAr ?? null,
+      })
+      .returning();
+    await tx.insert(financialEntries).values({
+      module: emp.department === "store" ? "store" : "production",
+      type: "expense",
+      category: "رواتب",
+      descriptionAr: `راتب ${emp.nameAr} عن ${b.periodMonth}`,
+      amountMinor: net,
+      referenceType: "salary",
+      referenceId: rows[0]!.id,
+      createdByUserId: req.appUser?.id ?? null,
+    });
+    return rows;
   });
   res.status(201).json({
     id: inserted[0]!.id,

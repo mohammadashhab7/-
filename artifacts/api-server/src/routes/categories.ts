@@ -28,7 +28,7 @@ function serialize(c: typeof categories.$inferSelect) {
   };
 }
 
-router.get("/categories", async (_req, res) => {
+router.get("/categories", requirePermission("categories", "read"), async (_req, res) => {
   const rows = await db
     .select()
     .from(categories)

@@ -36,81 +36,89 @@ export default function HomePage() {
   const heroMeta = ((hero as unknown as { metadata?: BlockMeta })?.metadata ?? {}) as BlockMeta;
   const heroVideoUrl = metaString(heroMeta, "videoUrl") ?? null;
   const heroImage = hero?.imageUrl ? imgSrc(hero.imageUrl) : heroImg;
-  const heroTitle = hero?.titleAr || "إرث دمشقي أصيل";
-  const heroBody =
-    hero?.contentAr ||
-    "نصنع الحلويات الشرقية بشغف وإتقان. ننتقي أفضل حبات الفستق الحلبي، ونعجنها بماء الزهر والسمن العربي الأصيل لنقدم لك طعماً لا ينسى.";
-  const ctaPrimaryLabel = hero?.ctaLabel || "تسوق الآن";
+  const heroTitle = hero?.titleAr ?? "";
+  const heroBody = hero?.contentAr ?? "";
+  const ctaPrimaryLabel = hero?.ctaLabel ?? "";
   const ctaPrimaryHref = hero?.ctaHref || "/shop";
   const ctaSecondaryLabel = metaString(heroMeta, "ctaSecondary") ?? "";
   const ctaSecondaryHref = metaString(heroMeta, "ctaSecondaryHref") ?? "/about";
 
+  const categoriesBlock = pickBlock(blocks, "home_categories_section");
+  const featuredBlock = pickBlock(blocks, "home_featured_section");
+
   return (
     <div className="w-full">
-      {/* Hero Section */}
-      <section className="relative w-full h-[80vh] min-h-[600px] flex items-center justify-center overflow-hidden">
-        <div className="absolute inset-0 w-full h-full">
-          {heroVideoUrl ? (
-            <video
-              autoPlay
-              muted
-              loop
-              playsInline
-              className="w-full h-full object-cover object-center"
-              src={imgSrc(heroVideoUrl)}
-              poster={heroImage}
-              data-testid="video-hero"
-            />
-          ) : (
-            <img
-              src={heroImage}
-              alt={heroTitle}
-              className="w-full h-full object-cover object-center"
-              data-testid="img-hero"
-            />
-          )}
-          <div className="absolute inset-0 bg-black/60 bg-gradient-to-t from-background via-black/40 to-transparent" />
-        </div>
-
-        <div className="relative z-10 container mx-auto px-4 text-center">
-          <h1
-            className="text-4xl md:text-6xl lg:text-7xl font-serif font-bold text-white mb-6 animate-in fade-in slide-in-from-bottom-8 duration-1000"
-            data-testid="text-hero-title"
-          >
-            {heroTitle}
-          </h1>
-          <p
-            className="text-lg md:text-xl text-white/90 max-w-2xl mx-auto mb-10 leading-relaxed animate-in fade-in slide-in-from-bottom-8 duration-1000 delay-150"
-            data-testid="text-hero-body"
-          >
-            {heroBody}
-          </p>
-          <div className="flex flex-wrap items-center justify-center gap-3 animate-in fade-in slide-in-from-bottom-8 duration-1000 delay-300">
-            <Button
-              size="lg"
-              className="h-14 px-8 text-base font-medium rounded-none bg-primary text-primary-foreground hover:bg-primary/90"
-              asChild
-            >
-              <Link href={ctaPrimaryHref} data-testid="link-hero-cta-primary">
-                {ctaPrimaryLabel}
-                <ArrowLeft className="mr-2 h-5 w-5" />
-              </Link>
-            </Button>
-            {ctaSecondaryLabel && (
-              <Button
-                size="lg"
-                variant="outline"
-                className="h-14 px-8 text-base font-medium rounded-none bg-transparent text-white border-white/70 hover:bg-white/10"
-                asChild
-              >
-                <Link href={ctaSecondaryHref} data-testid="link-hero-cta-secondary">
-                  {ctaSecondaryLabel}
-                </Link>
-              </Button>
+      {hero && (
+        <section className="relative w-full h-[80vh] min-h-[600px] flex items-center justify-center overflow-hidden">
+          <div className="absolute inset-0 w-full h-full">
+            {heroVideoUrl ? (
+              <video
+                autoPlay
+                muted
+                loop
+                playsInline
+                className="w-full h-full object-cover object-center"
+                src={imgSrc(heroVideoUrl)}
+                poster={heroImage}
+                data-testid="video-hero"
+              />
+            ) : (
+              <img
+                src={heroImage}
+                alt={heroTitle}
+                className="w-full h-full object-cover object-center"
+                data-testid="img-hero"
+              />
             )}
+            <div className="absolute inset-0 bg-black/60 bg-gradient-to-t from-background via-black/40 to-transparent" />
           </div>
-        </div>
-      </section>
+
+          <div className="relative z-10 container mx-auto px-4 text-center">
+            {heroTitle && (
+              <h1
+                className="text-4xl md:text-6xl lg:text-7xl font-serif font-bold text-white mb-6 animate-in fade-in slide-in-from-bottom-8 duration-1000"
+                data-testid="text-hero-title"
+              >
+                {heroTitle}
+              </h1>
+            )}
+            {heroBody && (
+              <p
+                className="text-lg md:text-xl text-white/90 max-w-2xl mx-auto mb-10 leading-relaxed animate-in fade-in slide-in-from-bottom-8 duration-1000 delay-150"
+                data-testid="text-hero-body"
+              >
+                {heroBody}
+              </p>
+            )}
+            <div className="flex flex-wrap items-center justify-center gap-3 animate-in fade-in slide-in-from-bottom-8 duration-1000 delay-300">
+              {ctaPrimaryLabel && (
+                <Button
+                  size="lg"
+                  className="h-14 px-8 text-base font-medium rounded-none bg-primary text-primary-foreground hover:bg-primary/90"
+                  asChild
+                >
+                  <Link href={ctaPrimaryHref} data-testid="link-hero-cta-primary">
+                    {ctaPrimaryLabel}
+                    <ArrowLeft className="mr-2 h-5 w-5" />
+                  </Link>
+                </Button>
+              )}
+              {ctaSecondaryLabel && (
+                <Button
+                  size="lg"
+                  variant="outline"
+                  className="h-14 px-8 text-base font-medium rounded-none bg-transparent text-white border-white/70 hover:bg-white/10"
+                  asChild
+                >
+                  <Link href={ctaSecondaryHref} data-testid="link-hero-cta-secondary">
+                    {ctaSecondaryLabel}
+                  </Link>
+                </Button>
+              )}
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* Quality strip (CMS) */}
       {quality && (quality.titleAr || quality.contentAr) && (
@@ -129,10 +137,11 @@ export default function HomePage() {
       )}
 
       {/* Categories */}
+      {categoriesBlock?.titleAr && categories && categories.length > 0 && (
       <section className="py-24 bg-background">
         <div className="container mx-auto px-4 sm:px-8">
           <div className="text-center mb-16">
-            <h2 className="text-3xl md:text-4xl font-serif font-bold text-foreground mb-4">تشكيلتنا الفاخرة</h2>
+            <h2 className="text-3xl md:text-4xl font-serif font-bold text-foreground mb-4" data-testid="text-categories-title">{categoriesBlock.titleAr}</h2>
             <div className="h-1 w-20 bg-primary mx-auto rounded-full" />
           </div>
 
@@ -162,6 +171,7 @@ export default function HomePage() {
           </div>
         </div>
       </section>
+      )}
 
       {/* Story excerpt (CMS) */}
       {story && (story.titleAr || story.contentAr) && (
@@ -184,37 +194,41 @@ export default function HomePage() {
                 {story.contentAr}
               </p>
             )}
-            <div className="mt-8">
-              <Button
-                variant="outline"
-                className="rounded-none"
-                asChild
-              >
-                <Link href="/about">
-                  اقرأ القصة كاملة
-                  <ArrowLeft className="mr-2 h-4 w-4" />
-                </Link>
-              </Button>
-            </div>
+            {story.ctaLabel && (
+              <div className="mt-8">
+                <Button
+                  variant="outline"
+                  className="rounded-none"
+                  asChild
+                >
+                  <Link href={story.ctaHref || "/about"} data-testid="link-story-cta">
+                    {story.ctaLabel}
+                    <ArrowLeft className="mr-2 h-4 w-4" />
+                  </Link>
+                </Button>
+              </div>
+            )}
           </div>
         </section>
       )}
 
       {/* Featured Products */}
-      {featuredProducts && featuredProducts.length > 0 && (
+      {featuredBlock?.titleAr && featuredProducts && featuredProducts.length > 0 && (
         <section className="py-24 bg-background">
           <div className="container mx-auto px-4 sm:px-8">
             <div className="flex justify-between items-end mb-12">
               <div>
-                <h2 className="text-3xl md:text-4xl font-serif font-bold text-foreground mb-4">الأكثر طلباً</h2>
+                <h2 className="text-3xl md:text-4xl font-serif font-bold text-foreground mb-4" data-testid="text-featured-title">{featuredBlock.titleAr}</h2>
                 <div className="h-1 w-20 bg-primary rounded-full" />
               </div>
-              <Button variant="ghost" className="text-primary hover:text-primary hover:bg-primary/10" asChild>
-                <Link href="/shop">
-                  عرض الكل
-                  <ArrowLeft className="mr-2 h-4 w-4" />
-                </Link>
-              </Button>
+              {featuredBlock.ctaLabel && (
+                <Button variant="ghost" className="text-primary hover:text-primary hover:bg-primary/10" asChild>
+                  <Link href={featuredBlock.ctaHref || "/shop"} data-testid="link-featured-cta">
+                    {featuredBlock.ctaLabel}
+                    <ArrowLeft className="mr-2 h-4 w-4" />
+                  </Link>
+                </Button>
+              )}
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">

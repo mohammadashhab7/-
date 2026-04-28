@@ -3,8 +3,12 @@ import { useGetSalesTrend, useGetTopProducts, useGetFinancialReport } from "@wor
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Button } from "@/components/ui/button";
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import { Download } from "lucide-react";
 import { formatSyp, formatDate } from "@/lib/format";
+
+const API_BASE = (import.meta.env.VITE_API_BASE_URL ?? "/api").replace(/\/$/, "");
 
 export default function AdminReportsPage() {
   const [days, setDays] = useState(30);
@@ -14,11 +18,13 @@ export default function AdminReportsPage() {
   const dateFrom = new Date(Date.now() - days * 86400000).toISOString().slice(0, 10);
   const { data: report } = useGetFinancialReport({ dateFrom, dateTo: today });
 
+  const csvHref = (path: string) => `${API_BASE}${path}`;
+
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-3">
         <h1 className="text-2xl font-serif text-primary">التقارير</h1>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           <span className="text-sm text-foreground/70">الفترة:</span>
           <Select value={String(days)} onValueChange={(v) => setDays(Number(v))}>
             <SelectTrigger className="w-32"><SelectValue /></SelectTrigger>
@@ -28,6 +34,26 @@ export default function AdminReportsPage() {
               <SelectItem value="90">90 يومًا</SelectItem>
             </SelectContent>
           </Select>
+          <Button variant="outline" size="sm" asChild data-testid="btn-export-financial">
+            <a href={csvHref(`/reports/financial.csv?dateFrom=${dateFrom}&dateTo=${today}`)}>
+              <Download className="h-4 w-4 ml-1" /> CSV مالي
+            </a>
+          </Button>
+          <Button variant="outline" size="sm" asChild data-testid="btn-export-cogs">
+            <a href={csvHref(`/reports/cogs.csv?dateFrom=${dateFrom}&dateTo=${today}`)}>
+              <Download className="h-4 w-4 ml-1" /> CSV التكلفة
+            </a>
+          </Button>
+          <Button variant="outline" size="sm" asChild data-testid="btn-export-trend">
+            <a href={csvHref(`/reports/sales-trend.csv?days=${days}`)}>
+              <Download className="h-4 w-4 ml-1" /> CSV اتجاه
+            </a>
+          </Button>
+          <Button variant="outline" size="sm" asChild data-testid="btn-export-top">
+            <a href={csvHref(`/reports/top-products.csv?days=${days}`)}>
+              <Download className="h-4 w-4 ml-1" /> CSV الأعلى
+            </a>
+          </Button>
         </div>
       </div>
 
