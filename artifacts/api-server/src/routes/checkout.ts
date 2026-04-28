@@ -65,8 +65,13 @@ router.post("/checkout", async (req, res) => {
       paymentMethod: order.paymentMethod,
     });
   } catch (err) {
+    const msg = (err as Error).message || "";
+    if (msg.startsWith("INSUFFICIENT_STOCK")) {
+      res.status(409).json({ error: "INSUFFICIENT_STOCK", detail: msg });
+      return;
+    }
     req.log.error({ err }, "Checkout failed");
-    res.status(400).json({ error: (err as Error).message });
+    res.status(400).json({ error: msg });
   }
 });
 

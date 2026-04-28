@@ -8,10 +8,14 @@ import {
   recipeItems,
   rawMaterials,
   products,
-  inventoryLocations,
 } from "@workspace/db";
 import { requireStaff } from "../lib/auth";
-import { applyLedgerEntry, getLocationByCode } from "../lib/inventory";
+import {
+  applyLedgerEntry,
+  getLocationByCode,
+  getStockQuantity,
+  InsufficientStockError,
+} from "../lib/inventory";
 import { nextProductionNumber } from "../lib/sequences";
 import { logActivity } from "../lib/activity";
 
@@ -80,87 +84,114 @@ router.post("/production-orders", requireStaff(), async (req, res) => {
     return;
   }
 
-  const orderNumber = await nextProductionNumber();
-  const unitsProduced = recipe.yieldQuantity * b.batchCount;
-  let totalCost = 0;
+  try {
+    const finalOrder = await db.transaction(async (tx) => {
+      // Pre-check raw material availability before any write
+      for (const it of items) {
+        const need = it.it.quantity * b.batchCount;
+        const stock = await getStockQuantity(rawLoc.id, "raw_material", it.mat.id, tx);
+        if (stock.quantity < need) {
+          throw new InsufficientStockError(rawLoc.id, "raw_material", it.mat.id, stock.quantity, need);
+        }
+      }
 
-  const created = await db
-    .insert(productionOrders)
-    .values({
-      orderNumber,
-      recipeId: recipe.id,
-      productId: product.id,
-      batchCount: b.batchCount,
-      unitsProduced,
-      totalCostMinor: 0,
-      unitCostMinor: 0,
-      status: "completed",
-      notesAr: b.notesAr ?? null,
-      startedAt: new Date(),
-      completedAt: new Date(),
-      createdByUserId: req.appUser?.id ?? null,
-    })
-    .returning();
-  const order = created[0]!;
+      const orderNumber = await nextProductionNumber();
+      const unitsProduced = recipe.yieldQuantity * b.batchCount;
+      let totalCost = 0;
 
-  for (const it of items) {
-    const consumeQty = it.it.quantity * b.batchCount;
-    const lineCost = Math.round((consumeQty * it.mat.unitCostMinor) / 1000);
-    totalCost += lineCost;
-    await db.insert(productionOrderItems).values({
-      productionOrderId: order.id,
-      materialId: it.mat.id,
-      quantityConsumed: consumeQty,
-      unitCostMinor: it.mat.unitCostMinor,
-      totalCostMinor: lineCost,
+      const created = await tx
+        .insert(productionOrders)
+        .values({
+          orderNumber,
+          recipeId: recipe.id,
+          productId: product.id,
+          batchCount: b.batchCount,
+          unitsProduced,
+          totalCostMinor: 0,
+          unitCostMinor: 0,
+          status: "completed",
+          notesAr: b.notesAr ?? null,
+          startedAt: new Date(),
+          completedAt: new Date(),
+          createdByUserId: req.appUser?.id ?? null,
+        })
+        .returning();
+      const order = created[0]!;
+
+      for (const it of items) {
+        const consumeQty = it.it.quantity * b.batchCount;
+        const lineCost = Math.round((consumeQty * it.mat.unitCostMinor) / 1000);
+        totalCost += lineCost;
+        await tx.insert(productionOrderItems).values({
+          productionOrderId: order.id,
+          materialId: it.mat.id,
+          quantityConsumed: consumeQty,
+          unitCostMinor: it.mat.unitCostMinor,
+          totalCostMinor: lineCost,
+        });
+        await applyLedgerEntry(
+          {
+            locationId: rawLoc.id,
+            itemType: "raw_material",
+            materialId: it.mat.id,
+            quantityDelta: -consumeQty,
+            unitCostMinor: it.mat.unitCostMinor,
+            reason: "production_consume",
+            referenceType: "production_order",
+            referenceId: order.id,
+            createdByUserId: req.appUser?.id ?? null,
+          },
+          tx,
+        );
+      }
+
+      const unitCost = unitsProduced > 0 ? Math.round(totalCost / unitsProduced) : 0;
+
+      await applyLedgerEntry(
+        {
+          locationId: finishedLoc.id,
+          itemType: "product",
+          productId: product.id,
+          quantityDelta: unitsProduced,
+          unitCostMinor: unitCost,
+          reason: "production_output",
+          referenceType: "production_order",
+          referenceId: order.id,
+          createdByUserId: req.appUser?.id ?? null,
+        },
+        tx,
+      );
+
+      const updated = await tx
+        .update(productionOrders)
+        .set({
+          totalCostMinor: totalCost,
+          unitCostMinor: unitCost,
+          updatedAt: new Date(),
+        })
+        .where(eq(productionOrders.id, order.id))
+        .returning();
+      return { o: updated[0]!, totalCost, unitsProduced };
     });
-    await applyLedgerEntry({
-      locationId: rawLoc.id,
-      itemType: "raw_material",
-      materialId: it.mat.id,
-      quantityDelta: -consumeQty,
-      unitCostMinor: it.mat.unitCostMinor,
-      reason: "production_consume",
+
+    await logActivity({
+      kind: "production_completed",
+      titleAr: `إنتاج ${product.nameAr}`,
+      descriptionAr: `${finalOrder.unitsProduced} وحدة بتكلفة ${finalOrder.totalCost} ل.س`,
       referenceType: "production_order",
-      referenceId: order.id,
-      createdByUserId: req.appUser?.id ?? null,
+      referenceId: finalOrder.o.id,
+      actor: req.appUser,
     });
+
+    res.status(201).json(serialize(finalOrder.o, product.nameAr));
+  } catch (err) {
+    if (err instanceof InsufficientStockError) {
+      res.status(409).json({ error: "INSUFFICIENT_STOCK", detail: err.message });
+      return;
+    }
+    req.log.error({ err }, "production create failed");
+    res.status(500).json({ error: "INTERNAL" });
   }
-
-  const unitCost = unitsProduced > 0 ? Math.round(totalCost / unitsProduced) : 0;
-
-  await applyLedgerEntry({
-    locationId: finishedLoc.id,
-    itemType: "product",
-    productId: product.id,
-    quantityDelta: unitsProduced,
-    unitCostMinor: unitCost,
-    reason: "production_output",
-    referenceType: "production_order",
-    referenceId: order.id,
-    createdByUserId: req.appUser?.id ?? null,
-  });
-
-  const updated = await db
-    .update(productionOrders)
-    .set({
-      totalCostMinor: totalCost,
-      unitCostMinor: unitCost,
-      updatedAt: new Date(),
-    })
-    .where(eq(productionOrders.id, order.id))
-    .returning();
-
-  await logActivity({
-    kind: "production_completed",
-    titleAr: `إنتاج ${product.nameAr}`,
-    descriptionAr: `${unitsProduced} وحدة بتكلفة ${totalCost} ل.س`,
-    referenceType: "production_order",
-    referenceId: order.id,
-    actor: req.appUser,
-  });
-
-  res.status(201).json(serialize(updated[0]!, product.nameAr));
 });
 
 router.get("/production-orders/:id", requireStaff(), async (req, res) => {

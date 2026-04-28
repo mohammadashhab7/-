@@ -8,9 +8,28 @@ import {
   financialEntries,
 } from "@workspace/db";
 import { requireStaff } from "../lib/auth";
-import { applyLedgerEntry, getLocationByCode, getStockQuantity } from "../lib/inventory";
+import {
+  applyLedgerEntry,
+  getLocationByCode,
+  getStockQuantity,
+  InsufficientStockError,
+} from "../lib/inventory";
 import { nextOrderNumber } from "../lib/sequences";
 import { logActivity } from "../lib/activity";
+
+type OrderStatus = typeof salesOrders.$inferSelect.status;
+
+// Allowed forward transitions. Terminal states (completed, cancelled) cannot
+// transition further. POS sales are created already in "completed" state.
+const STATUS_TRANSITIONS: Record<OrderStatus, OrderStatus[]> = {
+  pending: ["confirmed", "preparing", "ready", "out_for_delivery", "completed", "cancelled"],
+  confirmed: ["preparing", "ready", "out_for_delivery", "completed", "cancelled"],
+  preparing: ["ready", "out_for_delivery", "completed", "cancelled"],
+  ready: ["out_for_delivery", "completed", "cancelled"],
+  out_for_delivery: ["completed", "cancelled"],
+  completed: [],
+  cancelled: [],
+};
 
 const router: IRouter = Router();
 
@@ -73,108 +92,123 @@ export async function createSalesOrderInternal(args: {
   cashierUserId?: string | null;
 }) {
   if (args.items.length === 0) throw new Error("EMPTY_ORDER");
-  const orderNumber = await nextOrderNumber(args.channel);
-  const storeLoc = await getLocationByCode("STORE");
-  const finishedLoc = await getLocationByCode("PROD-FIN");
-  const sourceLoc = args.channel === "pos" ? storeLoc : finishedLoc;
+  // Sales (POS + online) always reduce STORE stock per architecture.
+  const sourceLoc = await getLocationByCode("STORE");
   if (!sourceLoc) throw new Error("LOCATIONS_NOT_SEEDED");
 
-  const productRows = await Promise.all(
-    args.items.map(async (it) => {
+  const order = await db.transaction(async (tx) => {
+    // Load products and stock inside the transaction; pre-check availability.
+    const productRows: { p: typeof products.$inferSelect; stock: { quantity: number; avgCostMinor: number }; qty: number }[] = [];
+    for (const it of args.items) {
       const p = (
-        await db.select().from(products).where(eq(products.id, it.productId)).limit(1)
+        await tx.select().from(products).where(eq(products.id, it.productId)).limit(1)
       )[0];
       if (!p) throw new Error("PRODUCT_NOT_FOUND");
-      const stock = await getStockQuantity(sourceLoc.id, "product", p.id);
-      return { p, stock, qty: it.quantity };
-    }),
-  );
+      const stock = await getStockQuantity(sourceLoc.id, "product", p.id, tx);
+      if (stock.quantity < it.quantity) {
+        throw new InsufficientStockError(
+          sourceLoc.id,
+          "product",
+          p.id,
+          stock.quantity,
+          it.quantity,
+        );
+      }
+      productRows.push({ p, stock, qty: it.quantity });
+    }
 
-  const subtotal = productRows.reduce(
-    (sum, r) => sum + r.p.priceMinor * r.qty,
-    0,
-  );
-  const cost = productRows.reduce(
-    (sum, r) => sum + r.stock.avgCostMinor * r.qty,
-    0,
-  );
-  const discount = args.discountMinor || 0;
-  const tax = args.taxMinor || 0;
-  const delivery = args.deliveryFeeMinor || 0;
-  const total = Math.max(0, subtotal - discount + tax + delivery);
+    const subtotal = productRows.reduce(
+      (sum, r) => sum + r.p.priceMinor * r.qty,
+      0,
+    );
+    const cost = productRows.reduce(
+      (sum, r) => sum + r.stock.avgCostMinor * r.qty,
+      0,
+    );
+    const discount = args.discountMinor || 0;
+    const tax = args.taxMinor || 0;
+    const delivery = args.deliveryFeeMinor || 0;
+    const total = Math.max(0, subtotal - discount + tax + delivery);
 
-  const insertedOrder = await db
-    .insert(salesOrders)
-    .values({
-      orderNumber,
-      channel: args.channel,
-      status: args.channel === "pos" ? "completed" : "pending",
-      customerUserId: args.customerUserId ?? null,
-      customerName: args.customerName ?? null,
-      customerPhone: args.customerPhone ?? null,
-      customerEmail: args.customerEmail ?? null,
-      deliveryAddress: args.deliveryAddress ?? null,
-      paymentMethod: args.paymentMethod,
-      subtotalMinor: subtotal,
-      discountMinor: discount,
-      taxMinor: tax,
-      deliveryFeeMinor: delivery,
-      totalMinor: total,
-      costMinor: cost,
-      notesAr: args.notesAr ?? null,
-      cashReceivedMinor: args.cashReceivedMinor ?? null,
-      changeMinor:
-        args.cashReceivedMinor != null ? args.cashReceivedMinor - total : null,
-      cashierUserId: args.cashierUserId ?? null,
-      completedAt: args.channel === "pos" ? new Date() : null,
-    })
-    .returning();
-  const order = insertedOrder[0]!;
+    const orderNumber = await nextOrderNumber(args.channel);
 
-  for (const r of productRows) {
-    await db.insert(salesOrderItems).values({
-      orderId: order.id,
-      productId: r.p.id,
-      productNameAr: r.p.nameAr,
-      quantity: r.qty,
-      unitPriceMinor: r.p.priceMinor,
-      unitCostMinor: r.stock.avgCostMinor,
-      totalMinor: r.p.priceMinor * r.qty,
-    });
-    await applyLedgerEntry({
-      locationId: sourceLoc.id,
-      itemType: "product",
-      productId: r.p.id,
-      quantityDelta: -r.qty,
-      unitCostMinor: r.stock.avgCostMinor,
-      reason: "sale",
+    const insertedOrder = await tx
+      .insert(salesOrders)
+      .values({
+        orderNumber,
+        channel: args.channel,
+        status: args.channel === "pos" ? "completed" : "pending",
+        customerUserId: args.customerUserId ?? null,
+        customerName: args.customerName ?? null,
+        customerPhone: args.customerPhone ?? null,
+        customerEmail: args.customerEmail ?? null,
+        deliveryAddress: args.deliveryAddress ?? null,
+        paymentMethod: args.paymentMethod,
+        subtotalMinor: subtotal,
+        discountMinor: discount,
+        taxMinor: tax,
+        deliveryFeeMinor: delivery,
+        totalMinor: total,
+        costMinor: cost,
+        notesAr: args.notesAr ?? null,
+        cashReceivedMinor: args.cashReceivedMinor ?? null,
+        changeMinor:
+          args.cashReceivedMinor != null ? args.cashReceivedMinor - total : null,
+        cashierUserId: args.cashierUserId ?? null,
+        completedAt: args.channel === "pos" ? new Date() : null,
+      })
+      .returning();
+    const created = insertedOrder[0]!;
+
+    for (const r of productRows) {
+      await tx.insert(salesOrderItems).values({
+        orderId: created.id,
+        productId: r.p.id,
+        productNameAr: r.p.nameAr,
+        quantity: r.qty,
+        unitPriceMinor: r.p.priceMinor,
+        unitCostMinor: r.stock.avgCostMinor,
+        totalMinor: r.p.priceMinor * r.qty,
+      });
+      await applyLedgerEntry(
+        {
+          locationId: sourceLoc.id,
+          itemType: "product",
+          productId: r.p.id,
+          quantityDelta: -r.qty,
+          unitCostMinor: r.stock.avgCostMinor,
+          reason: "sale",
+          referenceType: "sales_order",
+          referenceId: created.id,
+          createdByUserId: args.cashierUserId ?? null,
+        },
+        tx,
+      );
+    }
+
+    await tx.insert(financialEntries).values({
+      module: "store",
+      type: "income",
+      category: args.channel === "pos" ? "مبيعات نقطة البيع" : "مبيعات الموقع",
+      descriptionAr: `طلب ${orderNumber}`,
+      amountMinor: total,
       referenceType: "sales_order",
-      referenceId: order.id,
+      referenceId: created.id,
       createdByUserId: args.cashierUserId ?? null,
     });
-  }
 
-  // Financial entry: book in store module (POS sales) or store module (online sales fulfilled from store)
-  await db.insert(financialEntries).values({
-    module: "store",
-    type: "income",
-    category: args.channel === "pos" ? "مبيعات نقطة البيع" : "مبيعات الموقع",
-    descriptionAr: `طلب ${orderNumber}`,
-    amountMinor: total,
-    referenceType: "sales_order",
-    referenceId: order.id,
-    createdByUserId: args.cashierUserId ?? null,
+    return created;
   });
 
   await logActivity({
     kind: "order_placed",
-    titleAr: `طلب جديد ${orderNumber}`,
+    titleAr: `طلب جديد ${order.orderNumber}`,
     descriptionAr:
       args.customerName ||
       (args.channel === "pos" ? "بيع مباشر" : "طلب أونلاين"),
     referenceType: "sales_order",
     referenceId: order.id,
-    metadata: { totalMinor: total, channel: args.channel },
+    metadata: { totalMinor: order.totalMinor, channel: args.channel },
   });
 
   return order;
@@ -200,6 +234,10 @@ router.post("/sales-orders", requireStaff(), async (req, res) => {
     });
     res.status(201).json(serialize(order));
   } catch (err) {
+    if (err instanceof InsufficientStockError) {
+      res.status(409).json({ error: "INSUFFICIENT_STOCK", detail: err.message });
+      return;
+    }
     req.log.error({ err }, "createSalesOrder failed");
     res.status(400).json({ error: (err as Error).message });
   }
@@ -233,29 +271,113 @@ router.get("/sales-orders/:id", requireStaff(), async (req, res) => {
 
 router.patch("/sales-orders/:id/status", requireStaff(), async (req, res) => {
   const { status, notesAr } = req.body ?? {};
-  const updated = await db
-    .update(salesOrders)
-    .set({
-      status,
-      notesAr: notesAr ?? undefined,
-      updatedAt: new Date(),
-      completedAt: status === "completed" ? new Date() : undefined,
-    })
-    .where(eq(salesOrders.id, req.params.id))
-    .returning();
-  if (!updated[0]) {
-    res.status(404).json({ error: "NOT_FOUND" });
+  const ALL_STATUSES: OrderStatus[] = [
+    "pending",
+    "confirmed",
+    "preparing",
+    "ready",
+    "out_for_delivery",
+    "completed",
+    "cancelled",
+  ];
+  if (!ALL_STATUSES.includes(status)) {
+    res.status(400).json({ error: "INVALID_STATUS" });
     return;
   }
-  await logActivity({
-    kind: "order_status_changed",
-    titleAr: `تحديث حالة الطلب ${updated[0].orderNumber}`,
-    descriptionAr: `الحالة الجديدة: ${status}`,
-    referenceType: "sales_order",
-    referenceId: updated[0].id,
-    actor: req.appUser,
-  });
-  res.json(serialize(updated[0]));
+
+  try {
+    const finalRow = await db.transaction(async (tx) => {
+      const cur = (
+        await tx.select().from(salesOrders).where(eq(salesOrders.id, req.params.id)).limit(1)
+      )[0];
+      if (!cur) {
+        const e = new Error("NOT_FOUND");
+        (e as Error & { code?: string }).code = "NOT_FOUND";
+        throw e;
+      }
+      if (cur.status === status) {
+        return cur;
+      }
+      const allowed = STATUS_TRANSITIONS[cur.status];
+      if (!allowed.includes(status)) {
+        const e = new Error(`INVALID_TRANSITION: ${cur.status} -> ${status}`);
+        (e as Error & { code?: string }).code = "INVALID_TRANSITION";
+        throw e;
+      }
+
+      // On cancellation: append reversing inventory entries (re-stock STORE) and
+      // reversing financial entry. Skip if order was already in a state where
+      // no inventory/finance was committed (currently all states already had it).
+      if (status === "cancelled") {
+        const sourceLoc = await getLocationByCode("STORE");
+        if (!sourceLoc) throw new Error("LOCATIONS_NOT_SEEDED");
+        const items = await tx
+          .select()
+          .from(salesOrderItems)
+          .where(eq(salesOrderItems.orderId, cur.id));
+        for (const it of items) {
+          await applyLedgerEntry(
+            {
+              locationId: sourceLoc.id,
+              itemType: "product",
+              productId: it.productId,
+              quantityDelta: it.quantity,
+              unitCostMinor: it.unitCostMinor,
+              reason: "return",
+              referenceType: "sales_order_cancel",
+              referenceId: cur.id,
+              createdByUserId: req.appUser?.id ?? null,
+            },
+            tx,
+          );
+        }
+        await tx.insert(financialEntries).values({
+          module: "store",
+          type: "expense",
+          category: cur.channel === "pos" ? "إلغاء بيع نقطة البيع" : "إلغاء طلب أونلاين",
+          descriptionAr: `إلغاء طلب ${cur.orderNumber}`,
+          amountMinor: cur.totalMinor,
+          referenceType: "sales_order_cancel",
+          referenceId: cur.id,
+          createdByUserId: req.appUser?.id ?? null,
+        });
+      }
+
+      const updated = await tx
+        .update(salesOrders)
+        .set({
+          status,
+          notesAr: notesAr ?? undefined,
+          updatedAt: new Date(),
+          completedAt: status === "completed" ? new Date() : cur.completedAt ?? undefined,
+        })
+        .where(eq(salesOrders.id, cur.id))
+        .returning();
+      return updated[0]!;
+    });
+
+    await logActivity({
+      kind: "order_status_changed",
+      titleAr: `تحديث حالة الطلب ${finalRow.orderNumber}`,
+      descriptionAr: `الحالة الجديدة: ${status}`,
+      referenceType: "sales_order",
+      referenceId: finalRow.id,
+      actor: req.appUser,
+    });
+    res.json(serialize(finalRow));
+  } catch (err) {
+    const code = (err as Error & { code?: string }).code;
+    if (code === "NOT_FOUND") {
+      res.status(404).json({ error: "NOT_FOUND" });
+      return;
+    }
+    if (code === "INVALID_TRANSITION") {
+      res.status(409).json({ error: "INVALID_TRANSITION", detail: (err as Error).message });
+      return;
+    }
+    req.log.error({ err }, "status patch failed");
+    res.status(500).json({ error: "INTERNAL" });
+  }
 });
 
 export default router;

@@ -3,6 +3,8 @@ import {
   ObjectStorageService,
   ObjectNotFoundError,
 } from "../lib/objectStorage";
+import { ObjectPermission } from "../lib/objectAcl";
+import { loadAppUser } from "../lib/auth";
 
 const router: IRouter = Router();
 const objectStorage = new ObjectStorageService();
@@ -33,6 +35,11 @@ router.post(
   "/storage/uploads/request-url",
   async (req: Request, res: Response) => {
     try {
+      const u = await loadAppUser(req);
+      if (!u) {
+        res.status(401).json({ error: "UNAUTHENTICATED" });
+        return;
+      }
       const uploadURL = await objectStorage.getObjectEntityUploadURL();
       const objectPath = objectStorage.normalizeObjectEntityPath(uploadURL);
       const { name, size, contentType } = req.body ?? {};
@@ -83,6 +90,16 @@ router.get(
       const objectFile = await objectStorage.getObjectEntityFile(
         `/objects/${objectPath}`,
       );
+      const u = await loadAppUser(req);
+      const allowed = await objectStorage.canAccessObjectEntity({
+        userId: u?.id,
+        objectFile,
+        requestedPermission: ObjectPermission.READ,
+      });
+      if (!allowed) {
+        res.status(u ? 403 : 401).json({ error: u ? "FORBIDDEN" : "UNAUTHENTICATED" });
+        return;
+      }
       const webRes = await objectStorage.downloadObject(objectFile);
       await pipeFetchResponse(webRes, res);
     } catch (err) {

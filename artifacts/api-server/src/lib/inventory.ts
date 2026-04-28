@@ -23,27 +23,48 @@ export type LedgerInput = {
   referenceId?: string | null;
   notesAr?: string | null;
   createdByUserId?: string | null;
+  allowNegative?: boolean;
 };
+
+export class InsufficientStockError extends Error {
+  constructor(
+    public locationId: string,
+    public itemType: "raw_material" | "product",
+    public itemId: string,
+    public available: number,
+    public requested: number,
+  ) {
+    super(
+      `INSUFFICIENT_STOCK: location=${locationId} ${itemType}=${itemId} available=${available} requested=${requested}`,
+    );
+    this.name = "InsufficientStockError";
+  }
+}
+
+type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
 
 /**
  * Append-only ledger entry + atomic stock_levels update with weighted-average cost.
+ * Rejects when the resulting quantity would be negative unless `allowNegative` is true
+ * (used only for adjustments). Pass an outer `tx` to participate in a larger transaction.
  */
-export async function applyLedgerEntry(input: LedgerInput) {
-  const {
-    locationId,
-    itemType,
-    materialId,
-    productId,
-    quantityDelta,
-    unitCostMinor = 0,
-    reason,
-    referenceType,
-    referenceId,
-    notesAr,
-    createdByUserId,
-  } = input;
+export async function applyLedgerEntry(input: LedgerInput, tx?: Tx) {
+  const exec = async (txx: Tx) => {
+    const {
+      locationId,
+      itemType,
+      materialId,
+      productId,
+      quantityDelta,
+      unitCostMinor = 0,
+      reason,
+      referenceType,
+      referenceId,
+      notesAr,
+      createdByUserId,
+      allowNegative = false,
+    } = input;
 
-  return await db.transaction(async (tx) => {
     const cond = and(
       eq(stockLevels.locationId, locationId),
       eq(stockLevels.itemType, itemType),
@@ -55,14 +76,23 @@ export async function applyLedgerEntry(input: LedgerInput) {
         : isNull(stockLevels.productId),
     );
 
-    const existing = await tx
+    const existing = await txx
       .select()
       .from(stockLevels)
       .where(cond)
       .limit(1);
 
     if (existing.length === 0) {
-      await tx.insert(stockLevels).values({
+      if (quantityDelta < 0 && !allowNegative) {
+        throw new InsufficientStockError(
+          locationId,
+          itemType,
+          (materialId ?? productId)!,
+          0,
+          -quantityDelta,
+        );
+      }
+      await txx.insert(stockLevels).values({
         locationId,
         itemType,
         materialId: materialId ?? null,
@@ -75,6 +105,15 @@ export async function applyLedgerEntry(input: LedgerInput) {
       const oldQty = cur.quantity;
       const oldCost = cur.avgCostMinor;
       const newQty = oldQty + quantityDelta;
+      if (newQty < 0 && !allowNegative) {
+        throw new InsufficientStockError(
+          locationId,
+          itemType,
+          (materialId ?? productId)!,
+          oldQty,
+          -quantityDelta,
+        );
+      }
       let newAvg = oldCost;
       if (quantityDelta > 0 && unitCostMinor > 0) {
         const oldValue = oldQty * oldCost;
@@ -84,16 +123,13 @@ export async function applyLedgerEntry(input: LedgerInput) {
           newAvg = Math.round((oldValue + newValue) / totalQty);
         }
       }
-      if (newQty < 0) {
-        // Allow negative for now (warn via logs); production should enforce check separately
-      }
-      await tx
+      await txx
         .update(stockLevels)
         .set({ quantity: newQty, avgCostMinor: newAvg, updatedAt: new Date() })
         .where(cond);
     }
 
-    const inserted = await tx
+    const inserted = await txx
       .insert(inventoryLedger)
       .values({
         locationId,
@@ -110,15 +146,20 @@ export async function applyLedgerEntry(input: LedgerInput) {
       })
       .returning();
     return inserted[0]!;
-  });
+  };
+
+  if (tx) return await exec(tx);
+  return await db.transaction(exec);
 }
 
 export async function getStockQuantity(
   locationId: string,
   itemType: "raw_material" | "product",
   itemId: string,
+  tx?: Tx,
 ): Promise<{ quantity: number; avgCostMinor: number }> {
-  const rows = await db
+  const runner = tx ?? db;
+  const rows = await runner
     .select()
     .from(stockLevels)
     .where(

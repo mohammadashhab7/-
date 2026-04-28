@@ -8,7 +8,11 @@ import {
   products,
 } from "@workspace/db";
 import { requireStaff } from "../lib/auth";
-import { applyLedgerEntry, getStockQuantity } from "../lib/inventory";
+import {
+  applyLedgerEntry,
+  getStockQuantity,
+  InsufficientStockError,
+} from "../lib/inventory";
 import { nextTransferNumber } from "../lib/sequences";
 import { logActivity } from "../lib/activity";
 
@@ -69,68 +73,106 @@ router.post("/transfers", requireStaff(), async (req, res) => {
     res.status(400).json({ error: "VALIDATION" });
     return;
   }
-  const transferNumber = await nextTransferNumber();
-  const created = await db
-    .insert(transfers)
-    .values({
-      transferNumber,
-      fromLocationId: b.fromLocationId,
-      toLocationId: b.toLocationId,
-      notesAr: b.notesAr ?? null,
-      createdByUserId: req.appUser?.id ?? null,
-    })
-    .returning();
-  const t = created[0]!;
-
-  for (const it of b.items as { productId: string; quantity: number }[]) {
-    const stock = await getStockQuantity(b.fromLocationId, "product", it.productId);
-    const cost = stock.avgCostMinor;
-    await db.insert(transferItems).values({
-      transferId: t.id,
-      productId: it.productId,
-      quantity: it.quantity,
-      unitCostMinor: cost,
-    });
-    await applyLedgerEntry({
-      locationId: b.fromLocationId,
-      itemType: "product",
-      productId: it.productId,
-      quantityDelta: -it.quantity,
-      unitCostMinor: cost,
-      reason: "transfer_out",
-      referenceType: "transfer",
-      referenceId: t.id,
-      createdByUserId: req.appUser?.id ?? null,
-    });
-    await applyLedgerEntry({
-      locationId: b.toLocationId,
-      itemType: "product",
-      productId: it.productId,
-      quantityDelta: it.quantity,
-      unitCostMinor: cost,
-      reason: "transfer_in",
-      referenceType: "transfer",
-      referenceId: t.id,
-      createdByUserId: req.appUser?.id ?? null,
-    });
+  if (b.fromLocationId === b.toLocationId) {
+    res.status(400).json({ error: "SAME_LOCATION" });
+    return;
   }
 
-  await logActivity({
-    kind: "transfer_done",
-    titleAr: `تحويل بضاعة ${transferNumber}`,
-    referenceType: "transfer",
-    referenceId: t.id,
-    actor: req.appUser,
-  });
+  try {
+    const t = await db.transaction(async (tx) => {
+      // Pre-check stock for every item before any write
+      for (const it of b.items as { productId: string; quantity: number }[]) {
+        const stock = await getStockQuantity(b.fromLocationId, "product", it.productId, tx);
+        if (stock.quantity < it.quantity) {
+          throw new InsufficientStockError(
+            b.fromLocationId,
+            "product",
+            it.productId,
+            stock.quantity,
+            it.quantity,
+          );
+        }
+      }
 
-  res.status(201).json({
-    id: t.id,
-    transferNumber: t.transferNumber,
-    fromLocationId: t.fromLocationId,
-    toLocationId: t.toLocationId,
-    notesAr: t.notesAr,
-    createdAt: t.createdAt.toISOString(),
-  });
+      const transferNumber = await nextTransferNumber();
+      const created = await tx
+        .insert(transfers)
+        .values({
+          transferNumber,
+          fromLocationId: b.fromLocationId,
+          toLocationId: b.toLocationId,
+          notesAr: b.notesAr ?? null,
+          createdByUserId: req.appUser?.id ?? null,
+        })
+        .returning();
+      const tRow = created[0]!;
+
+      for (const it of b.items as { productId: string; quantity: number }[]) {
+        const stock = await getStockQuantity(b.fromLocationId, "product", it.productId, tx);
+        const cost = stock.avgCostMinor;
+        await tx.insert(transferItems).values({
+          transferId: tRow.id,
+          productId: it.productId,
+          quantity: it.quantity,
+          unitCostMinor: cost,
+        });
+        await applyLedgerEntry(
+          {
+            locationId: b.fromLocationId,
+            itemType: "product",
+            productId: it.productId,
+            quantityDelta: -it.quantity,
+            unitCostMinor: cost,
+            reason: "transfer_out",
+            referenceType: "transfer",
+            referenceId: tRow.id,
+            createdByUserId: req.appUser?.id ?? null,
+          },
+          tx,
+        );
+        await applyLedgerEntry(
+          {
+            locationId: b.toLocationId,
+            itemType: "product",
+            productId: it.productId,
+            quantityDelta: it.quantity,
+            unitCostMinor: cost,
+            reason: "transfer_in",
+            referenceType: "transfer",
+            referenceId: tRow.id,
+            createdByUserId: req.appUser?.id ?? null,
+          },
+          tx,
+        );
+      }
+
+      return tRow;
+    });
+
+    await logActivity({
+      kind: "transfer_done",
+      titleAr: `تحويل بضاعة ${t.transferNumber}`,
+      referenceType: "transfer",
+      referenceId: t.id,
+      actor: req.appUser,
+    });
+
+    res.status(201).json({
+      id: t.id,
+      transferNumber: t.transferNumber,
+      fromLocationId: t.fromLocationId,
+      toLocationId: t.toLocationId,
+      notesAr: t.notesAr,
+      createdAt: t.createdAt.toISOString(),
+    });
+  } catch (err) {
+    if (err instanceof InsufficientStockError) {
+      res.status(409).json({ error: "INSUFFICIENT_STOCK", detail: err.message });
+      return;
+    }
+    req.log.error({ err }, "transfer create failed");
+    res.status(500).json({ error: "INTERNAL" });
+  }
 });
 
 export default router;
