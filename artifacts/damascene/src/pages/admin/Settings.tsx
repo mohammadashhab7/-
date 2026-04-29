@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useGetSettings, useUpdateSettings, getGetSettingsQueryKey } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -9,81 +9,165 @@ import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import MediaPicker from "@/components/admin/MediaPicker";
 
+type SettingsForm = Record<string, unknown>;
+
+interface FieldProps {
+  k: string;
+  label: string;
+  type?: "text" | "number" | "email" | "tel" | "url";
+  textarea?: boolean;
+  form: SettingsForm;
+  onChange: (k: string, v: unknown) => void;
+}
+
+function Field({ k, label, type = "text", textarea = false, form, onChange }: FieldProps) {
+  const raw = form[k];
+  const stringValue =
+    raw === null || raw === undefined ? "" : String(raw);
+
+  if (textarea) {
+    return (
+      <div>
+        <Label htmlFor={`field-${k}`}>{label}</Label>
+        <Textarea
+          id={`field-${k}`}
+          value={stringValue}
+          onChange={(e) => onChange(k, e.target.value)}
+          data-testid={`input-${k}`}
+        />
+      </div>
+    );
+  }
+
+  return (
+    <div>
+      <Label htmlFor={`field-${k}`}>{label}</Label>
+      <Input
+        id={`field-${k}`}
+        type={type}
+        value={stringValue}
+        onChange={(e) => {
+          const v = e.target.value;
+          onChange(k, type === "number" ? (v === "" ? "" : Number(v)) : v);
+        }}
+        data-testid={`input-${k}`}
+      />
+    </div>
+  );
+}
+
 export default function AdminSettingsPage() {
   const { data: settings } = useGetSettings();
   const update = useUpdateSettings();
   const qc = useQueryClient();
   const { toast } = useToast();
-  const [form, setForm] = useState<any>({});
+  const [form, setForm] = useState<SettingsForm>({});
+  const dirtyRef = useRef(false);
 
-  useEffect(() => { if (settings) setForm(settings); }, [settings]);
+  // Hydrate form from server only when the user has not started editing.
+  // This prevents background refetches (refetchOnWindowFocus, etc.) from
+  // wiping in-progress edits.
+  useEffect(() => {
+    if (settings && !dirtyRef.current) {
+      setForm(settings as unknown as SettingsForm);
+    }
+  }, [settings]);
+
+  const updateField = (k: string, v: unknown) => {
+    dirtyRef.current = true;
+    setForm((f) => ({ ...f, [k]: v }));
+  };
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
-    update.mutate({ data: form }, {
-      onSuccess: () => { qc.invalidateQueries({ queryKey: getGetSettingsQueryKey() }); toast({ title: "تم الحفظ" }); },
-      onError: () => toast({ title: "خطأ", variant: "destructive" }),
-    });
+    // Coerce empty number fields back to 0 so the API doesn't choke on "".
+    const payload: SettingsForm = { ...form };
+    for (const numKey of [
+      "taxPercent",
+      "deliveryFeeMinor",
+      "freeDeliveryThresholdMinor",
+    ]) {
+      if (payload[numKey] === "" || payload[numKey] === undefined) {
+        payload[numKey] = 0;
+      }
+    }
+    update.mutate(
+      { data: payload as Parameters<typeof update.mutate>[0]["data"] },
+      {
+        onSuccess: () => {
+          qc.invalidateQueries({ queryKey: getGetSettingsQueryKey() });
+          toast({ title: "تم الحفظ" });
+        },
+        onError: () => toast({ title: "خطأ", variant: "destructive" }),
+      },
+    );
   };
 
   if (!settings) return <p>جاري التحميل...</p>;
 
-  const F = ({ k, label, type = "text", textarea = false }: any) => (
-    <div>
-      <Label>{label}</Label>
-      {textarea ? (
-        <Textarea value={form[k] || ""} onChange={(e) => setForm({ ...form, [k]: e.target.value })} />
-      ) : (
-        <Input type={type} value={form[k] ?? ""} onChange={(e) => setForm({ ...form, [k]: type === "number" ? Number(e.target.value) : e.target.value })} />
-      )}
-    </div>
-  );
-
   return (
     <form onSubmit={submit} className="space-y-4 max-w-3xl">
       <Card>
-        <CardHeader><CardTitle>المتجر</CardTitle></CardHeader>
+        <CardHeader>
+          <CardTitle>المتجر</CardTitle>
+        </CardHeader>
         <CardContent className="grid sm:grid-cols-2 gap-3">
-          <F k="storeNameAr" label="اسم المتجر بالعربية" />
-          <F k="storeNameEn" label="Store Name (English)" />
-          <div className="sm:col-span-2"><F k="taglineAr" label="الشعار" /></div>
-          <div className="sm:col-span-2"><F k="addressAr" label="العنوان" textarea /></div>
-          <F k="phone" label="الهاتف" />
-          <F k="email" label="البريد الإلكتروني" />
+          <Field k="storeNameAr" label="اسم المتجر بالعربية" form={form} onChange={updateField} />
+          <Field k="storeNameEn" label="Store Name (English)" form={form} onChange={updateField} />
+          <div className="sm:col-span-2">
+            <Field k="taglineAr" label="الشعار" form={form} onChange={updateField} />
+          </div>
+          <div className="sm:col-span-2">
+            <Field k="addressAr" label="العنوان" textarea form={form} onChange={updateField} />
+          </div>
+          <Field k="phone" label="الهاتف" type="tel" form={form} onChange={updateField} />
+          <Field k="email" label="البريد الإلكتروني" type="email" form={form} onChange={updateField} />
         </CardContent>
       </Card>
+
       <Card>
-        <CardHeader><CardTitle>الأموال والتوصيل</CardTitle></CardHeader>
+        <CardHeader>
+          <CardTitle>الأموال والتوصيل</CardTitle>
+        </CardHeader>
         <CardContent className="grid sm:grid-cols-2 gap-3">
-          <F k="currency" label="العملة" />
-          <F k="currencySymbol" label="رمز العملة" />
-          <F k="taxPercent" label="نسبة الضريبة %" type="number" />
-          <F k="deliveryFeeMinor" label="رسوم التوصيل (×100)" type="number" />
-          <F k="freeDeliveryThresholdMinor" label="حد التوصيل المجاني (×100)" type="number" />
+          <Field k="currency" label="العملة" form={form} onChange={updateField} />
+          <Field k="currencySymbol" label="رمز العملة" form={form} onChange={updateField} />
+          <Field k="taxPercent" label="نسبة الضريبة %" type="number" form={form} onChange={updateField} />
+          <Field k="deliveryFeeMinor" label="رسوم التوصيل (×100)" type="number" form={form} onChange={updateField} />
+          <Field k="freeDeliveryThresholdMinor" label="حد التوصيل المجاني (×100)" type="number" form={form} onChange={updateField} />
         </CardContent>
       </Card>
+
       <Card>
-        <CardHeader><CardTitle>روابط التواصل</CardTitle></CardHeader>
+        <CardHeader>
+          <CardTitle>روابط التواصل</CardTitle>
+        </CardHeader>
         <CardContent className="grid sm:grid-cols-2 gap-3">
-          <F k="instagramUrl" label="إنستغرام" />
-          <F k="facebookUrl" label="فيسبوك" />
-          <F k="whatsappNumber" label="واتساب" />
+          <Field k="instagramUrl" label="إنستغرام" type="url" form={form} onChange={updateField} />
+          <Field k="facebookUrl" label="فيسبوك" type="url" form={form} onChange={updateField} />
+          <Field k="whatsappNumber" label="واتساب" type="tel" form={form} onChange={updateField} />
         </CardContent>
       </Card>
+
       <Card>
-        <CardHeader><CardTitle>شعار المتجر</CardTitle></CardHeader>
+        <CardHeader>
+          <CardTitle>شعار المتجر</CardTitle>
+        </CardHeader>
         <CardContent>
           <MediaPicker
             label="صورة الشعار"
-            value={form.logoUrl ?? ""}
-            onChange={(url) => setForm({ ...form, logoUrl: url })}
+            value={(form.logoUrl as string | undefined) ?? ""}
+            onChange={(url) => updateField("logoUrl", url)}
             kind="image"
             helperText="تُستخدم في المراسلات والفواتير وواجهة المتجر"
             testId="media-picker-logo"
           />
         </CardContent>
       </Card>
-      <Button type="submit" disabled={update.isPending}>حفظ الإعدادات</Button>
+
+      <Button type="submit" disabled={update.isPending}>
+        حفظ الإعدادات
+      </Button>
     </form>
   );
 }
