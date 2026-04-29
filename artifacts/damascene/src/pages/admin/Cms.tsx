@@ -377,7 +377,7 @@ function ContentTab() {
                             value={intervalSec}
                             onChange={(e) => {
                               const v = Number(e.target.value);
-                              if (Number.isFinite(v) && v >= 0.5)
+                              if (Number.isFinite(v) && v >= 1)
                                 setMeta({ sliderInterval: Math.round(v * 1000) });
                             }}
                             className="ltr-numbers mt-1"
