@@ -141,21 +141,21 @@ export default function PublicLayout({ children }: PublicLayoutProps) {
           <div className="flex-1 order-2" aria-hidden />
 
           <nav
-            className="hidden lg:flex items-center justify-center gap-7 xl:gap-9 order-3 w-[280px] xl:w-[320px]"
-            data-testid="nav-right"
-          >
-            {RIGHT_NAV.map(renderNavLink)}
-          </nav>
-
-          <nav
             className="hidden lg:flex items-center justify-center gap-7 xl:gap-9 order-4 w-[280px] xl:w-[320px]"
             data-testid="nav-left"
           >
             {LEFT_NAV.map(renderNavLink)}
           </nav>
 
+          <nav
+            className="hidden lg:flex items-center justify-center gap-7 xl:gap-9 order-5 w-[280px] xl:w-[320px]"
+            data-testid="nav-right"
+          >
+            {RIGHT_NAV.map(renderNavLink)}
+          </nav>
+
           {/* Mobile menu trigger sits inline before cart on small screens */}
-          <div className="flex items-center gap-1 sm:gap-2 order-5 lg:hidden">
+          <div className="flex items-center gap-1 sm:gap-2 order-6 lg:hidden">
             <Sheet>
               <SheetTrigger asChild>
                 <Button
@@ -197,7 +197,7 @@ export default function PublicLayout({ children }: PublicLayoutProps) {
           </div>
 
           {/* Visual left edge in RTL = last child = Cart */}
-          <div className="flex items-center order-6">
+          <div className="flex items-center order-7">
             <CartDrawer>
               <Button
                 variant="outline"
