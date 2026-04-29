@@ -87,9 +87,13 @@ export default function HeroSection({
     setVideoFailed(false);
   }, [resolvedVideo]);
 
+  // Reset index only when slide URLs actually change, not on every render
+  // (slides prop gets a new array reference each render from Home.tsx)
+  const slidesKey = validSlides.map((s) => s.imageUrl).join("|");
   useEffect(() => {
     setCurrentIndex(0);
-  }, [slides]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [slidesKey]);
 
   useEffect(() => {
     if (!isSlider || slideCount <= 1 || paused) return;
