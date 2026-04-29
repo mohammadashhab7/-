@@ -31,20 +31,26 @@ async function cropToBlob(
   pixelCrop: PixelCrop,
   mimeType: string
 ): Promise<Blob> {
+  const scaleX = img.naturalWidth / img.width;
+  const scaleY = img.naturalHeight / img.height;
+  const srcX = pixelCrop.x * scaleX;
+  const srcY = pixelCrop.y * scaleY;
+  const srcW = pixelCrop.width * scaleX;
+  const srcH = pixelCrop.height * scaleY;
   const canvas = document.createElement("canvas");
-  canvas.width = pixelCrop.width;
-  canvas.height = pixelCrop.height;
+  canvas.width = Math.round(srcW);
+  canvas.height = Math.round(srcH);
   const ctx = canvas.getContext("2d")!;
   ctx.drawImage(
     img,
-    pixelCrop.x,
-    pixelCrop.y,
-    pixelCrop.width,
-    pixelCrop.height,
+    srcX,
+    srcY,
+    srcW,
+    srcH,
     0,
     0,
-    pixelCrop.width,
-    pixelCrop.height
+    canvas.width,
+    canvas.height
   );
   return new Promise<Blob>((resolve, reject) => {
     canvas.toBlob(
