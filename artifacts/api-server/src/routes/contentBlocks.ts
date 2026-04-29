@@ -57,7 +57,8 @@ router.get("/content-blocks/:key", async (req, res) => {
 });
 
 router.put("/content-blocks/:key", requirePermission("cms", "write"), async (req, res) => {
-  const b = (req.body ?? {}) as {
+  const body = (req.body ?? {}) as Record<string, unknown>;
+  const b = body as {
     page?: string;
     titleAr?: string | null;
     contentAr?: string | null;
@@ -71,15 +72,49 @@ router.put("/content-blocks/:key", requirePermission("cms", "write"), async (req
     await db.select().from(contentBlocks).where(eq(contentBlocks.key, key)).limit(1)
   )[0];
 
-  const baseMeta = asMeta(existing?.metadata ?? b.metadata);
-  const mergedMeta: Meta = {
-    ...baseMeta,
-    ...(b.metadata ?? {}),
+  // Metadata: REPLACE wholesale when provided in body. The admin form holds
+  // the complete latest state, so removed keys must actually go away.
+  const newMeta: Meta =
+    "metadata" in body ? { ...asMeta(b.metadata) } : asMeta(existing?.metadata);
+
+  // Mirror ctaLabel / ctaHref into metadata for backward compatibility.
+  if ("ctaLabel" in body) {
+    if (typeof b.ctaLabel === "string" && b.ctaLabel.length > 0) {
+      newMeta.ctaLabel = b.ctaLabel;
+    } else {
+      delete newMeta.ctaLabel;
+    }
+  }
+  if ("ctaHref" in body) {
+    if (typeof b.ctaHref === "string" && b.ctaHref.length > 0) {
+      newMeta.ctaHref = b.ctaHref;
+    } else {
+      delete newMeta.ctaHref;
+    }
+  }
+
+  // Column field semantics:
+  //   field absent from body  → keep existing
+  //   field null / empty str  → clear (null)
+  //   non-empty string        → set
+  const pickStr = (
+    field: string,
+    existingVal: string | null | undefined,
+  ): string | null => {
+    if (!(field in body)) return existingVal ?? null;
+    const v = body[field];
+    if (v === null || v === undefined) return null;
+    if (typeof v === "string") return v.length > 0 ? v : null;
+    return null;
   };
-  if (b.ctaLabel !== undefined) mergedMeta.ctaLabel = b.ctaLabel ?? "";
-  if (b.ctaHref !== undefined) mergedMeta.ctaHref = b.ctaHref ?? "";
-  if (mergedMeta.ctaLabel === "") delete mergedMeta.ctaLabel;
-  if (mergedMeta.ctaHref === "") delete mergedMeta.ctaHref;
+
+  const page =
+    "page" in body && typeof b.page === "string" && b.page.length > 0
+      ? b.page
+      : existing?.page ?? "general";
+  const titleAr = pickStr("titleAr", existing?.titleAr);
+  const bodyAr = pickStr("contentAr", existing?.bodyAr);
+  const imageUrl = pickStr("imageUrl", existing?.imageUrl);
 
   let row;
   if (existing) {
@@ -87,11 +122,11 @@ router.put("/content-blocks/:key", requirePermission("cms", "write"), async (req
       await db
         .update(contentBlocks)
         .set({
-          page: b.page ?? existing.page,
-          titleAr: b.titleAr ?? existing.titleAr ?? null,
-          bodyAr: b.contentAr ?? existing.bodyAr ?? null,
-          imageUrl: b.imageUrl ?? existing.imageUrl ?? null,
-          metadata: mergedMeta,
+          page,
+          titleAr,
+          bodyAr,
+          imageUrl,
+          metadata: newMeta,
           updatedAt: new Date(),
         })
         .where(eq(contentBlocks.key, key))
@@ -103,15 +138,17 @@ router.put("/content-blocks/:key", requirePermission("cms", "write"), async (req
         .insert(contentBlocks)
         .values({
           key,
-          page: b.page || "general",
-          titleAr: b.titleAr ?? null,
-          bodyAr: b.contentAr ?? null,
-          imageUrl: b.imageUrl ?? null,
-          metadata: mergedMeta,
+          page,
+          titleAr,
+          bodyAr,
+          imageUrl,
+          metadata: newMeta,
         })
         .returning()
     )[0]!;
   }
+  // Prevent stale CMS data being served from intermediary caches/browsers.
+  res.setHeader("Cache-Control", "no-store");
   res.json(serialize(row));
 });
 
