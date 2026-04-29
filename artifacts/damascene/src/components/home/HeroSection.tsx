@@ -121,17 +121,24 @@ export default function HeroSection({
         {isSlider ? (
           <div className="relative w-full h-full">
             <AnimatePresence initial={false}>
-              <motion.img
-                key={currentIndex}
-                src={imgSrc(validSlides[currentIndex].imageUrl)}
-                alt={validSlides[currentIndex].alt || alt || title || ""}
-                className="absolute inset-0 w-full h-full object-cover object-center"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                transition={{ duration: transitionSec, ease: "easeInOut" }}
-                data-testid="img-hero"
-              />
+              {(() => {
+                const safeIdx = slideCount ? currentIndex % slideCount : 0;
+                const slide = validSlides[safeIdx];
+                if (!slide) return null;
+                return (
+                  <motion.img
+                    key={safeIdx}
+                    src={imgSrc(slide.imageUrl)}
+                    alt={slide.alt || alt || title || ""}
+                    className="absolute inset-0 w-full h-full object-cover object-center"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: transitionSec, ease: "easeInOut" }}
+                    data-testid="img-hero"
+                  />
+                );
+              })()}
             </AnimatePresence>
           </div>
         ) : showVideo ? (
