@@ -143,6 +143,7 @@ export default function HeroSection({
           </div>
         ) : showVideo ? (
           <video
+            key={resolvedVideo}
             autoPlay
             muted
             loop
