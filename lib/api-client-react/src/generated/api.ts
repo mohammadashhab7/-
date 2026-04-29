@@ -89,6 +89,7 @@ import type {
   TransferInput,
   UpdateAdminUserBody,
   UpdateCartItemBody,
+  UpdateMediaBody,
   UpdateSalesOrderStatusBody,
 } from "./api.schemas";
 
@@ -5831,6 +5832,87 @@ export const useCreateMedia = <
   TContext
 > => {
   return useMutation(getCreateMediaMutationOptions(options));
+};
+
+export const getUpdateMediaUrl = (id: string) => {
+  return `/api/media/${id}`;
+};
+
+export const updateMedia = async (
+  id: string,
+  updateMediaBody: UpdateMediaBody,
+  options?: RequestInit,
+): Promise<MediaAsset> => {
+  return customFetch<MediaAsset>(getUpdateMediaUrl(id), {
+    ...options,
+    method: "PATCH",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(updateMediaBody),
+  });
+};
+
+export const getUpdateMediaMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateMedia>>,
+    TError,
+    { id: string; data: BodyType<UpdateMediaBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof updateMedia>>,
+  TError,
+  { id: string; data: BodyType<UpdateMediaBody> },
+  TContext
+> => {
+  const mutationKey = ["updateMedia"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof updateMedia>>,
+    { id: string; data: BodyType<UpdateMediaBody> }
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return updateMedia(id, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type UpdateMediaMutationResult = NonNullable<
+  Awaited<ReturnType<typeof updateMedia>>
+>;
+export type UpdateMediaMutationBody = BodyType<UpdateMediaBody>;
+export type UpdateMediaMutationError = ErrorType<unknown>;
+
+export const useUpdateMedia = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateMedia>>,
+    TError,
+    { id: string; data: BodyType<UpdateMediaBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof updateMedia>>,
+  TError,
+  { id: string; data: BodyType<UpdateMediaBody> },
+  TContext
+> => {
+  return useMutation(getUpdateMediaMutationOptions(options));
 };
 
 export const getDeleteMediaUrl = (id: string) => {

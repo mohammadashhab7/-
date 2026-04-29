@@ -18,6 +18,7 @@ import { Badge } from "@/components/ui/badge";
 import { Plus, Pencil, Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { formatSyp } from "@/lib/format";
+import MediaPicker from "@/components/admin/MediaPicker";
 
 const emptyForm = {
   slug: "", sku: "", nameAr: "", nameEn: "", descriptionAr: "",
@@ -105,7 +106,15 @@ export default function AdminProductsPage() {
               </div>
               <div><Label>السعر (ل.س × 100)</Label><Input type="number" required value={form.priceMinor} onChange={(e) => setForm({ ...form, priceMinor: Number(e.target.value) })} /></div>
               <div><Label>الوزن (غ)</Label><Input type="number" value={form.weightGrams} onChange={(e) => setForm({ ...form, weightGrams: Number(e.target.value) })} /></div>
-              <div className="col-span-2"><Label>رابط الصورة</Label><Input value={form.imageUrl} onChange={(e) => setForm({ ...form, imageUrl: e.target.value })} placeholder="/objects/..." /></div>
+              <div className="col-span-2">
+                <MediaPicker
+                  label="صورة المنتج"
+                  value={form.imageUrl}
+                  onChange={(url) => setForm({ ...form, imageUrl: url })}
+                  kind="image"
+                  testId="media-picker-product-image"
+                />
+              </div>
               <div><Label>حد إعادة الطلب</Label><Input type="number" value={form.reorderThreshold} onChange={(e) => setForm({ ...form, reorderThreshold: Number(e.target.value) })} /></div>
               <div className="flex items-center gap-2 mt-6"><Switch checked={form.isActive} onCheckedChange={(v) => setForm({ ...form, isActive: v })} /><Label>نشط</Label></div>
               <div className="flex items-center gap-2"><Switch checked={form.isFeatured} onCheckedChange={(v) => setForm({ ...form, isFeatured: v })} /><Label>مميّز</Label></div>

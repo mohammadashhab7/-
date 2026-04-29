@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
+import MediaPicker from "@/components/admin/MediaPicker";
 
 export default function AdminSettingsPage() {
   const { data: settings } = useGetSettings();
@@ -67,6 +68,19 @@ export default function AdminSettingsPage() {
           <F k="instagramUrl" label="إنستغرام" />
           <F k="facebookUrl" label="فيسبوك" />
           <F k="whatsappNumber" label="واتساب" />
+        </CardContent>
+      </Card>
+      <Card>
+        <CardHeader><CardTitle>شعار المتجر</CardTitle></CardHeader>
+        <CardContent>
+          <MediaPicker
+            label="صورة الشعار"
+            value={form.logoUrl ?? ""}
+            onChange={(url) => setForm({ ...form, logoUrl: url })}
+            kind="image"
+            helperText="تُستخدم في المراسلات والفواتير وواجهة المتجر"
+            testId="media-picker-logo"
+          />
         </CardContent>
       </Card>
       <Button type="submit" disabled={update.isPending}>حفظ الإعدادات</Button>

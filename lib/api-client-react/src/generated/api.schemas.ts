@@ -832,6 +832,7 @@ export interface Settings {
   instagramUrl?: string;
   facebookUrl?: string;
   whatsappNumber?: string;
+  logoUrl?: string;
 }
 
 export type PaymentRecordProvider =
@@ -1079,6 +1080,10 @@ export type PaySalaryBody = {
 
 export type ListContentBlocksParams = {
   page?: string;
+};
+
+export type UpdateMediaBody = {
+  name?: string;
 };
 
 export type GetMediaUploadUrl200 = {

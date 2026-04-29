@@ -6,6 +6,7 @@ import { requireStaff, requirePermission } from "../lib/auth";
 const router: IRouter = Router();
 
 function serialize(s: typeof settings.$inferSelect) {
+  const meta = (s.metadata ?? {}) as Record<string, unknown>;
   return {
     storeNameAr: s.storeNameAr,
     storeNameEn: s.storeNameEn,
@@ -21,6 +22,7 @@ function serialize(s: typeof settings.$inferSelect) {
     facebookUrl: s.socialFacebook,
     instagramUrl: s.socialInstagram,
     whatsappNumber: s.socialWhatsapp,
+    logoUrl: typeof meta.logoUrl === "string" ? meta.logoUrl : undefined,
   };
 }
 
@@ -58,6 +60,11 @@ router.patch("/settings", requirePermission("settings", "write"), async (req, re
   if (b.facebookUrl !== undefined) updates.socialFacebook = b.facebookUrl;
   if (b.instagramUrl !== undefined) updates.socialInstagram = b.instagramUrl;
   if (b.whatsappNumber !== undefined) updates.socialWhatsapp = b.whatsappNumber;
+  if (b.logoUrl !== undefined) {
+    const current = await db.select({ metadata: settings.metadata }).from(settings).where(eq(settings.id, 1)).limit(1);
+    const existingMeta = (current[0]?.metadata ?? {}) as Record<string, unknown>;
+    updates.metadata = { ...existingMeta, logoUrl: b.logoUrl };
+  }
   const updated = await db.update(settings).set(updates).where(eq(settings.id, 1)).returning();
   res.json(serialize(updated[0]!));
 });

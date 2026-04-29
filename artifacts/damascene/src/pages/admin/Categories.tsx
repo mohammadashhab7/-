@@ -14,6 +14,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { Plus, Pencil, Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import MediaPicker from "@/components/admin/MediaPicker";
 
 export default function AdminCategoriesPage() {
   const { data: categories, isLoading } = useListCategories();
@@ -24,20 +25,20 @@ export default function AdminCategoriesPage() {
   const deleteMut = useDeleteCategory();
   const [editing, setEditing] = useState<Category | null>(null);
   const [open, setOpen] = useState(false);
-  const [form, setForm] = useState({ slug: "", nameAr: "", nameEn: "", descriptionAr: "", sortOrder: 0 });
+  const [form, setForm] = useState({ slug: "", nameAr: "", nameEn: "", descriptionAr: "", sortOrder: 0, imageUrl: "" });
 
   const refresh = () => qc.invalidateQueries({ queryKey: getListCategoriesQueryKey() });
-  const reset = () => { setForm({ slug: "", nameAr: "", nameEn: "", descriptionAr: "", sortOrder: 0 }); setEditing(null); };
+  const reset = () => { setForm({ slug: "", nameAr: "", nameEn: "", descriptionAr: "", sortOrder: 0, imageUrl: "" }); setEditing(null); };
   const openNew = () => { reset(); setOpen(true); };
   const openEdit = (c: Category) => {
     setEditing(c);
-    setForm({ slug: c.slug, nameAr: c.nameAr, nameEn: c.nameEn || "", descriptionAr: c.descriptionAr || "", sortOrder: c.sortOrder });
+    setForm({ slug: c.slug, nameAr: c.nameAr, nameEn: c.nameEn || "", descriptionAr: c.descriptionAr || "", sortOrder: c.sortOrder, imageUrl: c.imageUrl || "" });
     setOpen(true);
   };
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
-    const data = { ...form, sortOrder: Number(form.sortOrder) };
+    const data = { ...form, sortOrder: Number(form.sortOrder), imageUrl: form.imageUrl || undefined };
     const cb = {
       onSuccess: () => { refresh(); setOpen(false); reset(); toast({ title: "تم الحفظ" }); },
       onError: () => toast({ title: "خطأ", variant: "destructive" }),
@@ -65,6 +66,13 @@ export default function AdminCategoriesPage() {
               <div><Label>Name (English)</Label><Input value={form.nameEn} onChange={(e) => setForm({ ...form, nameEn: e.target.value })} /></div>
               <div><Label>الوصف</Label><Textarea value={form.descriptionAr} onChange={(e) => setForm({ ...form, descriptionAr: e.target.value })} /></div>
               <div><Label>الترتيب</Label><Input type="number" value={form.sortOrder} onChange={(e) => setForm({ ...form, sortOrder: Number(e.target.value) })} /></div>
+              <MediaPicker
+                label="صورة الفئة"
+                value={form.imageUrl}
+                onChange={(url) => setForm({ ...form, imageUrl: url })}
+                kind="image"
+                testId="media-picker-category-image"
+              />
               <DialogFooter><Button type="submit" disabled={createMut.isPending || updateMut.isPending}>حفظ</Button></DialogFooter>
             </form>
           </DialogContent>

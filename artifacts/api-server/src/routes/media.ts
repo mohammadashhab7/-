@@ -62,6 +62,21 @@ router.post("/media", requirePermission("media", "write"), async (req, res) => {
   res.status(201).json(serialize(inserted[0]!));
 });
 
+router.patch("/media/:id", requirePermission("media", "write"), async (req, res) => {
+  const { name } = req.body ?? {};
+  if (!name || typeof name !== "string") {
+    res.status(400).json({ error: "VALIDATION" });
+    return;
+  }
+  const updated = await db
+    .update(mediaAssets)
+    .set({ titleAr: name })
+    .where(eq(mediaAssets.id, String(req.params.id)))
+    .returning();
+  if (!updated[0]) { res.status(404).json({ error: "NOT_FOUND" }); return; }
+  res.json(serialize(updated[0]));
+});
+
 router.delete("/media/:id", requirePermission("media", "write"), async (req, res) => {
   await db.delete(mediaAssets).where(eq(mediaAssets.id, String(req.params.id)));
   res.status(204).send();

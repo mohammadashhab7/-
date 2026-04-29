@@ -1233,6 +1233,28 @@ paths:
             application/json:
               schema: { $ref: "#/components/schemas/MediaAsset" }
   /media/{id}:
+    patch:
+      operationId: updateMedia
+      tags: [media]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name: { type: string }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/MediaAsset" }
     delete:
       operationId: deleteMedia
       tags: [media]
@@ -2077,6 +2099,7 @@ components:
         instagramUrl: { type: string }
         facebookUrl: { type: string }
         whatsappNumber: { type: string }
+        logoUrl: { type: string }
 
     PaymentRecord:
       type: object

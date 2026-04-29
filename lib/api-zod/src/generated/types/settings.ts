@@ -21,4 +21,5 @@ export interface Settings {
   instagramUrl?: string;
   facebookUrl?: string;
   whatsappNumber?: string;
+  logoUrl?: string;
 }

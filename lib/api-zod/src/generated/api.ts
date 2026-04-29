@@ -1662,6 +1662,24 @@ export const CreateMediaBody = zod.object({
   kind: zod.enum(["image", "video", "document"]).optional(),
 });
 
+export const UpdateMediaParams = zod.object({
+  id: zod.coerce.string(),
+});
+
+export const UpdateMediaBody = zod.object({
+  name: zod.string().optional(),
+});
+
+export const UpdateMediaResponse = zod.object({
+  id: zod.string(),
+  name: zod.string(),
+  url: zod.string(),
+  objectPath: zod.string().optional(),
+  kind: zod.enum(["image", "video", "document"]),
+  sizeBytes: zod.number().optional(),
+  createdAt: zod.coerce.date(),
+});
+
 export const DeleteMediaParams = zod.object({
   id: zod.coerce.string(),
 });
@@ -1688,6 +1706,7 @@ export const GetSettingsResponse = zod.object({
   instagramUrl: zod.string().optional(),
   facebookUrl: zod.string().optional(),
   whatsappNumber: zod.string().optional(),
+  logoUrl: zod.string().optional(),
 });
 
 export const UpdateSettingsBody = zod.object({
@@ -1722,6 +1741,7 @@ export const UpdateSettingsResponse = zod.object({
   instagramUrl: zod.string().optional(),
   facebookUrl: zod.string().optional(),
   whatsappNumber: zod.string().optional(),
+  logoUrl: zod.string().optional(),
 });
 
 export const ListPaymentsForOrderParams = zod.object({

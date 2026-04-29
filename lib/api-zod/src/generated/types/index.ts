@@ -125,5 +125,6 @@ export * from "./transferInputItemsItem";
 export * from "./transferItem";
 export * from "./updateAdminUserBody";
 export * from "./updateCartItemBody";
+export * from "./updateMediaBody";
 export * from "./updateSalesOrderStatusBody";
 export * from "./userRole";
