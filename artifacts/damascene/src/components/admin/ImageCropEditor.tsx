@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import ReactCrop, {
   centerCrop,
   makeAspectCrop,
@@ -74,10 +74,29 @@ export default function ImageCropEditor({
   const imgRef = useRef<HTMLImageElement>(null);
   const mimeType = file.type || "image/jpeg";
 
-  const [imageSrc, setImageSrc] = useState<string>(
-    () => URL.createObjectURL(file)
-  );
+  const [imageSrc, setImageSrc] = useState<string>(() => URL.createObjectURL(file));
+  const currentSrc = useRef<string>("");
   const [crop, setCrop] = useState<Crop>();
+
+  useEffect(() => {
+    currentSrc.current = imageSrc;
+  }, [imageSrc]);
+
+  useEffect(() => {
+    return () => {
+      if (currentSrc.current.startsWith("blob:")) {
+        URL.revokeObjectURL(currentSrc.current);
+      }
+    };
+  }, []);
+
+  const updateImageSrc = (newSrc: string) => {
+    if (currentSrc.current.startsWith("blob:")) {
+      URL.revokeObjectURL(currentSrc.current);
+    }
+    currentSrc.current = newSrc;
+    setImageSrc(newSrc);
+  };
   const [completedCrop, setCompletedCrop] = useState<PixelCrop>();
   const [busy, setBusy] = useState(false);
 
@@ -97,7 +116,7 @@ export default function ImageCropEditor({
   const rotate = () => {
     if (!imgRef.current) return;
     const newSrc = rotateSrc(imgRef.current, mimeType);
-    setImageSrc(newSrc);
+    updateImageSrc(newSrc);
     setCrop(undefined);
     setCompletedCrop(undefined);
   };

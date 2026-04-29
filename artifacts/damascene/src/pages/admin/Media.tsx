@@ -52,11 +52,12 @@ export default function AdminMediaPage() {
         const upl = await getUrl.mutateAsync();
         const uploadURL = (upl as { uploadURL?: string }).uploadURL;
         if (!uploadURL) throw new Error("missing upload url");
-        await fetch(uploadURL, {
+        const put = await fetch(uploadURL, {
           method: "PUT",
           body: blob,
           headers: { "Content-Type": blob.type || "image/jpeg" },
         });
+        if (!put.ok) throw new Error(`فشل رفع الملف (${put.status})`);
         const detectedKind: "image" | "video" | "document" = blob.type.startsWith("image/")
           ? "image"
           : blob.type.startsWith("video/")

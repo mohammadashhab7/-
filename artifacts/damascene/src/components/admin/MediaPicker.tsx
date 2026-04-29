@@ -173,11 +173,12 @@ function MediaPickerBody({
       setCropFile(null);
       try {
         const { uploadURL } = await getUrl.mutateAsync();
-        await fetch(uploadURL, {
+        const put = await fetch(uploadURL, {
           method: "PUT",
           body: blob,
           headers: { "Content-Type": blob.type || "image/jpeg" },
         });
+        if (!put.ok) throw new Error(`فشل رفع الملف (${put.status})`);
         const detectedKind: "image" | "video" | "document" = blob.type.startsWith("image/")
           ? "image"
           : blob.type.startsWith("video/")
