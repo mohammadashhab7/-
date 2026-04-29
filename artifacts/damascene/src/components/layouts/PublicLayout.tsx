@@ -70,7 +70,7 @@ export default function PublicLayout({ children }: PublicLayoutProps) {
         className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/75"
         data-testid="header-public"
       >
-        <div className="relative container mx-auto flex h-20 items-center px-4 sm:px-6 lg:px-8">
+        <div className="relative container mx-auto grid h-20 grid-cols-[auto_1fr_auto] items-center px-4 sm:px-6 lg:px-8">
           {/* Visual right edge in RTL = first child = Account/Login */}
           <div className="flex items-center gap-1 sm:gap-2 order-1">
             {isSignedIn ? (
@@ -138,24 +138,23 @@ export default function PublicLayout({ children }: PublicLayoutProps) {
             )}
           </div>
 
-          <div className="flex-1 order-2" aria-hidden />
-
-          <nav
-            className="hidden lg:flex items-center justify-center gap-7 xl:gap-9 order-4 w-[280px] xl:w-[320px]"
-            data-testid="nav-left"
-          >
-            {LEFT_NAV.map(renderNavLink)}
-          </nav>
-
-          <nav
-            className="hidden lg:flex items-center justify-center gap-7 xl:gap-9 order-5 w-[280px] xl:w-[320px]"
-            data-testid="nav-right"
-          >
-            {RIGHT_NAV.map(renderNavLink)}
-          </nav>
+          <div className="hidden lg:flex items-center justify-between gap-8 xl:gap-12 order-2 mx-auto w-full max-w-[720px]" aria-hidden>
+            <nav
+              className="flex items-center justify-center gap-7 xl:gap-9"
+              data-testid="nav-left"
+            >
+              {LEFT_NAV.map(renderNavLink)}
+            </nav>
+            <nav
+              className="flex items-center justify-center gap-7 xl:gap-9"
+              data-testid="nav-right"
+            >
+              {RIGHT_NAV.map(renderNavLink)}
+            </nav>
+          </div>
 
           {/* Mobile menu trigger sits inline before cart on small screens */}
-          <div className="flex items-center gap-1 sm:gap-2 order-6 lg:hidden">
+          <div className="flex items-center gap-1 sm:gap-2 justify-self-end lg:hidden order-3">
             <Sheet>
               <SheetTrigger asChild>
                 <Button
@@ -197,7 +196,7 @@ export default function PublicLayout({ children }: PublicLayoutProps) {
           </div>
 
           {/* Visual left edge in RTL = last child = Cart */}
-          <div className="flex items-center order-7">
+          <div className="hidden lg:flex items-center justify-self-end order-4">
             <CartDrawer>
               <Button
                 variant="outline"
