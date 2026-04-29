@@ -138,20 +138,17 @@ export default function PublicLayout({ children }: PublicLayoutProps) {
             )}
           </div>
 
-          {/* Right-side nav links (between Account and Logo, RTL visual right of logo) */}
+          <div className="flex-1 order-2" aria-hidden />
+
           <nav
-            className="hidden lg:flex items-center gap-7 xl:gap-9 order-2 mr-6 xl:mr-10"
+            className="hidden lg:flex items-center justify-center gap-7 xl:gap-9 order-3 w-[280px] xl:w-[320px]"
             data-testid="nav-right"
           >
             {RIGHT_NAV.map(renderNavLink)}
           </nav>
 
-          {/* Spacer to reserve room for the centered logo */}
-          <div className="flex-1 order-3" aria-hidden />
-
-          {/* Left-side nav links (between Logo and Cart, RTL visual left of logo) */}
           <nav
-            className="hidden lg:flex items-center gap-7 xl:gap-9 order-4 ml-6 xl:ml-10"
+            className="hidden lg:flex items-center justify-center gap-7 xl:gap-9 order-4 w-[280px] xl:w-[320px]"
             data-testid="nav-left"
           >
             {LEFT_NAV.map(renderNavLink)}
