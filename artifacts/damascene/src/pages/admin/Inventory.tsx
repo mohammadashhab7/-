@@ -16,9 +16,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { formatQty, formatSyp } from "@/lib/format";
+import { formatQty, useFormatPrice } from "@/lib/format";
 
 export default function AdminInventoryPage() {
+  const formatSyp = useFormatPrice();
   const { data: locations } = useListInventoryLocations();
   const [locationId, setLocationId] = useState<string>("");
   const { data: stock } = useListStock(locationId ? { locationId } : undefined);

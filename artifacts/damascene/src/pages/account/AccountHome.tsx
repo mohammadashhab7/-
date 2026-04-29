@@ -3,11 +3,12 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Link } from "wouter";
 import { useListMyOrders } from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
-import { formatSyp, formatDateTime, ORDER_STATUS_AR } from "@/lib/format";
+import { useFormatPrice, formatDateTime, ORDER_STATUS_AR } from "@/lib/format";
 
 export default function AccountHomePage() {
   const { user } = useUser();
   const { data: orders } = useListMyOrders();
+  const formatSyp = useFormatPrice();
   const recent = orders?.slice(0, 5) || [];
   return (
     <div className="space-y-6">

@@ -4,6 +4,7 @@ import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { imgSrc } from "@/lib/imgSrc";
+import { useCurrencySymbol } from "@/lib/format";
 
 export interface FeaturedProductItem {
   id: string;
@@ -30,6 +31,7 @@ export default function FeaturedProductsSection({
   eyebrow = "مختاراتنا",
   products,
 }: FeaturedProductsSectionProps) {
+  const currencySymbol = useCurrencySymbol();
   if (!title || products.length === 0) return null;
 
   return (
@@ -115,7 +117,7 @@ export default function FeaturedProductsSection({
                       <span className="text-base">
                         {new Intl.NumberFormat("ar-SY").format(product.priceMinor)}
                       </span>
-                      <span>ل.س</span>
+                      <span>{currencySymbol}</span>
                       {product.unit && (
                         <span className="text-muted-foreground font-normal text-xs">
                           / {product.unit}

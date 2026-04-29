@@ -15,7 +15,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
-import { formatSyp, formatDateTime, ORDER_STATUS_AR, CHANNEL_AR, PAYMENT_METHOD_AR } from "@/lib/format";
+import { useFormatPrice, formatDateTime, ORDER_STATUS_AR, CHANNEL_AR, PAYMENT_METHOD_AR } from "@/lib/format";
 
 const STATUS_OPTIONS: OrderStatus[] = [
   "pending_payment", "paid", "pending", "confirmed", "preparing",
@@ -24,6 +24,7 @@ const STATUS_OPTIONS: OrderStatus[] = [
 const CHANNEL_OPTIONS: Array<"online" | "pos"> = ["online", "pos"];
 
 export default function AdminOrdersPage() {
+  const formatSyp = useFormatPrice();
   const [channels, setChannels] = useState<Set<"online" | "pos">>(new Set(["online", "pos"]));
   const [statuses, setStatuses] = useState<Set<OrderStatus>>(new Set());
   const [dateFrom, setDateFrom] = useState<string>("");

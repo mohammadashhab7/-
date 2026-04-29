@@ -7,8 +7,10 @@ import { Card, CardContent } from "@/components/ui/card";
 import { ShoppingBag } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { imgSrc } from "@/lib/imgSrc";
+import { useCurrencySymbol } from "@/lib/format";
 
 export default function ShopPage() {
+  const currencySymbol = useCurrencySymbol();
   const searchString = useSearch();
   const searchParams = new URLSearchParams(searchString);
   const activeCategoryId = searchParams.get("category") || undefined;
@@ -131,7 +133,7 @@ export default function ShopPage() {
                         <div className="mt-auto pt-4 flex items-center justify-between">
                           <div className="text-primary font-medium" dir="ltr">
                             <span>{new Intl.NumberFormat("ar-SY").format(product.priceMinor)}</span>
-                            <span className="ml-1 text-sm">ل.س</span>
+                            <span className="ml-1 text-sm">{currencySymbol}</span>
                             <span className="text-muted-foreground font-normal text-xs ml-1">/ {product.unit}</span>
                           </div>
                           

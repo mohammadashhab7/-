@@ -17,9 +17,10 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import { imgSrc } from "@/lib/imgSrc";
-import { formatSyp } from "@/lib/format";
+import { useFormatPrice } from "@/lib/format";
 
 export default function CheckoutPage() {
+  const formatSyp = useFormatPrice();
   const { data: cart } = useGetCart();
   const { data: settings } = useGetSettings();
   const { user } = useUser();

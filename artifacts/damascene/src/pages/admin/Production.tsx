@@ -15,9 +15,10 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, Dialog
 import { Badge } from "@/components/ui/badge";
 import { Plus } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { formatSyp, formatDateTime } from "@/lib/format";
+import { useFormatPrice, formatDateTime } from "@/lib/format";
 
 export default function AdminProductionPage() {
+  const formatSyp = useFormatPrice();
   const { data: orders, isLoading } = useListProductionOrders();
   const { data: recipes } = useListRecipes();
   const qc = useQueryClient();

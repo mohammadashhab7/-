@@ -12,9 +12,10 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import { imgSrc } from "@/lib/imgSrc";
-import { formatSyp } from "@/lib/format";
+import { useFormatPrice } from "@/lib/format";
 
 export default function ProductDetailPage({ slug }: { slug: string }) {
+  const formatSyp = useFormatPrice();
   const { data: product, isLoading } = useGetPublicProduct(slug);
   const [qty, setQty] = useState(1);
   const [activeImg, setActiveImg] = useState(0);

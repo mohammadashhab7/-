@@ -4,14 +4,14 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import { ShoppingBag } from "lucide-react";
-
-function formatSyp(minor: number): string {
-  return new Intl.NumberFormat("ar-SY").format(minor) + " ل.س";
-}
+import { useCurrencySymbol } from "@/lib/format";
 
 export default function CartPage() {
   const { data: cart, isLoading } = useGetCart();
   const [, navigate] = useLocation();
+  const symbol = useCurrencySymbol();
+  const formatSyp = (minor: number): string =>
+    `${new Intl.NumberFormat("ar-SY").format(minor)} ${symbol}`;
 
   if (isLoading) {
     return (

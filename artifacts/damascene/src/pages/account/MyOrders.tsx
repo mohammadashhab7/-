@@ -2,10 +2,11 @@ import { useListMyOrders } from "@workspace/api-client-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { formatSyp, formatDateTime, ORDER_STATUS_AR } from "@/lib/format";
+import { useFormatPrice, formatDateTime, ORDER_STATUS_AR } from "@/lib/format";
 
 export default function MyOrdersPage() {
   const { data: orders, isLoading } = useListMyOrders();
+  const formatSyp = useFormatPrice();
   return (
     <Card>
       <CardHeader><CardTitle>طلباتي</CardTitle></CardHeader>

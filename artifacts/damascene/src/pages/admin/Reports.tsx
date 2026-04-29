@@ -12,11 +12,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Button } from "@/components/ui/button";
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { Download } from "lucide-react";
-import { formatSyp, formatDate } from "@/lib/format";
+import { useFormatPrice, formatDate } from "@/lib/format";
 
 const API_BASE = (import.meta.env.VITE_API_BASE_URL ?? "/api").replace(/\/$/, "");
 
 export default function AdminReportsPage() {
+  const formatSyp = useFormatPrice();
   const [days, setDays] = useState(30);
   const { data: trend } = useGetSalesTrend({ days });
   const { data: top } = useGetTopProducts({ limit: 10, days });

@@ -130,8 +130,7 @@ export default function AdminSettingsPage() {
           <CardTitle>الأموال والتوصيل</CardTitle>
         </CardHeader>
         <CardContent className="grid sm:grid-cols-2 gap-3">
-          <Field k="currency" label="العملة" form={form} onChange={updateField} />
-          <Field k="currencySymbol" label="رمز العملة" form={form} onChange={updateField} />
+          <Field k="currencySymbol" label="رمز العملة (مثال: ل.س, $, €)" form={form} onChange={updateField} />
           <Field k="taxPercent" label="نسبة الضريبة %" type="number" form={form} onChange={updateField} />
           <Field k="deliveryFeeMinor" label="رسوم التوصيل (×100)" type="number" form={form} onChange={updateField} />
           <Field k="freeDeliveryThresholdMinor" label="حد التوصيل المجاني (×100)" type="number" form={form} onChange={updateField} />

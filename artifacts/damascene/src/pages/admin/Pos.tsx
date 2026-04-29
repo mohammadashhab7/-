@@ -8,12 +8,18 @@ import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { Plus, Minus, Trash2, Search } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { formatSyp } from "@/lib/format";
+import { formatSyp, useCurrencySymbol } from "@/lib/format";
+import { useGetSettings } from "@workspace/api-client-react";
 
 interface CartLine { productId: string; nameAr: string; priceMinor: number; quantity: number }
 
 export default function AdminPosPage() {
   const { data: products } = useListProducts({ isActive: true });
+  const { data: settings } = useGetSettings();
+  const currencySymbol = useCurrencySymbol();
+  const storeName =
+    (settings as { storeNameAr?: string } | undefined)?.storeNameAr ||
+    "الدمشقي";
   const createOrder = useCreateSalesOrder();
   const { toast } = useToast();
   const [search, setSearch] = useState("");
@@ -39,7 +45,7 @@ export default function AdminPosPage() {
     const w = window.open("", "_blank", "width=400,height=600");
     if (!w) return;
     const fmt = (n: number) =>
-      `${(n / 100).toLocaleString("ar-SY")} ل.س`;
+      `${(n / 100).toLocaleString("ar-SY")} ${currencySymbol}`;
     const pmLabel: Record<string, string> = {
       cash: "نقداً",
       card: "بطاقة",
@@ -55,7 +61,7 @@ export default function AdminPosPage() {
   .center{text-align:center;margin-top:14px;font-size:11px}
   @media print{button{display:none}}
 </style></head><body>
-  <h1>الدمشقي</h1>
+  <h1>${storeName}</h1>
   <div class="meta">فاتورة رقم: ${lastInvoice.orderNumber}<br>${new Date(lastInvoice.issuedAt).toLocaleString("ar-SY")}</div>
   ${lastInvoice.customerName ? `<div class="row"><span>العميل</span><span>${lastInvoice.customerName}</span></div>` : ""}
   ${lastInvoice.customerPhone ? `<div class="row"><span>الهاتف</span><span dir="ltr">${lastInvoice.customerPhone}</span></div>` : ""}

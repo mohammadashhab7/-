@@ -12,9 +12,10 @@ import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { formatSyp, formatDate } from "@/lib/format";
+import { useFormatPrice, formatDate } from "@/lib/format";
 
 export default function AdminClosingPage() {
+  const formatSyp = useFormatPrice();
   const today = new Date().toISOString().slice(0, 10);
   const [date, setDate] = useState(today);
   const { data: closing, isLoading } = useGetDailyClosing(date);

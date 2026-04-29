@@ -1,10 +1,55 @@
-export function formatSyp(minor: number | undefined | null, currency: string = "SYP"): string {
+import { useGetSettings } from "@workspace/api-client-react";
+
+export const DEFAULT_CURRENCY_SYMBOL = "ل.س";
+
+export function formatSyp(
+  minor: number | undefined | null,
+  symbol: string = DEFAULT_CURRENCY_SYMBOL,
+): string {
   const n = Number(minor || 0) / 100;
   const formatted = new Intl.NumberFormat("ar-SY", {
     minimumFractionDigits: 0,
     maximumFractionDigits: 0,
   }).format(n);
-  return `${formatted} ل.س`;
+  return `${formatted} ${symbol}`;
+}
+
+/**
+ * React hook that returns the configured currency symbol from store settings.
+ * Falls back to the default if settings haven't loaded yet.
+ */
+export function useCurrencySymbol(): string {
+  const { data } = useGetSettings();
+  const sym = (data as { currencySymbol?: string } | undefined)?.currencySymbol;
+  return sym && sym.length > 0 ? sym : DEFAULT_CURRENCY_SYMBOL;
+}
+
+/**
+ * React hook returning a price formatter bound to the current settings symbol.
+ * Use everywhere prices are displayed so admin changes propagate automatically.
+ */
+export function useFormatPrice(): (minor: number | undefined | null) => string {
+  const symbol = useCurrencySymbol();
+  return (minor) => formatSyp(minor, symbol);
+}
+
+/**
+ * React hook returning just the integer part formatted for ar-SY locale,
+ * for use when the component lays out the symbol separately in markup.
+ */
+export function useFormatPriceParts(): {
+  format: (minor: number | undefined | null) => string;
+  symbol: string;
+} {
+  const symbol = useCurrencySymbol();
+  return {
+    symbol,
+    format: (minor) =>
+      new Intl.NumberFormat("ar-SY", {
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 0,
+      }).format(Number(minor || 0) / 100),
+  };
 }
 
 export function formatNumber(value: number | undefined | null, fractionDigits: number = 0): string {

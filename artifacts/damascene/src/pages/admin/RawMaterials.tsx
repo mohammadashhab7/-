@@ -14,11 +14,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { Plus, Pencil, Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { formatSyp } from "@/lib/format";
+import { useFormatPrice } from "@/lib/format";
 
 const empty = { sku: "", nameAr: "", unit: "kg", costPerUnitMinor: 0, reorderThreshold: 0 };
 
 export default function AdminRawMaterialsPage() {
+  const formatSyp = useFormatPrice();
   const { data, isLoading } = useListRawMaterials();
   const qc = useQueryClient();
   const { toast } = useToast();

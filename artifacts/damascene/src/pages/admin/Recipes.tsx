@@ -15,11 +15,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { Plus, Trash2, X } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { formatSyp, formatQty } from "@/lib/format";
+import { useFormatPrice, formatQty } from "@/lib/format";
 
 interface Item { materialId: string; quantity: number }
 
 export default function AdminRecipesPage() {
+  const formatSyp = useFormatPrice();
   const { data: recipes, isLoading } = useListRecipes();
   const { data: products } = useListProducts();
   const { data: materials } = useListRawMaterials();

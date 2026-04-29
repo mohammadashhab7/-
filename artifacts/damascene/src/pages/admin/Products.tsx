@@ -17,7 +17,7 @@ import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { Plus, Pencil, Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { formatSyp } from "@/lib/format";
+import { useFormatPrice } from "@/lib/format";
 import MediaPicker from "@/components/admin/MediaPicker";
 
 const emptyForm = {
@@ -27,6 +27,7 @@ const emptyForm = {
 };
 
 export default function AdminProductsPage() {
+  const formatSyp = useFormatPrice();
   const { data: products, isLoading } = useListProducts();
   const { data: cats } = useListCategories();
   const qc = useQueryClient();

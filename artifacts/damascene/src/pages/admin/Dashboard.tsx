@@ -34,6 +34,7 @@ import {
   Tooltip, 
   ResponsiveContainer 
 } from "recharts";
+import { useCurrencySymbol } from "@/lib/format";
 
 export default function DashboardPage() {
   const { data: kpis, isLoading: isLoadingKpis } = useGetDashboardKpis();
@@ -41,6 +42,7 @@ export default function DashboardPage() {
   const { data: topProducts, isLoading: isLoadingTop } = useGetTopProducts({ limit: 5 });
   const { data: recentActivity, isLoading: isLoadingActivity } = useGetRecentActivity();
   const { data: lowStock } = useListLowStock();
+  const currencySymbol = useCurrencySymbol();
 
   const formatCurrency = (minor: number | undefined) => {
     if (minor === undefined) return "0";
@@ -76,7 +78,7 @@ export default function DashboardPage() {
               <div className="h-8 bg-muted animate-pulse rounded mt-1 w-1/2" />
             ) : (
               <div className="text-2xl font-bold text-primary" dir="ltr">
-                {formatCurrency(kpis?.todaySalesMinor)} <span className="text-sm text-muted-foreground ml-1">{kpis?.currency}</span>
+                {formatCurrency(kpis?.todaySalesMinor)} <span className="text-sm text-muted-foreground ml-1">{currencySymbol}</span>
               </div>
             )}
             <div className="text-xs text-muted-foreground mt-1 space-y-0.5">
@@ -107,7 +109,7 @@ export default function DashboardPage() {
               <div className="h-8 bg-muted animate-pulse rounded mt-1 w-1/2" />
             ) : (
               <div className="text-2xl font-bold" dir="ltr">
-                {formatCurrency(kpis?.thisWeekSalesMinor)} <span className="text-sm text-muted-foreground ml-1">{kpis?.currency}</span>
+                {formatCurrency(kpis?.thisWeekSalesMinor)} <span className="text-sm text-muted-foreground ml-1">{currencySymbol}</span>
               </div>
             )}
             <p className="text-xs text-muted-foreground mt-1">
@@ -132,7 +134,7 @@ export default function DashboardPage() {
               <div className="h-8 bg-muted animate-pulse rounded mt-1 w-1/2" />
             ) : (
               <div className="text-2xl font-bold" dir="ltr">
-                {formatCurrency(kpis?.monthSalesMinor)} <span className="text-sm text-muted-foreground ml-1">{kpis?.currency}</span>
+                {formatCurrency(kpis?.monthSalesMinor)} <span className="text-sm text-muted-foreground ml-1">{currencySymbol}</span>
               </div>
             )}
             <p className="text-xs text-muted-foreground mt-1">
@@ -221,7 +223,7 @@ export default function DashboardPage() {
                     <Tooltip 
                       contentStyle={{ backgroundColor: "hsl(var(--card))", borderColor: "hsl(var(--border))", borderRadius: "8px" }}
                       itemStyle={{ color: "hsl(var(--foreground))" }}
-                      formatter={(value: number) => [`${formatCurrency(value)} ل.س`, "المبيعات"]}
+                      formatter={(value: number) => [`${formatCurrency(value)} ${currencySymbol}`, "المبيعات"]}
                       labelFormatter={(label) => format(new Date(label), "d MMMM yyyy", { locale: ar })}
                     />
                     <Area 

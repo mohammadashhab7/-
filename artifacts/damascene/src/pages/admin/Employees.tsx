@@ -18,11 +18,12 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, Dialog
 import { Badge } from "@/components/ui/badge";
 import { Plus, Pencil } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { formatSyp, formatDate } from "@/lib/format";
+import { useFormatPrice, formatDate } from "@/lib/format";
 
 const empty = { fullNameAr: "", role: "", phone: "", nationalId: "", baseSalaryMinor: 0, hiredOn: new Date().toISOString().slice(0, 10), notesAr: "", isActive: true };
 
 function EmployeesTab() {
+  const formatSyp = useFormatPrice();
   const { data, isLoading } = useListEmployees();
   const qc = useQueryClient();
   const { toast } = useToast();
@@ -92,6 +93,7 @@ function EmployeesTab() {
 }
 
 function SalariesTab() {
+  const formatSyp = useFormatPrice();
   const month = new Date().toISOString().slice(0, 7);
   const [m, setM] = useState(month);
   const { data } = useListSalaries({ month: m });

@@ -16,9 +16,10 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, Dialog
 import { Badge } from "@/components/ui/badge";
 import { Plus } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { formatSyp, formatDate } from "@/lib/format";
+import { useFormatPrice, formatDate } from "@/lib/format";
 
 function BookSummary({ title, book }: { title: string; book: any }) {
+  const formatSyp = useFormatPrice();
   if (!book) return null;
   return (
     <Card>
@@ -33,6 +34,7 @@ function BookSummary({ title, book }: { title: string; book: any }) {
 }
 
 export default function AdminFinancialsPage() {
+  const formatSyp = useFormatPrice();
   const today = new Date().toISOString().slice(0, 10);
   const monthAgo = new Date(Date.now() - 30 * 86400000).toISOString().slice(0, 10);
   const [dateFrom, setDateFrom] = useState(monthAgo);
