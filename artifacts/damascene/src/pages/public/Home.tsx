@@ -55,13 +55,27 @@ export default function HomePage() {
   const heroFallbackUrl = metaString(heroMeta, "fallbackImageUrl") ?? null;
   const heroMediaTypeRaw = metaString(heroMeta, "mediaType");
   const heroMediaType: HeroMediaType | undefined =
-    heroMediaTypeRaw === "video" || heroMediaTypeRaw === "image"
+    heroMediaTypeRaw === "video" || heroMediaTypeRaw === "image" || heroMediaTypeRaw === "slider"
       ? heroMediaTypeRaw
       : undefined;
   const heroOverlay = metaNumber(heroMeta, "overlayOpacity");
   const heroAlt = metaString(heroMeta, "alt");
   const heroCtaSecondary = metaString(heroMeta, "ctaSecondary");
   const heroCtaSecondaryHref = metaString(heroMeta, "ctaSecondaryHref") ?? "/about";
+
+  const heroSlides = (() => {
+    const raw = heroMeta["slides"];
+    if (!Array.isArray(raw)) return [];
+    return raw.filter(
+      (s): s is { imageUrl: string; alt?: string } =>
+        typeof s === "object" && s !== null && typeof (s as { imageUrl?: unknown }).imageUrl === "string"
+    );
+  })();
+  const heroSliderInterval = metaNumber(heroMeta, "sliderInterval");
+  const heroSliderTransition = metaNumber(heroMeta, "sliderTransition");
+  const heroSliderShowDotsRaw = heroMeta["sliderShowDots"];
+  const heroSliderShowDots =
+    typeof heroSliderShowDotsRaw === "boolean" ? heroSliderShowDotsRaw : true;
 
   const storyMeta = blockMeta(story);
   const storyImageUrl = story?.imageUrl ?? metaString(storyMeta, "imageUrl") ?? null;
@@ -90,6 +104,10 @@ export default function HomePage() {
           ctaPrimaryHref={hero.ctaHref || "/shop"}
           ctaSecondaryLabel={heroCtaSecondary}
           ctaSecondaryHref={heroCtaSecondaryHref}
+          slides={heroSlides}
+          sliderInterval={heroSliderInterval}
+          sliderTransition={heroSliderTransition}
+          sliderShowDots={heroSliderShowDots}
         />
       )}
 

@@ -38,6 +38,15 @@ function metaNumber(m: Meta, k: string, fallback: number): number {
   return fallback;
 }
 
+function metaSlides(m: Meta): Array<{ imageUrl: string; alt?: string }> {
+  const v = m["slides"];
+  if (!Array.isArray(v)) return [];
+  return v.filter(
+    (s): s is { imageUrl: string; alt?: string } =>
+      typeof s === "object" && s !== null && typeof (s as { imageUrl?: unknown }).imageUrl === "string"
+  );
+}
+
 interface BlockForm {
   key: string;
   page: string;
@@ -240,100 +249,218 @@ function ContentTab() {
             </div>
 
             {/* Hero-specific media controls */}
-            {isHero && (
-              <fieldset className="border rounded-md p-4 space-y-4">
-                <legend className="px-2 text-sm font-semibold text-primary">وسائط القسم الرئيسي (الـHero)</legend>
+            {isHero && (() => {
+              const heroType = metaString(form.metadata, "mediaType") || "image";
+              const slides = metaSlides(form.metadata);
+              const updateSlide = (idx: number, imageUrl: string) => {
+                const next = [...slides];
+                next[idx] = { ...next[idx], imageUrl };
+                setMeta({ slides: next });
+              };
+              const addSlide = () => setMeta({ slides: [...slides, { imageUrl: "" }] });
+              const removeSlide = (idx: number) =>
+                setMeta({ slides: slides.filter((_, i) => i !== idx) });
+              const intervalSec = metaNumber(form.metadata, "sliderInterval", 5000) / 1000;
+              const transitionMs = metaNumber(form.metadata, "sliderTransition", 800);
+              const showDots = form.metadata["sliderShowDots"] !== false;
+              return (
+                <fieldset className="border rounded-md p-4 space-y-4">
+                  <legend className="px-2 text-sm font-semibold text-primary">وسائط القسم الرئيسي (الـHero)</legend>
 
-                <div>
-                  <Label>نوع الخلفية</Label>
-                  <Select
-                    value={metaString(form.metadata, "mediaType") || "image"}
-                    onValueChange={(v) => setMeta({ mediaType: v })}
-                  >
-                    <SelectTrigger data-testid="select-hero-media-type">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="image">صورة</SelectItem>
-                      <SelectItem value="video">فيديو</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    اختر نوع الخلفية المعروضة. عند اختيار الفيديو سيتم تشغيله تلقائيًا بدون صوت.
-                  </p>
-                </div>
-
-                <MediaPicker
-                  label="صورة الخلفية"
-                  value={form.imageUrl}
-                  onChange={(url) => setForm({ ...form, imageUrl: url })}
-                  kind="image"
-                  helperText="تظهر دائمًا عند استخدام نوع 'صورة'، وكصورة احتياطية أثناء تحميل الفيديو."
-                  testId="picker-hero-image"
-                />
-
-                <MediaPicker
-                  label="فيديو الخلفية"
-                  value={metaString(form.metadata, "videoUrl")}
-                  onChange={(url) => setMeta({ videoUrl: url })}
-                  kind="video"
-                  helperText="يُستخدم فقط عند اختيار نوع الخلفية 'فيديو'. تشغيل تلقائي بدون صوت وفي حلقة."
-                  testId="picker-hero-video"
-                />
-
-                <MediaPicker
-                  label="صورة احتياطية للفيديو"
-                  value={metaString(form.metadata, "fallbackImageUrl")}
-                  onChange={(url) => setMeta({ fallbackImageUrl: url })}
-                  kind="image"
-                  helperText="تظهر إذا تعذّر تحميل الفيديو أو على الأجهزة التي لا تدعمه."
-                  testId="picker-hero-fallback"
-                />
-
-                <div>
-                  <div className="flex items-center justify-between">
-                    <Label>درجة تعتيم الطبقة الداكنة</Label>
-                    <span className="text-sm font-mono text-muted-foreground ltr-numbers">
-                      {metaNumber(form.metadata, "overlayOpacity", 60)}%
-                    </span>
-                  </div>
-                  <input
-                    type="range"
-                    min={0}
-                    max={100}
-                    step={5}
-                    value={metaNumber(form.metadata, "overlayOpacity", 60)}
-                    onChange={(e) => setMeta({ overlayOpacity: Number(e.target.value) })}
-                    className="w-full mt-2 accent-primary"
-                    data-testid="input-hero-overlay"
-                  />
-                  <p className="text-xs text-muted-foreground mt-1">
-                    تحكّم بشفافية الطبقة الداكنة فوق الخلفية لضمان وضوح النصوص. القيمة الافتراضية ٦٠٪.
-                  </p>
-                </div>
-
-                <div className="grid grid-cols-2 gap-2 pt-2 border-t">
                   <div>
-                    <Label>نص الزر الثانوي</Label>
-                    <Input
-                      value={metaString(form.metadata, "ctaSecondary")}
-                      onChange={(e) => setMeta({ ctaSecondary: e.target.value })}
-                      data-testid="input-cta-secondary-label"
-                    />
+                    <Label>نوع الخلفية</Label>
+                    <Select
+                      value={heroType}
+                      onValueChange={(v) => setMeta({ mediaType: v })}
+                    >
+                      <SelectTrigger data-testid="select-hero-media-type">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="image">صورة ثابتة</SelectItem>
+                        <SelectItem value="slider">سلايدر (عرض شرائح)</SelectItem>
+                        <SelectItem value="video">فيديو متكرر</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {heroType === "slider"
+                        ? "سيتم التنقل تلقائيًا بين الصور بتأثير انسيابي."
+                        : heroType === "video"
+                        ? "يُشغَّل الفيديو تلقائيًا بدون صوت وفي حلقة مستمرة."
+                        : "تظهر صورة ثابتة واحدة كخلفية للقسم."}
+                    </p>
                   </div>
+
+                  {/* Single image mode */}
+                  {heroType === "image" && (
+                    <MediaPicker
+                      label="صورة الخلفية"
+                      value={form.imageUrl}
+                      onChange={(url) => setForm({ ...form, imageUrl: url })}
+                      kind="image"
+                      helperText="الصورة الثابتة المعروضة كخلفية للقسم الرئيسي."
+                      testId="picker-hero-image"
+                    />
+                  )}
+
+                  {/* Video mode */}
+                  {heroType === "video" && (
+                    <>
+                      <MediaPicker
+                        label="فيديو الخلفية"
+                        value={metaString(form.metadata, "videoUrl")}
+                        onChange={(url) => setMeta({ videoUrl: url })}
+                        kind="video"
+                        helperText="تشغيل تلقائي بدون صوت وفي حلقة مستمرة."
+                        testId="picker-hero-video"
+                      />
+                      <MediaPicker
+                        label="صورة احتياطية للفيديو"
+                        value={metaString(form.metadata, "fallbackImageUrl")}
+                        onChange={(url) => setMeta({ fallbackImageUrl: url })}
+                        kind="image"
+                        helperText="تظهر إذا تعذّر تحميل الفيديو أو على الأجهزة التي لا تدعمه."
+                        testId="picker-hero-fallback"
+                      />
+                    </>
+                  )}
+
+                  {/* Slider mode */}
+                  {heroType === "slider" && (
+                    <div className="space-y-3">
+                      <Label>شرائح السلايدر</Label>
+                      {slides.length === 0 && (
+                        <p className="text-sm text-muted-foreground">لا توجد شرائح. أضف شريحة للبدء.</p>
+                      )}
+                      {slides.map((slide, idx) => (
+                        <div key={idx} className="flex items-end gap-2" data-testid={`slider-slide-${idx}`}>
+                          <div className="flex-1">
+                            <MediaPicker
+                              label={`شريحة ${idx + 1}`}
+                              value={slide.imageUrl}
+                              onChange={(url) => updateSlide(idx, url)}
+                              kind="image"
+                              testId={`picker-slide-${idx}`}
+                            />
+                          </div>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => removeSlide(idx)}
+                            className="text-destructive hover:text-destructive mb-1"
+                            data-testid={`button-remove-slide-${idx}`}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      ))}
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={addSlide}
+                        data-testid="button-add-slide"
+                      >
+                        <Plus className="ml-1.5 h-4 w-4" />
+                        إضافة شريحة
+                      </Button>
+
+                      <div className="grid grid-cols-2 gap-3 pt-3 border-t">
+                        <div>
+                          <Label>مدة عرض الشريحة (ثوانٍ)</Label>
+                          <Input
+                            type="number"
+                            min={1}
+                            max={60}
+                            step={0.5}
+                            value={intervalSec}
+                            onChange={(e) =>
+                              setMeta({ sliderInterval: Math.round(Number(e.target.value) * 1000) })
+                            }
+                            className="ltr-numbers mt-1"
+                            dir="ltr"
+                            data-testid="input-slider-interval"
+                          />
+                        </div>
+                        <div>
+                          <Label>مدة الانتقال (ملي ثانية)</Label>
+                          <Input
+                            type="number"
+                            min={100}
+                            max={3000}
+                            step={100}
+                            value={transitionMs}
+                            onChange={(e) =>
+                              setMeta({ sliderTransition: Number(e.target.value) })
+                            }
+                            className="ltr-numbers mt-1"
+                            dir="ltr"
+                            data-testid="input-slider-transition"
+                          />
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2 pt-1">
+                        <input
+                          type="checkbox"
+                          id="slider-show-dots"
+                          checked={showDots}
+                          onChange={(e) => setMeta({ sliderShowDots: e.target.checked })}
+                          className="accent-primary h-4 w-4"
+                          data-testid="checkbox-slider-dots"
+                        />
+                        <label htmlFor="slider-show-dots" className="text-sm">
+                          عرض نقاط التنقل
+                        </label>
+                      </div>
+                    </div>
+                  )}
+
                   <div>
-                    <Label>رابط الزر الثانوي</Label>
-                    <Input
-                      value={metaString(form.metadata, "ctaSecondaryHref")}
-                      onChange={(e) => setMeta({ ctaSecondaryHref: e.target.value })}
-                      className="ltr-numbers"
-                      dir="ltr"
-                      data-testid="input-cta-secondary-href"
+                    <div className="flex items-center justify-between">
+                      <Label>درجة تعتيم الطبقة الداكنة</Label>
+                      <span className="text-sm font-mono text-muted-foreground ltr-numbers">
+                        {metaNumber(form.metadata, "overlayOpacity", 60)}%
+                      </span>
+                    </div>
+                    <input
+                      type="range"
+                      min={0}
+                      max={100}
+                      step={5}
+                      value={metaNumber(form.metadata, "overlayOpacity", 60)}
+                      onChange={(e) => setMeta({ overlayOpacity: Number(e.target.value) })}
+                      className="w-full mt-2 accent-primary"
+                      data-testid="input-hero-overlay"
                     />
+                    <p className="text-xs text-muted-foreground mt-1">
+                      تحكّم بشفافية الطبقة الداكنة فوق الخلفية لضمان وضوح النصوص. القيمة الافتراضية ٦٠٪.
+                    </p>
                   </div>
-                </div>
-              </fieldset>
-            )}
+
+                  <div className="grid grid-cols-2 gap-2 pt-2 border-t">
+                    <div>
+                      <Label>نص الزر الثانوي</Label>
+                      <Input
+                        value={metaString(form.metadata, "ctaSecondary")}
+                        onChange={(e) => setMeta({ ctaSecondary: e.target.value })}
+                        data-testid="input-cta-secondary-label"
+                      />
+                    </div>
+                    <div>
+                      <Label>رابط الزر الثانوي</Label>
+                      <Input
+                        value={metaString(form.metadata, "ctaSecondaryHref")}
+                        onChange={(e) => setMeta({ ctaSecondaryHref: e.target.value })}
+                        className="ltr-numbers"
+                        dir="ltr"
+                        data-testid="input-cta-secondary-href"
+                      />
+                    </div>
+                  </div>
+                </fieldset>
+              );
+            })()}
 
             {/* Story / generic section media controls */}
             {!isHero && showMainMedia && (

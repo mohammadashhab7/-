@@ -6,7 +6,12 @@ import { Button } from "@/components/ui/button";
 import { imgSrc } from "@/lib/imgSrc";
 import heroImg from "@/assets/hero.png";
 
-export type HeroMediaType = "image" | "video";
+export type HeroMediaType = "image" | "video" | "slider";
+
+export interface HeroSlide {
+  imageUrl: string;
+  alt?: string;
+}
 
 export interface HeroSectionProps {
   title?: string;
@@ -21,6 +26,10 @@ export interface HeroSectionProps {
   ctaPrimaryHref?: string;
   ctaSecondaryLabel?: string;
   ctaSecondaryHref?: string;
+  slides?: HeroSlide[];
+  sliderInterval?: number;
+  sliderTransition?: number;
+  sliderShowDots?: boolean;
 }
 
 function clampOpacity(o: number | undefined): number {
@@ -43,9 +52,15 @@ export default function HeroSection({
   ctaPrimaryHref = "/shop",
   ctaSecondaryLabel,
   ctaSecondaryHref = "/about",
+  slides = [],
+  sliderInterval = 5000,
+  sliderTransition = 800,
+  sliderShowDots = true,
 }: HeroSectionProps) {
   const ref = useRef<HTMLElement>(null);
   const [videoFailed, setVideoFailed] = useState(false);
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const [paused, setPaused] = useState(false);
 
   const { scrollYProgress } = useScroll({
     target: ref,
@@ -56,22 +71,33 @@ export default function HeroSection({
   const contentY = useTransform(scrollYProgress, [0, 1], ["0%", "40%"]);
   const contentOpacity = useTransform(scrollYProgress, [0, 0.6, 1], [1, 0.5, 0]);
 
-  // Image priority: explicit imageUrl, then bundled hero asset.
   const resolvedImage = imageUrl ? imgSrc(imageUrl) : heroImg;
-  // Poster/fallback for video: explicit fallbackImageUrl, else the regular image.
-  const resolvedFallback = fallbackImageUrl
-    ? imgSrc(fallbackImageUrl)
-    : resolvedImage;
+  const resolvedFallback = fallbackImageUrl ? imgSrc(fallbackImageUrl) : resolvedImage;
   const resolvedVideo = videoUrl ? imgSrc(videoUrl) : null;
 
   const wantsVideo = mediaType === "video" || (!mediaType && !!resolvedVideo);
   const showVideo = wantsVideo && !!resolvedVideo && !videoFailed;
 
-  // Reset failure flag whenever the effective video source changes so a fresh
-  // URL gets a clean chance to load instead of silently falling back forever.
+  const validSlides = slides.filter((s) => s.imageUrl);
+  const isSlider = mediaType === "slider" && validSlides.length > 0;
+  const slideCount = validSlides.length;
+  const transitionSec = Math.max(0.1, (sliderTransition ?? 800) / 1000);
+
   useEffect(() => {
     setVideoFailed(false);
   }, [resolvedVideo]);
+
+  useEffect(() => {
+    setCurrentIndex(0);
+  }, [slides]);
+
+  useEffect(() => {
+    if (!isSlider || slideCount <= 1 || paused) return;
+    const id = setInterval(() => {
+      setCurrentIndex((i) => (i + 1) % slideCount);
+    }, Math.max(1000, sliderInterval ?? 5000));
+    return () => clearInterval(id);
+  }, [isSlider, slideCount, paused, sliderInterval]);
 
   const overlayPct = clampOpacity(overlayOpacity);
   const overlayDecimal = overlayPct / 100;
@@ -81,12 +107,29 @@ export default function HeroSection({
       ref={ref}
       className="relative w-full h-[92vh] min-h-[640px] flex items-center justify-center overflow-hidden bg-black"
       data-testid="section-hero"
+      onMouseEnter={() => setPaused(true)}
+      onMouseLeave={() => setPaused(false)}
     >
       <motion.div
         className="absolute inset-0 w-full h-[120%]"
         style={{ y: mediaY }}
       >
-        {showVideo ? (
+        {isSlider ? (
+          <div className="relative w-full h-full">
+            {validSlides.map((slide, i) => (
+              <motion.img
+                key={i}
+                src={imgSrc(slide.imageUrl)}
+                alt={slide.alt || alt || title || ""}
+                className="absolute inset-0 w-full h-full object-cover object-center"
+                initial={false}
+                animate={{ opacity: i === currentIndex ? 1 : 0 }}
+                transition={{ duration: transitionSec, ease: "easeInOut" }}
+                data-testid={i === currentIndex ? "img-hero" : undefined}
+              />
+            ))}
+          </div>
+        ) : showVideo ? (
           <video
             autoPlay
             muted
@@ -173,8 +216,28 @@ export default function HeroSection({
         </motion.div>
       </motion.div>
 
+      {isSlider && sliderShowDots && slideCount > 1 && (
+        <div
+          className="absolute bottom-20 left-1/2 -translate-x-1/2 z-20 flex gap-2.5"
+          data-testid="slider-dots"
+        >
+          {validSlides.map((_, i) => (
+            <button
+              key={i}
+              onClick={() => setCurrentIndex(i)}
+              aria-label={`الشريحة ${i + 1}`}
+              className={`h-2 rounded-full transition-all duration-500 ${
+                i === currentIndex
+                  ? "w-6 bg-white"
+                  : "w-2 bg-white/50 hover:bg-white/80"
+              }`}
+            />
+          ))}
+        </div>
+      )}
+
       <motion.div
-        className="absolute bottom-8 left-1/2 -translate-x-1/2 z-10 text-white/60 text-xs tracking-[0.3em] uppercase font-medium"
+        className="absolute bottom-6 left-1/2 -translate-x-1/2 z-10 text-white/60 text-xs tracking-[0.3em] uppercase font-medium"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ delay: 1.2, duration: 1 }}
