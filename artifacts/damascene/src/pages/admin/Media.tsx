@@ -142,7 +142,7 @@ export default function AdminMediaPage() {
                 ref={fileInput}
                 type="file"
                 hidden
-                accept="image/*,video/*"
+                accept="image/*,video/*,application/pdf,.doc,.docx,.xls,.xlsx,.csv"
                 onChange={(e) => {
                   const f = e.target.files?.[0];
                   if (f) handleFile(f);

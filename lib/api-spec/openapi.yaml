@@ -2132,3 +2132,4 @@ components:
         instagramUrl: { type: string }
         facebookUrl: { type: string }
         whatsappNumber: { type: string }
+        logoUrl: { type: string }

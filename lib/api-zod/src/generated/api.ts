@@ -1724,6 +1724,7 @@ export const UpdateSettingsBody = zod.object({
   instagramUrl: zod.string().optional(),
   facebookUrl: zod.string().optional(),
   whatsappNumber: zod.string().optional(),
+  logoUrl: zod.string().optional(),
 });
 
 export const UpdateSettingsResponse = zod.object({
