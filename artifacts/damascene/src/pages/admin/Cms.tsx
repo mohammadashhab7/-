@@ -277,9 +277,9 @@ function ContentTab() {
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="image">صورة ثابتة</SelectItem>
-                        <SelectItem value="slider">سلايدر (عرض شرائح)</SelectItem>
-                        <SelectItem value="video">فيديو متكرر</SelectItem>
+                        <SelectItem value="image">صورة</SelectItem>
+                        <SelectItem value="slider">سلايدر</SelectItem>
+                        <SelectItem value="video">فيديو</SelectItem>
                       </SelectContent>
                     </Select>
                     <p className="text-xs text-muted-foreground mt-1">
@@ -375,9 +375,11 @@ function ContentTab() {
                             max={60}
                             step={0.5}
                             value={intervalSec}
-                            onChange={(e) =>
-                              setMeta({ sliderInterval: Math.round(Number(e.target.value) * 1000) })
-                            }
+                            onChange={(e) => {
+                              const v = Number(e.target.value);
+                              if (Number.isFinite(v) && v >= 0.5)
+                                setMeta({ sliderInterval: Math.round(v * 1000) });
+                            }}
                             className="ltr-numbers mt-1"
                             dir="ltr"
                             data-testid="input-slider-interval"
@@ -391,9 +393,11 @@ function ContentTab() {
                             max={3000}
                             step={100}
                             value={transitionMs}
-                            onChange={(e) =>
-                              setMeta({ sliderTransition: Number(e.target.value) })
-                            }
+                            onChange={(e) => {
+                              const v = Number(e.target.value);
+                              if (Number.isFinite(v) && v >= 100)
+                                setMeta({ sliderTransition: v });
+                            }}
                             className="ltr-numbers mt-1"
                             dir="ltr"
                             data-testid="input-slider-transition"
