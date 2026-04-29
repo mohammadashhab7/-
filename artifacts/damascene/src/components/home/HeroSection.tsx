@@ -1,5 +1,5 @@
 import { Link } from "wouter";
-import { motion, useScroll, useTransform } from "framer-motion";
+import { AnimatePresence, motion, useScroll, useTransform } from "framer-motion";
 import { useEffect, useRef, useState } from "react";
 import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -116,18 +116,19 @@ export default function HeroSection({
       >
         {isSlider ? (
           <div className="relative w-full h-full">
-            {validSlides.map((slide, i) => (
+            <AnimatePresence initial={false}>
               <motion.img
-                key={i}
-                src={imgSrc(slide.imageUrl)}
-                alt={slide.alt || alt || title || ""}
+                key={currentIndex}
+                src={imgSrc(validSlides[currentIndex].imageUrl)}
+                alt={validSlides[currentIndex].alt || alt || title || ""}
                 className="absolute inset-0 w-full h-full object-cover object-center"
-                initial={false}
-                animate={{ opacity: i === currentIndex ? 1 : 0 }}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
                 transition={{ duration: transitionSec, ease: "easeInOut" }}
-                data-testid={i === currentIndex ? "img-hero" : undefined}
+                data-testid="img-hero"
               />
-            ))}
+            </AnimatePresence>
           </div>
         ) : showVideo ? (
           <video
