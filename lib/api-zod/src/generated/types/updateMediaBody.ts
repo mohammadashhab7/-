@@ -7,5 +7,5 @@
  */
 
 export type UpdateMediaBody = {
-  name?: string;
+  name: string;
 };

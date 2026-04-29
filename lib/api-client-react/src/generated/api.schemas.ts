@@ -1084,7 +1084,7 @@ export type ListContentBlocksParams = {
 };
 
 export type UpdateMediaBody = {
-  name?: string;
+  name: string;
 };
 
 export type GetMediaUploadUrl200 = {

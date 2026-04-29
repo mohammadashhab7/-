@@ -1667,7 +1667,7 @@ export const UpdateMediaParams = zod.object({
 });
 
 export const UpdateMediaBody = zod.object({
-  name: zod.string().optional(),
+  name: zod.string(),
 });
 
 export const UpdateMediaResponse = zod.object({
