@@ -38,7 +38,7 @@ router.get("/settings", async (_req, res) => {
   res.json(serialize(s));
 });
 
-router.patch("/settings", requirePermission("settings", "write"), async (req, res) => {
+router.put("/settings", requirePermission("settings", "write"), async (req, res) => {
   await getOrCreate();
   const b = req.body ?? {};
   const updates: Partial<typeof settings.$inferInsert> = { updatedAt: new Date() };
