@@ -17,6 +17,21 @@
 --
 -- This file is a committed audit artifact; the actual UPDATE was executed
 -- via psql against $DATABASE_URL during the migration session.
+--
+-- Deployment runbook (when applying to a fresh environment):
+--   1) Pull the code change.
+--   2) Run `pnpm --filter @workspace/db run push` FIRST — this creates the
+--      new `settings.country_code` column that step 3 depends on.
+--   3) Then execute this backfill SQL (it references `settings.country_code`).
+--   4) Optionally re-run `pnpm --filter @workspace/api-server exec tsx src/seed.ts`
+--      only if the environment is still on bare seed data; production should
+--      skip this so admin-edited content is preserved.
+--
+-- Note on financial_entries: rewriting historical currency rows from SYP
+-- to ILS was an intentional, approved data-correction (the system was
+-- mis-configured at seed time, not actually transacting in SYP). This is
+-- not a normal audit-trail rewrite and should not be repeated for any
+-- future currency change without an explicit data-policy decision.
 
 BEGIN;
 
