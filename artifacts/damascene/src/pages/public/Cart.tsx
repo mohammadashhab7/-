@@ -11,7 +11,7 @@ export default function CartPage() {
   const [, navigate] = useLocation();
   const symbol = useCurrencySymbol();
   const formatSyp = (minor: number): string =>
-    `${new Intl.NumberFormat(["ar-PS", "ar"]).format(minor)} ${symbol}`;
+    `${new Intl.NumberFormat("en-US").format(minor)} ${symbol}`;
 
   if (isLoading) {
     return (

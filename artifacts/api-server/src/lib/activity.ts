@@ -7,7 +7,10 @@ export async function logActivity(args: {
     | "order_status_changed"
     | "production_started"
     | "production_completed"
+    | "transfer_requested"
+    | "transfer_approved"
     | "transfer_done"
+    | "transfer_cancelled"
     | "low_stock"
     | "financial_entry"
     | "user_action";

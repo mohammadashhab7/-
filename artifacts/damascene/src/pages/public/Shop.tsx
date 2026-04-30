@@ -132,7 +132,7 @@ export default function ShopPage() {
                         
                         <div className="mt-auto pt-4 flex items-center justify-between">
                           <div className="text-primary font-medium" dir="ltr">
-                            <span>{new Intl.NumberFormat(["ar-PS", "ar"]).format(product.priceMinor)}</span>
+                            <span>{new Intl.NumberFormat("en-US").format(product.priceMinor)}</span>
                             <span className="ml-1 text-sm">{currencySymbol}</span>
                             <span className="text-muted-foreground font-normal text-xs ml-1">/ {product.unit}</span>
                           </div>

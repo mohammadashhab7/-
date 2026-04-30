@@ -59,6 +59,13 @@ export const productionOrderStatusEnum = pgEnum("production_order_status", [
   "cancelled",
 ]);
 
+export const transferStatusEnum = pgEnum("transfer_status", [
+  "pending",
+  "approved",
+  "completed",
+  "cancelled",
+]);
+
 export const orderStatusEnum = pgEnum("order_status", [
   "pending_payment",
   "paid",
@@ -124,7 +131,10 @@ export const activityKindEnum = pgEnum("activity_kind", [
   "order_status_changed",
   "production_started",
   "production_completed",
+  "transfer_requested",
+  "transfer_approved",
   "transfer_done",
+  "transfer_cancelled",
   "low_stock",
   "financial_entry",
   "user_action",
@@ -370,8 +380,15 @@ export const transfers = pgTable("transfers", {
   toLocationId: uuid("to_location_id")
     .notNull()
     .references(() => inventoryLocations.id),
+  status: transferStatusEnum("status").notNull().default("completed"),
   notesAr: text("notes_ar"),
   createdByUserId: uuid("created_by_user_id").references(() => users.id),
+  approvedByUserId: uuid("approved_by_user_id").references(() => users.id),
+  approvedAt: timestamp("approved_at", { withTimezone: true }),
+  completedByUserId: uuid("completed_by_user_id").references(() => users.id),
+  completedAt: timestamp("completed_at", { withTimezone: true }),
+  cancelledByUserId: uuid("cancelled_by_user_id").references(() => users.id),
+  cancelledAt: timestamp("cancelled_at", { withTimezone: true }),
   createdAt,
 });
 

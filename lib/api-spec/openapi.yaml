@@ -613,6 +613,57 @@ paths:
             application/json:
               schema: { $ref: "#/components/schemas/Transfer" }
 
+  /transfers/{id}/approve:
+    post:
+      operationId: approveTransfer
+      tags: [transfers]
+      summary: Approve a pending transfer (no stock movement)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Approved
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/TransferStatusUpdate" }
+
+  /transfers/{id}/complete:
+    post:
+      operationId: completeTransfer
+      tags: [transfers]
+      summary: Complete a transfer and move stock
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Completed
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/TransferStatusUpdate" }
+
+  /transfers/{id}/cancel:
+    post:
+      operationId: cancelTransfer
+      tags: [transfers]
+      summary: Cancel a pending or approved transfer
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Cancelled
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/TransferStatusUpdate" }
+
   /sales-orders:
     get:
       operationId: listSalesOrders
@@ -1657,18 +1708,28 @@ components:
         batchCount: { type: integer, minimum: 1 }
         notesAr: { type: string }
 
+    TransferStatus:
+      type: string
+      enum: [pending, approved, completed, cancelled]
     Transfer:
       type: object
-      required: [id, fromLocationId, toLocationId, items, createdAt]
+      required: [id, fromLocationId, toLocationId, status, items, createdAt]
       properties:
         id: { type: string }
+        transferNumber: { type: string }
         fromLocationId: { type: string }
+        fromLocationNameAr: { type: string, nullable: true }
         toLocationId: { type: string }
-        notesAr: { type: string }
+        toLocationNameAr: { type: string, nullable: true }
+        status: { $ref: "#/components/schemas/TransferStatus" }
+        notesAr: { type: string, nullable: true }
         items:
           type: array
           items: { $ref: "#/components/schemas/TransferItem" }
         createdAt: { type: string, format: date-time }
+        approvedAt: { type: string, format: date-time, nullable: true }
+        completedAt: { type: string, format: date-time, nullable: true }
+        cancelledAt: { type: string, format: date-time, nullable: true }
     TransferItem:
       type: object
       required: [productId, productNameAr, quantity]
@@ -1684,6 +1745,13 @@ components:
         fromLocationId: { type: string }
         toLocationId: { type: string }
         notesAr: { type: string }
+        executeImmediately:
+          type: boolean
+          description: When false, transfer is created in pending status and stock is not moved until completion. Defaults to true for backward compatibility.
+        status:
+          type: string
+          enum: [pending, completed]
+          description: Optional explicit status. If "pending", stock is not moved.
         items:
           type: array
           items:
@@ -1692,6 +1760,12 @@ components:
             properties:
               productId: { type: string }
               quantity: { type: integer }
+    TransferStatusUpdate:
+      type: object
+      required: [id, status]
+      properties:
+        id: { type: string }
+        status: { $ref: "#/components/schemas/TransferStatus" }
 
     OrderStatus:
       type: string
@@ -1892,10 +1966,10 @@ components:
 
     DashboardKpis:
       type: object
-      required: [todaySalesMinor, todayOrders, monthSalesMinor, monthOrders, pendingOnlineOrders, lowStockCount, openProductionToday, currency]
+      required: [todaySalesMinor, todayOrders, monthSalesMinor, monthOrders, pendingOnlineOrders, lowStockCount, openProductionToday, currency, workshopMonthExpenseMinor, workshopMonthProductionOrders, workshopRawMaterialLowStockCount]
       properties:
         currency: { type: string }
-        todaySalesMinor: { type: integer }
+        todaySalesMinor: { type: integer, description: "Store division — combined POS + online" }
         todayOrders: { type: integer }
         todayPosSalesMinor: { type: integer }
         todayPosOrders: { type: integer }
@@ -1907,9 +1981,12 @@ components:
         monthSalesMinor: { type: integer }
         monthOrders: { type: integer }
         pendingOnlineOrders: { type: integer }
-        lowStockCount: { type: integer }
-        openProductionToday: { type: integer }
+        lowStockCount: { type: integer, description: "Store division — finished goods below reorder threshold" }
+        openProductionToday: { type: integer, description: "Workshop — production orders currently planned/in_progress" }
         cashOnHandMinor: { type: integer }
+        workshopMonthExpenseMinor: { type: integer, description: "Sum of production-module financial expenses this month" }
+        workshopMonthProductionOrders: { type: integer, description: "Production orders completed this month" }
+        workshopRawMaterialLowStockCount: { type: integer, description: "Raw materials below their reorder threshold" }
 
     MaterialSpendReport:
       type: object

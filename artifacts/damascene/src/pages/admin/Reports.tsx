@@ -114,7 +114,7 @@ export default function AdminReportsPage() {
 
       <Card data-testid="card-store-kpis">
         <CardHeader>
-          <CardTitle>مؤشرات المتجر (POS مقابل الإنترنت)</CardTitle>
+          <CardTitle>مؤشرات المعرض (POS مقابل الإنترنت)</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid md:grid-cols-3 gap-3">
@@ -174,7 +174,7 @@ export default function AdminReportsPage() {
 
       <Card data-testid="card-material-spend">
         <CardHeader>
-          <CardTitle>مصاريف المواد الأولية في الإنتاج</CardTitle>
+          <CardTitle>مصاريف المواد الأولية في المشغل</CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
           <div className="rounded-md border p-3 inline-block">

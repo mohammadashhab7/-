@@ -6,12 +6,20 @@
  * OpenAPI spec version: 0.1.0
  */
 import type { TransferItem } from "./transferItem";
+import type { TransferStatus } from "./transferStatus";
 
 export interface Transfer {
   id: string;
+  transferNumber?: string;
   fromLocationId: string;
+  fromLocationNameAr?: string | null;
   toLocationId: string;
-  notesAr?: string;
+  toLocationNameAr?: string | null;
+  status: TransferStatus;
+  notesAr?: string | null;
   items: TransferItem[];
   createdAt: Date;
+  approvedAt?: Date | null;
+  completedAt?: Date | null;
+  cancelledAt?: Date | null;
 }

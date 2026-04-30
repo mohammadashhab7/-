@@ -44,7 +44,7 @@ export default function AdminPosPage() {
     const w = window.open("", "_blank", "width=400,height=600");
     if (!w) return;
     const fmt = (n: number) =>
-      `${(n / 100).toLocaleString(["ar-PS", "ar"])} ${currencySymbol}`;
+      `${(n / 100).toLocaleString("en-US")} ${currencySymbol}`;
     const pmLabel: Record<string, string> = {
       cash: "نقداً",
       card: "بطاقة",
@@ -61,7 +61,7 @@ export default function AdminPosPage() {
   @media print{button{display:none}}
 </style></head><body>
   <h1>${storeName}</h1>
-  <div class="meta">فاتورة رقم: ${lastInvoice.orderNumber}<br>${new Date(lastInvoice.issuedAt).toLocaleString(["ar-PS", "ar"])}</div>
+  <div class="meta">فاتورة رقم: ${lastInvoice.orderNumber}<br>${new Date(lastInvoice.issuedAt).toLocaleString("ar-PS-u-nu-latn")}</div>
   ${lastInvoice.customerName ? `<div class="row"><span>العميل</span><span>${lastInvoice.customerName}</span></div>` : ""}
   ${lastInvoice.customerPhone ? `<div class="row"><span>الهاتف</span><span dir="ltr">${lastInvoice.customerPhone}</span></div>` : ""}
   <div style="margin-top:8px;border-top:1px solid #000;padding-top:6px">

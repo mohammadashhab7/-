@@ -9,8 +9,11 @@ import {
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { format } from "date-fns";
-import { ar } from "date-fns/locale";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  DIVISION_LABEL_AR,
+  type DivisionFilter,
+} from "@/lib/division";
 import { 
   TrendingUp, 
   TrendingDown,
@@ -34,9 +37,10 @@ import {
   Tooltip, 
   ResponsiveContainer 
 } from "recharts";
-import { useCurrencySymbol } from "@/lib/format";
+import { useCurrencySymbol, formatDate as fmtDate, formatDateTime as fmtDateTime } from "@/lib/format";
 
 export default function DashboardPage() {
+  const [division, setDivision] = React.useState<DivisionFilter>("all");
   const { data: kpis, isLoading: isLoadingKpis } = useGetDashboardKpis();
   const { data: salesTrend, isLoading: isLoadingTrend } = useGetSalesTrend({ days: 7 });
   const { data: topProducts, isLoading: isLoadingTop } = useGetTopProducts({ limit: 5 });
@@ -44,9 +48,12 @@ export default function DashboardPage() {
   const { data: lowStock } = useListLowStock();
   const currencySymbol = useCurrencySymbol();
 
+  const showStore = division === "all" || division === "store";
+  const showWorkshop = division === "all" || division === "workshop";
+
   const formatCurrency = (minor: number | undefined) => {
     if (minor === undefined) return "0";
-    return new Intl.NumberFormat(["ar-PS", "ar"]).format(minor);
+    return new Intl.NumberFormat("en-US").format(minor);
   };
 
   const getActivityIcon = (kind: string) => {
@@ -61,13 +68,28 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-6 animate-in fade-in duration-500">
-      <div>
-        <h1 className="text-3xl font-serif font-bold text-foreground tracking-tight">نظرة عامة</h1>
-        <p className="text-muted-foreground mt-1">ملخص أداء العمليات والمبيعات.</p>
+      <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+        <div>
+          <h1 className="text-3xl font-serif font-bold text-foreground tracking-tight">نظرة عامة</h1>
+          <p className="text-muted-foreground mt-1">ملخص أداء العمليات والمبيعات.</p>
+        </div>
+        <Tabs
+          value={division}
+          onValueChange={(v) => setDivision(v as DivisionFilter)}
+          className="w-full md:w-auto"
+          data-testid="dashboard-division-tabs"
+        >
+          <TabsList>
+            <TabsTrigger value="all" data-testid="tab-all">{DIVISION_LABEL_AR.all}</TabsTrigger>
+            <TabsTrigger value="workshop" data-testid="tab-workshop">{DIVISION_LABEL_AR.workshop}</TabsTrigger>
+            <TabsTrigger value="store" data-testid="tab-store">{DIVISION_LABEL_AR.store}</TabsTrigger>
+          </TabsList>
+        </Tabs>
       </div>
 
       {/* KPIs */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        {showStore && (
         <Card className="border-border/50 shadow-sm bg-card" data-testid="kpi-today-sales">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">مبيعات اليوم</CardTitle>
@@ -96,7 +118,9 @@ export default function DashboardPage() {
             </div>
           </CardContent>
         </Card>
+        )}
 
+        {showStore && (
         <Card className="border-border/50 shadow-sm bg-card" data-testid="kpi-wow">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">مبيعات هذا الأسبوع</CardTitle>
@@ -123,8 +147,10 @@ export default function DashboardPage() {
             </p>
           </CardContent>
         </Card>
+        )}
 
-        <Card className="border-border/50 shadow-sm bg-card">
+        {showStore && (
+        <Card className="border-border/50 shadow-sm bg-card" data-testid="kpi-month-sales">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">مبيعات الشهر</CardTitle>
             <Wallet className="h-4 w-4 text-muted-foreground" />
@@ -142,8 +168,10 @@ export default function DashboardPage() {
             </p>
           </CardContent>
         </Card>
+        )}
 
-        <Card className="border-border/50 shadow-sm bg-card">
+        {showStore && (
+        <Card className="border-border/50 shadow-sm bg-card" data-testid="kpi-low-stock">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">نواقص المخزون</CardTitle>
             <AlertTriangle className="h-4 w-4 text-destructive" />
@@ -161,8 +189,10 @@ export default function DashboardPage() {
             </p>
           </CardContent>
         </Card>
+        )}
 
-        <Card className="border-border/50 shadow-sm bg-card">
+        {showStore && (
+        <Card className="border-border/50 shadow-sm bg-card" data-testid="kpi-pending-online">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">طلبات أونلاين معلقة</CardTitle>
             <Clock className="h-4 w-4 text-blue-500" />
@@ -180,11 +210,97 @@ export default function DashboardPage() {
             </p>
           </CardContent>
         </Card>
+        )}
+
+        {showWorkshop && (
+        <Card className="border-border/50 shadow-sm bg-card" data-testid="kpi-workshop-open-prod">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">إنتاج جارٍ اليوم</CardTitle>
+            <Factory className="h-4 w-4 text-orange-500" />
+          </CardHeader>
+          <CardContent>
+            {isLoadingKpis ? (
+              <div className="h-8 bg-muted animate-pulse rounded mt-1 w-1/4" />
+            ) : (
+              <div className="text-2xl font-bold text-orange-600">
+                {kpis?.openProductionToday ?? 0}
+              </div>
+            )}
+            <p className="text-xs text-muted-foreground mt-1">
+              أوامر إنتاج مفتوحة
+            </p>
+          </CardContent>
+        </Card>
+        )}
+
+        {showWorkshop && (
+        <Card className="border-border/50 shadow-sm bg-card" data-testid="kpi-workshop-month-prod">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">إنتاج هذا الشهر</CardTitle>
+            <Factory className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            {isLoadingKpis ? (
+              <div className="h-8 bg-muted animate-pulse rounded mt-1 w-1/4" />
+            ) : (
+              <div className="text-2xl font-bold">
+                {kpis?.workshopMonthProductionOrders ?? 0}
+              </div>
+            )}
+            <p className="text-xs text-muted-foreground mt-1">
+              أوامر مكتملة هذا الشهر
+            </p>
+          </CardContent>
+        </Card>
+        )}
+
+        {showWorkshop && (
+        <Card className="border-border/50 shadow-sm bg-card" data-testid="kpi-workshop-month-expense">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">مصاريف المشغل (الشهر)</CardTitle>
+            <Wallet className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            {isLoadingKpis ? (
+              <div className="h-8 bg-muted animate-pulse rounded mt-1 w-1/2" />
+            ) : (
+              <div className="text-2xl font-bold" dir="ltr">
+                {formatCurrency(kpis?.workshopMonthExpenseMinor)} <span className="text-sm text-muted-foreground ml-1">{currencySymbol}</span>
+              </div>
+            )}
+            <p className="text-xs text-muted-foreground mt-1">
+              إجمالي المصاريف الشهرية
+            </p>
+          </CardContent>
+        </Card>
+        )}
+
+        {showWorkshop && (
+        <Card className="border-border/50 shadow-sm bg-card" data-testid="kpi-workshop-low-raw">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">نواقص مواد خام</CardTitle>
+            <AlertTriangle className="h-4 w-4 text-destructive" />
+          </CardHeader>
+          <CardContent>
+            {isLoadingKpis ? (
+              <div className="h-8 bg-muted animate-pulse rounded mt-1 w-1/4" />
+            ) : (
+              <div className="text-2xl font-bold text-destructive">
+                {kpis?.workshopRawMaterialLowStockCount ?? 0}
+              </div>
+            )}
+            <p className="text-xs text-muted-foreground mt-1">
+              مواد بحاجة للشراء
+            </p>
+          </CardContent>
+        </Card>
+        )}
       </div>
 
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-7">
         
         {/* Sales Chart */}
+        {showStore && (
         <Card className="lg:col-span-4 border-border/50 shadow-sm bg-card">
           <CardHeader>
             <CardTitle>المبيعات (آخر 7 أيام)</CardTitle>
@@ -207,7 +323,7 @@ export default function DashboardPage() {
                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border))" />
                     <XAxis 
                       dataKey="date" 
-                      tickFormatter={(val) => format(new Date(val), "d MMM")}
+                      tickFormatter={(val) => fmtDate(val).split(" ").slice(0, 2).join(" ")}
                       axisLine={false}
                       tickLine={false}
                       tick={{ fontSize: 12, fill: "hsl(var(--muted-foreground))" }}
@@ -224,7 +340,7 @@ export default function DashboardPage() {
                       contentStyle={{ backgroundColor: "hsl(var(--card))", borderColor: "hsl(var(--border))", borderRadius: "8px" }}
                       itemStyle={{ color: "hsl(var(--foreground))" }}
                       formatter={(value: number) => [`${formatCurrency(value)} ${currencySymbol}`, "المبيعات"]}
-                      labelFormatter={(label) => format(new Date(label), "d MMMM yyyy", { locale: ar })}
+                      labelFormatter={(label) => fmtDate(label as string)}
                     />
                     <Area 
                       type="monotone" 
@@ -244,9 +360,11 @@ export default function DashboardPage() {
             )}
           </CardContent>
         </Card>
+        )}
 
         {/* Top Products & Low Stock */}
-        <div className="lg:col-span-3 space-y-6 flex flex-col">
+        <div className={`${showStore ? "lg:col-span-3" : "lg:col-span-7"} space-y-6 flex flex-col`}>
+          {showStore && (
           <Card className="border-border/50 shadow-sm flex-1 bg-card">
             <CardHeader>
               <CardTitle>الأكثر مبيعاً</CardTitle>
@@ -280,6 +398,7 @@ export default function DashboardPage() {
               )}
             </CardContent>
           </Card>
+          )}
 
           <Card className="border-border/50 shadow-sm bg-card border-destructive/20">
             <CardHeader className="py-4">
@@ -343,7 +462,7 @@ export default function DashboardPage() {
                             )}
                           </div>
                           <div className="text-xs text-muted-foreground whitespace-nowrap mr-4 text-left" dir="ltr">
-                            {format(new Date(activity.occurredAt), "d MMM, HH:mm", { locale: ar })}
+                            {fmtDateTime(activity.occurredAt)}
                           </div>
                         </div>
                         {activity.amountMinor !== undefined && (

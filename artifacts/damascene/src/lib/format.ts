@@ -6,14 +6,25 @@ import { useGetSettings } from "@workspace/api-client-react";
  * the settings endpoint where applicable (so admin changes propagate).
  */
 export const DEFAULT_CURRENCY_SYMBOL = "₪";
-const LOCALES: readonly string[] = ["ar-PS", "ar"];
+
+/**
+ * Numbers and currency render in English (Latin) digits with English
+ * grouping (123,456). The product is fully Arabic, but the operator
+ * preference is to use Latin digits in tables/dashboards/POS so the
+ * numbers are easier to read at a glance.
+ *
+ * Dates use an Arabic locale forced to the Latin numbering system, so
+ * month names stay Arabic ("أبريل") but day / year render as 1, 2025.
+ */
+export const NUMBER_LOCALES: readonly string[] = ["en-US"];
+export const DATE_LOCALES: readonly string[] = ["ar-PS-u-nu-latn", "ar-u-nu-latn"];
 
 export function formatSyp(
   minor: number | undefined | null,
   symbol: string = DEFAULT_CURRENCY_SYMBOL,
 ): string {
   const n = Number(minor || 0) / 100;
-  const formatted = new Intl.NumberFormat(LOCALES, {
+  const formatted = new Intl.NumberFormat(NUMBER_LOCALES, {
     minimumFractionDigits: 0,
     maximumFractionDigits: 0,
   }).format(n);
@@ -53,7 +64,7 @@ export function useFormatPriceParts(): {
   return {
     symbol,
     format: (minor) =>
-      new Intl.NumberFormat(LOCALES, {
+      new Intl.NumberFormat(NUMBER_LOCALES, {
         minimumFractionDigits: 0,
         maximumFractionDigits: 0,
       }).format(Number(minor || 0) / 100),
@@ -61,7 +72,7 @@ export function useFormatPriceParts(): {
 }
 
 export function formatNumber(value: number | undefined | null, fractionDigits: number = 0): string {
-  return new Intl.NumberFormat(LOCALES, {
+  return new Intl.NumberFormat(NUMBER_LOCALES, {
     minimumFractionDigits: fractionDigits,
     maximumFractionDigits: fractionDigits,
   }).format(Number(value || 0));
@@ -74,7 +85,7 @@ export function formatQty(thousandths: number | undefined | null): string {
 export function formatDate(input: string | Date | undefined | null): string {
   if (!input) return "";
   const d = typeof input === "string" ? new Date(input) : input;
-  return new Intl.DateTimeFormat(LOCALES, {
+  return new Intl.DateTimeFormat(DATE_LOCALES, {
     year: "numeric",
     month: "long",
     day: "numeric",
@@ -84,7 +95,7 @@ export function formatDate(input: string | Date | undefined | null): string {
 export function formatDateTime(input: string | Date | undefined | null): string {
   if (!input) return "";
   const d = typeof input === "string" ? new Date(input) : input;
-  return new Intl.DateTimeFormat(LOCALES, {
+  return new Intl.DateTimeFormat(DATE_LOCALES, {
     year: "numeric",
     month: "short",
     day: "numeric",

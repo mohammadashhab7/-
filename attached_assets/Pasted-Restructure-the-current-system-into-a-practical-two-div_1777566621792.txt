@@ -1,0 +1,143 @@
+Restructure the current system into a practical two-division business model WITHOUT rebuilding from scratch and WITHOUT breaking any existing features.
+
+Divisions:
+1) Workshop / Factory (المشغل)
+2) Store / Showroom (المعرض)
+
+Keep current UI and features, but separate the business logic clearly.
+
+-----------------------------------
+CORE REQUIREMENTS
+-----------------------------------
+
+1. Division separation:
+Add a field "division" where relevant:
+- workshop
+- store
+
+Apply to:
+- inventory
+- financial records
+- orders
+- stock movements
+- production
+
+Defaults:
+- POS & online orders → store
+- manufacturing & raw materials → workshop
+
+-----------------------------------
+
+2. Multi-location inventory:
+Create locations:
+- Workshop Raw Materials
+- Workshop Finished Goods
+- Store Finished Goods
+
+Products are shared catalog, but stock is per location.
+
+-----------------------------------
+
+3. Stock transfer system:
+Add module: Transfers / التحويلات
+
+Workflow:
+- Store creates transfer request (needed items)
+- Workshop reviews & prepares
+- On completion:
+  - deduct from Workshop Finished Goods
+  - add to Store Finished Goods
+  - create stock movement record
+
+Include:
+- create request
+- pending
+- approved
+- completed
+- history
+
+-----------------------------------
+
+4. Manufacturing (Workshop only):
+- deduct raw materials from Workshop Raw Materials
+- add products to Workshop Finished Goods
+- DO NOT add directly to Store (only via transfer)
+
+-----------------------------------
+
+5. Finance separation:
+Add division field:
+- workshop income / expenses
+- store income / expenses
+
+Rules:
+- POS & online sales → store
+- wholesale (if any) → workshop
+
+-----------------------------------
+
+6. Dashboard:
+Add filter/tabs:
+- All
+- Workshop
+- Store
+
+Show:
+- combined view
+- per-division view
+
+-----------------------------------
+
+7. Navigation mapping:
+- POS → Store
+- Online Orders → Store
+- Raw Materials → Workshop
+- Manufacturing → Workshop
+- Transfers → between both
+- Finance → filtered by division
+- Reports → filterable
+
+-----------------------------------
+
+8. Keep it simple:
+No advanced accounting, costing, or complex approvals now.
+
+-----------------------------------
+NUMBER FORMAT REQUIREMENT
+-----------------------------------
+
+All numbers must be displayed using English numerals (123), NOT Arabic (١٢٣), even if UI is Arabic.
+
+Apply globally to:
+- dashboard stats
+- POS
+- orders
+- inventory
+- finance
+- reports
+- tables
+- charts
+
+Technical:
+- use toLocaleString('en-US') for formatting
+- keep text Arabic, numbers English
+- store numbers as numeric (not Arabic text)
+- charts axes/tooltips must show English numbers
+
+-----------------------------------
+
+9. Safety rules:
+- inspect current DB/schema before changes
+- reuse existing structures
+- add only necessary fields/tables
+- preserve existing data
+- support backward compatibility
+
+-----------------------------------
+
+GOAL:
+Transform system from a single shop into:
+Workshop + Store system
+with separated inventory + finance
+connected via transfers
+simple, practical, and smooth to use.

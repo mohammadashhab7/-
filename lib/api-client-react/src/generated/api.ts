@@ -87,6 +87,7 @@ import type {
   TopProduct,
   Transfer,
   TransferInput,
+  TransferStatusUpdate,
   UpdateAdminUserBody,
   UpdateCartItemBody,
   UpdateMediaBody,
@@ -3003,6 +3004,258 @@ export const useCreateTransfer = <
   TContext
 > => {
   return useMutation(getCreateTransferMutationOptions(options));
+};
+
+/**
+ * @summary Approve a pending transfer (no stock movement)
+ */
+export const getApproveTransferUrl = (id: string) => {
+  return `/api/transfers/${id}/approve`;
+};
+
+export const approveTransfer = async (
+  id: string,
+  options?: RequestInit,
+): Promise<TransferStatusUpdate> => {
+  return customFetch<TransferStatusUpdate>(getApproveTransferUrl(id), {
+    ...options,
+    method: "POST",
+  });
+};
+
+export const getApproveTransferMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof approveTransfer>>,
+    TError,
+    { id: string },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof approveTransfer>>,
+  TError,
+  { id: string },
+  TContext
+> => {
+  const mutationKey = ["approveTransfer"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof approveTransfer>>,
+    { id: string }
+  > = (props) => {
+    const { id } = props ?? {};
+
+    return approveTransfer(id, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type ApproveTransferMutationResult = NonNullable<
+  Awaited<ReturnType<typeof approveTransfer>>
+>;
+
+export type ApproveTransferMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Approve a pending transfer (no stock movement)
+ */
+export const useApproveTransfer = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof approveTransfer>>,
+    TError,
+    { id: string },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof approveTransfer>>,
+  TError,
+  { id: string },
+  TContext
+> => {
+  return useMutation(getApproveTransferMutationOptions(options));
+};
+
+/**
+ * @summary Complete a transfer and move stock
+ */
+export const getCompleteTransferUrl = (id: string) => {
+  return `/api/transfers/${id}/complete`;
+};
+
+export const completeTransfer = async (
+  id: string,
+  options?: RequestInit,
+): Promise<TransferStatusUpdate> => {
+  return customFetch<TransferStatusUpdate>(getCompleteTransferUrl(id), {
+    ...options,
+    method: "POST",
+  });
+};
+
+export const getCompleteTransferMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof completeTransfer>>,
+    TError,
+    { id: string },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof completeTransfer>>,
+  TError,
+  { id: string },
+  TContext
+> => {
+  const mutationKey = ["completeTransfer"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof completeTransfer>>,
+    { id: string }
+  > = (props) => {
+    const { id } = props ?? {};
+
+    return completeTransfer(id, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CompleteTransferMutationResult = NonNullable<
+  Awaited<ReturnType<typeof completeTransfer>>
+>;
+
+export type CompleteTransferMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Complete a transfer and move stock
+ */
+export const useCompleteTransfer = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof completeTransfer>>,
+    TError,
+    { id: string },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof completeTransfer>>,
+  TError,
+  { id: string },
+  TContext
+> => {
+  return useMutation(getCompleteTransferMutationOptions(options));
+};
+
+/**
+ * @summary Cancel a pending or approved transfer
+ */
+export const getCancelTransferUrl = (id: string) => {
+  return `/api/transfers/${id}/cancel`;
+};
+
+export const cancelTransfer = async (
+  id: string,
+  options?: RequestInit,
+): Promise<TransferStatusUpdate> => {
+  return customFetch<TransferStatusUpdate>(getCancelTransferUrl(id), {
+    ...options,
+    method: "POST",
+  });
+};
+
+export const getCancelTransferMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof cancelTransfer>>,
+    TError,
+    { id: string },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof cancelTransfer>>,
+  TError,
+  { id: string },
+  TContext
+> => {
+  const mutationKey = ["cancelTransfer"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof cancelTransfer>>,
+    { id: string }
+  > = (props) => {
+    const { id } = props ?? {};
+
+    return cancelTransfer(id, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CancelTransferMutationResult = NonNullable<
+  Awaited<ReturnType<typeof cancelTransfer>>
+>;
+
+export type CancelTransferMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Cancel a pending or approved transfer
+ */
+export const useCancelTransfer = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof cancelTransfer>>,
+    TError,
+    { id: string },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof cancelTransfer>>,
+  TError,
+  { id: string },
+  TContext
+> => {
+  return useMutation(getCancelTransferMutationOptions(options));
 };
 
 export const getListSalesOrdersUrl = (params?: ListSalesOrdersParams) => {

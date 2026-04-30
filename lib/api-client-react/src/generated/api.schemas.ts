@@ -310,6 +310,16 @@ export interface ProductionOrderInput {
   notesAr?: string;
 }
 
+export type TransferStatus =
+  (typeof TransferStatus)[keyof typeof TransferStatus];
+
+export const TransferStatus = {
+  pending: "pending",
+  approved: "approved",
+  completed: "completed",
+  cancelled: "cancelled",
+} as const;
+
 export interface TransferItem {
   productId: string;
   productNameAr: string;
@@ -319,12 +329,30 @@ export interface TransferItem {
 
 export interface Transfer {
   id: string;
+  transferNumber?: string;
   fromLocationId: string;
+  fromLocationNameAr?: string | null;
   toLocationId: string;
-  notesAr?: string;
+  toLocationNameAr?: string | null;
+  status: TransferStatus;
+  notesAr?: string | null;
   items: TransferItem[];
   createdAt: string;
+  approvedAt?: string | null;
+  completedAt?: string | null;
+  cancelledAt?: string | null;
 }
+
+/**
+ * Optional explicit status. If "pending", stock is not moved.
+ */
+export type TransferInputStatus =
+  (typeof TransferInputStatus)[keyof typeof TransferInputStatus];
+
+export const TransferInputStatus = {
+  pending: "pending",
+  completed: "completed",
+} as const;
 
 export type TransferInputItemsItem = {
   productId: string;
@@ -335,7 +363,16 @@ export interface TransferInput {
   fromLocationId: string;
   toLocationId: string;
   notesAr?: string;
+  /** When false, transfer is created in pending status and stock is not moved until completion. Defaults to true for backward compatibility. */
+  executeImmediately?: boolean;
+  /** Optional explicit status. If "pending", stock is not moved. */
+  status?: TransferInputStatus;
   items: TransferInputItemsItem[];
+}
+
+export interface TransferStatusUpdate {
+  id: string;
+  status: TransferStatus;
 }
 
 export type OrderStatus = (typeof OrderStatus)[keyof typeof OrderStatus];
@@ -598,6 +635,7 @@ export interface TopProduct {
 
 export interface DashboardKpis {
   currency: string;
+  /** Store division — combined POS + online */
   todaySalesMinor: number;
   todayOrders: number;
   todayPosSalesMinor?: number;
@@ -610,9 +648,17 @@ export interface DashboardKpis {
   monthSalesMinor: number;
   monthOrders: number;
   pendingOnlineOrders: number;
+  /** Store division — finished goods below reorder threshold */
   lowStockCount: number;
+  /** Workshop — production orders currently planned/in_progress */
   openProductionToday: number;
   cashOnHandMinor?: number;
+  /** Sum of production-module financial expenses this month */
+  workshopMonthExpenseMinor: number;
+  /** Production orders completed this month */
+  workshopMonthProductionOrders: number;
+  /** Raw materials below their reorder threshold */
+  workshopRawMaterialLowStockCount: number;
 }
 
 export type MaterialSpendReportByMaterialItem = {

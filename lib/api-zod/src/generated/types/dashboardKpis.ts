@@ -8,6 +8,7 @@
 
 export interface DashboardKpis {
   currency: string;
+  /** Store division — combined POS + online */
   todaySalesMinor: number;
   todayOrders: number;
   todayPosSalesMinor?: number;
@@ -20,7 +21,15 @@ export interface DashboardKpis {
   monthSalesMinor: number;
   monthOrders: number;
   pendingOnlineOrders: number;
+  /** Store division — finished goods below reorder threshold */
   lowStockCount: number;
+  /** Workshop — production orders currently planned/in_progress */
   openProductionToday: number;
   cashOnHandMinor?: number;
+  /** Sum of production-module financial expenses this month */
+  workshopMonthExpenseMinor: number;
+  /** Production orders completed this month */
+  workshopMonthProductionOrders: number;
+  /** Raw materials below their reorder threshold */
+  workshopRawMaterialLowStockCount: number;
 }

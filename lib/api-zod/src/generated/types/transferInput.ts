@@ -6,10 +6,15 @@
  * OpenAPI spec version: 0.1.0
  */
 import type { TransferInputItemsItem } from "./transferInputItemsItem";
+import type { TransferInputStatus } from "./transferInputStatus";
 
 export interface TransferInput {
   fromLocationId: string;
   toLocationId: string;
   notesAr?: string;
+  /** When false, transfer is created in pending status and stock is not moved until completion. Defaults to true for backward compatibility. */
+  executeImmediately?: boolean;
+  /** Optional explicit status. If "pending", stock is not moved. */
+  status?: TransferInputStatus;
   items: TransferInputItemsItem[];
 }

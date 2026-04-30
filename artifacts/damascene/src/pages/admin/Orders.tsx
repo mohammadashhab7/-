@@ -252,7 +252,7 @@ export default function AdminOrdersPage() {
                           <Badge variant="secondary">{ORDER_STATUS_AR[ev.toStatus]}</Badge>
                         </div>
                         <div className="text-xs text-foreground/60 mt-1">
-                          {new Date(ev.changedAt).toLocaleString(["ar-PS", "ar"])}
+                          {new Date(ev.changedAt).toLocaleString("ar-PS-u-nu-latn")}
                           {ev.changedByNameAr && <span> · {ev.changedByNameAr}</span>}
                         </div>
                         {ev.noteAr && (

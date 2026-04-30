@@ -651,9 +651,13 @@ export const GetProductionOrderResponse = zod.object({
 
 export const ListTransfersResponseItem = zod.object({
   id: zod.string(),
+  transferNumber: zod.string().optional(),
   fromLocationId: zod.string(),
+  fromLocationNameAr: zod.string().nullish(),
   toLocationId: zod.string(),
-  notesAr: zod.string().optional(),
+  toLocationNameAr: zod.string().nullish(),
+  status: zod.enum(["pending", "approved", "completed", "cancelled"]),
+  notesAr: zod.string().nullish(),
   items: zod.array(
     zod.object({
       productId: zod.string(),
@@ -663,6 +667,9 @@ export const ListTransfersResponseItem = zod.object({
     }),
   ),
   createdAt: zod.coerce.date(),
+  approvedAt: zod.coerce.date().nullish(),
+  completedAt: zod.coerce.date().nullish(),
+  cancelledAt: zod.coerce.date().nullish(),
 });
 export const ListTransfersResponse = zod.array(ListTransfersResponseItem);
 
@@ -673,12 +680,58 @@ export const CreateTransferBody = zod.object({
   fromLocationId: zod.string(),
   toLocationId: zod.string(),
   notesAr: zod.string().optional(),
+  executeImmediately: zod
+    .boolean()
+    .optional()
+    .describe(
+      "When false, transfer is created in pending status and stock is not moved until completion. Defaults to true for backward compatibility.",
+    ),
+  status: zod
+    .enum(["pending", "completed"])
+    .optional()
+    .describe('Optional explicit status. If \"pending\", stock is not moved.'),
   items: zod.array(
     zod.object({
       productId: zod.string(),
       quantity: zod.number(),
     }),
   ),
+});
+
+/**
+ * @summary Approve a pending transfer (no stock movement)
+ */
+export const ApproveTransferParams = zod.object({
+  id: zod.coerce.string(),
+});
+
+export const ApproveTransferResponse = zod.object({
+  id: zod.string(),
+  status: zod.enum(["pending", "approved", "completed", "cancelled"]),
+});
+
+/**
+ * @summary Complete a transfer and move stock
+ */
+export const CompleteTransferParams = zod.object({
+  id: zod.coerce.string(),
+});
+
+export const CompleteTransferResponse = zod.object({
+  id: zod.string(),
+  status: zod.enum(["pending", "approved", "completed", "cancelled"]),
+});
+
+/**
+ * @summary Cancel a pending or approved transfer
+ */
+export const CancelTransferParams = zod.object({
+  id: zod.coerce.string(),
+});
+
+export const CancelTransferResponse = zod.object({
+  id: zod.string(),
+  status: zod.enum(["pending", "approved", "completed", "cancelled"]),
 });
 
 export const listSalesOrdersQueryLimitMax = 500;
@@ -1410,7 +1463,9 @@ export const GetStoreKpisResponse = zod.object({
 
 export const GetDashboardKpisResponse = zod.object({
   currency: zod.string(),
-  todaySalesMinor: zod.number(),
+  todaySalesMinor: zod
+    .number()
+    .describe("Store division — combined POS + online"),
   todayOrders: zod.number(),
   todayPosSalesMinor: zod.number().optional(),
   todayPosOrders: zod.number().optional(),
@@ -1422,9 +1477,22 @@ export const GetDashboardKpisResponse = zod.object({
   monthSalesMinor: zod.number(),
   monthOrders: zod.number(),
   pendingOnlineOrders: zod.number(),
-  lowStockCount: zod.number(),
-  openProductionToday: zod.number(),
+  lowStockCount: zod
+    .number()
+    .describe("Store division — finished goods below reorder threshold"),
+  openProductionToday: zod
+    .number()
+    .describe("Workshop — production orders currently planned\/in_progress"),
   cashOnHandMinor: zod.number().optional(),
+  workshopMonthExpenseMinor: zod
+    .number()
+    .describe("Sum of production-module financial expenses this month"),
+  workshopMonthProductionOrders: zod
+    .number()
+    .describe("Production orders completed this month"),
+  workshopRawMaterialLowStockCount: zod
+    .number()
+    .describe("Raw materials below their reorder threshold"),
 });
 
 export const GetRecentActivityResponseItem = zod.object({

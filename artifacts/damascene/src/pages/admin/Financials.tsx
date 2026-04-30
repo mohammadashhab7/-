@@ -62,7 +62,7 @@ export default function AdminFinancialsPage() {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between flex-wrap gap-2">
-        <h1 className="text-2xl font-serif text-primary">المالية (دفتر الإنتاج ودفتر المتجر)</h1>
+        <h1 className="text-2xl font-serif text-primary">المالية (دفتر المشغل ودفتر المعرض)</h1>
         <div className="flex items-center gap-2">
           <Input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} className="w-40" />
           <Input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} className="w-40" />
@@ -72,10 +72,10 @@ export default function AdminFinancialsPage() {
               <DialogHeader><DialogTitle>قيد مالي جديد</DialogTitle></DialogHeader>
               <form onSubmit={submit} className="space-y-3">
                 <div className="grid grid-cols-2 gap-2">
-                  <div><Label>الدفتر</Label>
+                  <div><Label>القسم</Label>
                     <Select value={form.module} onValueChange={(v: any) => setForm({ ...form, module: v })}>
                       <SelectTrigger><SelectValue /></SelectTrigger>
-                      <SelectContent><SelectItem value="store">المتجر</SelectItem><SelectItem value="production">الإنتاج</SelectItem></SelectContent>
+                      <SelectContent><SelectItem value="store">المعرض</SelectItem><SelectItem value="production">المشغل</SelectItem></SelectContent>
                     </Select>
                   </div>
                   <div><Label>النوع</Label>
@@ -99,8 +99,8 @@ export default function AdminFinancialsPage() {
       </div>
 
       <div className="grid md:grid-cols-3 gap-3">
-        <BookSummary title="دفتر الإنتاج" book={report?.production} />
-        <BookSummary title="دفتر المتجر" book={report?.store} />
+        <BookSummary title="دفتر المشغل" book={report?.production} />
+        <BookSummary title="دفتر المعرض" book={report?.store} />
         <BookSummary title="مجمّع" book={report?.combined} />
       </div>
 
@@ -109,14 +109,14 @@ export default function AdminFinancialsPage() {
         <CardContent>
           <Table>
             <TableHeader><TableRow>
-              <TableHead>التاريخ</TableHead><TableHead>الدفتر</TableHead><TableHead>النوع</TableHead>
+              <TableHead>التاريخ</TableHead><TableHead>القسم</TableHead><TableHead>النوع</TableHead>
               <TableHead>التصنيف</TableHead><TableHead>الوصف</TableHead><TableHead>المبلغ</TableHead>
             </TableRow></TableHeader>
             <TableBody>
               {entries?.map((e) => (
                 <TableRow key={e.id}>
                   <TableCell>{formatDate(e.occurredOn)}</TableCell>
-                  <TableCell><Badge variant="outline">{e.module === "store" ? "المتجر" : "الإنتاج"}</Badge></TableCell>
+                  <TableCell><Badge variant="outline">{e.module === "store" ? "المعرض" : "المشغل"}</Badge></TableCell>
                   <TableCell><Badge variant={e.type === "income" ? "default" : "secondary"}>{e.type === "income" ? "إيراد" : "مصروف"}</Badge></TableCell>
                   <TableCell>{e.category}</TableCell>
                   <TableCell className="text-sm">{e.descriptionAr || "-"}</TableCell>

@@ -63,6 +63,27 @@ router.get(
     where channel='pos' and payment_method='cash'
       and placed_at::date = now()::date
   `);
+    const workshopMonthExpense = await db.execute<{ total: string }>(sql`
+    select coalesce(sum(amount_minor), 0)::text as total
+    from financial_entries
+    where module = 'production'
+      and type = 'expense'
+      and date_trunc('month', occurred_at) = date_trunc('month', now())
+  `);
+    const workshopMonthProd = await db.execute<{ count: string }>(sql`
+    select count(*)::text as count
+    from production_orders
+    where status = 'completed'
+      and date_trunc('month', completed_at) = date_trunc('month', now())
+  `);
+    const workshopRawLowStock = await db.execute<{ count: string }>(sql`
+    select count(*)::text as count
+    from stock_levels sl
+    join raw_materials rm on rm.id = sl.material_id
+    where sl.item_type = 'raw_material'
+      and rm.reorder_threshold > 0
+      and sl.quantity_thousandths < rm.reorder_threshold
+  `);
     const thisWeekTotal = Number(thisWeek.rows[0]!.total);
     const lastWeekTotal = Number(lastWeek.rows[0]!.total);
     const wowDeltaPct =
@@ -86,6 +107,9 @@ router.get(
       lowStockCount: Number(lowStock.rows[0]!.count),
       openProductionToday: Number(openProd.rows[0]!.count),
       cashOnHandMinor: Number(cashOnHand.rows[0]!.total),
+      workshopMonthExpenseMinor: Number(workshopMonthExpense.rows[0]!.total),
+      workshopMonthProductionOrders: Number(workshopMonthProd.rows[0]!.count),
+      workshopRawMaterialLowStockCount: Number(workshopRawLowStock.rows[0]!.count),
     });
   },
 );
