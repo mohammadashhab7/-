@@ -2,6 +2,9 @@ import { useState } from "react";
 import {
   useListCategories, useCreateCategory, useUpdateCategory, useDeleteCategory,
   getListCategoriesQueryKey,
+  getListPublicCategoriesQueryKey,
+  getListPublicProductsQueryKey,
+  getListFeaturedProductsQueryKey,
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import type { Category } from "@workspace/api-client-react";
@@ -27,7 +30,17 @@ export default function AdminCategoriesPage() {
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState({ slug: "", nameAr: "", nameEn: "", descriptionAr: "", sortOrder: 0, imageUrl: "" });
 
-  const refresh = () => qc.invalidateQueries({ queryKey: getListCategoriesQueryKey() });
+  // Refresh both admin and public-facing caches so storefront visitors see
+  // the new category data on their next focus/refetch instead of the
+  // previous version flashing first.
+  const refresh = () => {
+    qc.invalidateQueries({ queryKey: getListCategoriesQueryKey() });
+    qc.invalidateQueries({ queryKey: getListPublicCategoriesQueryKey() });
+    // Public product/featured listings include the category name, so they
+    // can also go stale when categories change.
+    qc.invalidateQueries({ queryKey: getListPublicProductsQueryKey() });
+    qc.invalidateQueries({ queryKey: getListFeaturedProductsQueryKey() });
+  };
   const reset = () => { setForm({ slug: "", nameAr: "", nameEn: "", descriptionAr: "", sortOrder: 0, imageUrl: "" }); setEditing(null); };
   const openNew = () => { reset(); setOpen(true); };
   const openEdit = (c: Category) => {

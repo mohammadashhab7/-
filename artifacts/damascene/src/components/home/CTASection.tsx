@@ -22,10 +22,11 @@ export default function CTASection({
   ctaSecondaryHref = "/contact",
   eyebrow,
 }: CTASectionProps) {
-  // Render only when the CMS block actually has content. Mirrors the loading
-  // pattern used by QualitySection / BrandStorySection so we never flash a
-  // hardcoded default before the saved CMS copy arrives.
-  if (!title && !body && !ctaPrimaryLabel && !ctaSecondaryLabel) return null;
+  // Render only when the CMS block actually has copy. The CTA section's whole
+  // purpose is the headline + body invitation; without those, button-only
+  // markup would just look like a stray pair of buttons. Stay hidden until
+  // the saved CMS title and body both arrive.
+  if (!title || !body) return null;
 
   return (
     <section

@@ -2,6 +2,8 @@ import { useState } from "react";
 import {
   useListProducts, useCreateProduct, useUpdateProduct, useDeleteProduct,
   useListCategories, getListProductsQueryKey,
+  getListPublicProductsQueryKey,
+  getListFeaturedProductsQueryKey,
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import type { Product } from "@workspace/api-client-react";
@@ -39,7 +41,25 @@ export default function AdminProductsPage() {
   const [editing, setEditing] = useState<Product | null>(null);
   const [form, setForm] = useState(emptyForm);
 
-  const refresh = () => qc.invalidateQueries({ queryKey: getListProductsQueryKey() });
+  // Refresh both the admin list and the public-facing caches so storefront
+  // visitors see the new product data on their next focus/refetch instead
+  // of the previous version flashing first. We invalidate the list keys
+  // explicitly and use a predicate to also catch every per-slug detail
+  // query under /api/public/products/:slug.
+  const refresh = () => {
+    qc.invalidateQueries({ queryKey: getListProductsQueryKey() });
+    qc.invalidateQueries({ queryKey: getListPublicProductsQueryKey() });
+    qc.invalidateQueries({ queryKey: getListFeaturedProductsQueryKey() });
+    qc.invalidateQueries({
+      predicate: (q) => {
+        const first = q.queryKey?.[0];
+        return (
+          typeof first === "string" &&
+          first.startsWith("/api/public/products/")
+        );
+      },
+    });
+  };
   const reset = () => { setForm(emptyForm); setEditing(null); };
   const openNew = () => { reset(); setOpen(true); };
   const openEdit = (p: Product) => {
