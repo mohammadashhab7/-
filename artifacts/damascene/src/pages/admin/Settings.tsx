@@ -6,8 +6,18 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import MediaPicker from "@/components/admin/MediaPicker";
+
+const COUNTRY_OPTIONS: ReadonlyArray<{ code: string; nameAr: string }> = [
+  { code: "PS", nameAr: "فلسطين" },
+  { code: "JO", nameAr: "الأردن" },
+  { code: "LB", nameAr: "لبنان" },
+  { code: "EG", nameAr: "مصر" },
+  { code: "SA", nameAr: "السعودية" },
+  { code: "AE", nameAr: "الإمارات" },
+];
 
 type SettingsForm = Record<string, unknown>;
 
@@ -122,6 +132,24 @@ export default function AdminSettingsPage() {
           </div>
           <Field k="phone" label="الهاتف" type="tel" form={form} onChange={updateField} />
           <Field k="email" label="البريد الإلكتروني" type="email" form={form} onChange={updateField} />
+          <div>
+            <Label htmlFor="field-country">الدولة</Label>
+            <Select
+              value={(form.country as string | undefined) ?? "PS"}
+              onValueChange={(v) => updateField("country", v)}
+            >
+              <SelectTrigger id="field-country" data-testid="input-country">
+                <SelectValue placeholder="اختر الدولة" />
+              </SelectTrigger>
+              <SelectContent>
+                {COUNTRY_OPTIONS.map((c) => (
+                  <SelectItem key={c.code} value={c.code}>
+                    {c.nameAr}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
         </CardContent>
       </Card>
 
@@ -130,7 +158,7 @@ export default function AdminSettingsPage() {
           <CardTitle>الأموال والتوصيل</CardTitle>
         </CardHeader>
         <CardContent className="grid sm:grid-cols-2 gap-3">
-          <Field k="currencySymbol" label="رمز العملة (مثال: ل.س, $, €)" form={form} onChange={updateField} />
+          <Field k="currencySymbol" label="رمز العملة (مثال: ₪, $, €)" form={form} onChange={updateField} />
           <Field k="taxPercent" label="نسبة الضريبة %" type="number" form={form} onChange={updateField} />
           <Field k="deliveryFeeMinor" label="رسوم التوصيل (×100)" type="number" form={form} onChange={updateField} />
           <Field k="freeDeliveryThresholdMinor" label="حد التوصيل المجاني (×100)" type="number" form={form} onChange={updateField} />

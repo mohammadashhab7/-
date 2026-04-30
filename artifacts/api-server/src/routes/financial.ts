@@ -3,6 +3,7 @@ import { and, desc, eq, gte, lte, sql } from "drizzle-orm";
 import { db, financialEntries } from "@workspace/db";
 import { requireStaff, requirePermission } from "../lib/auth";
 import { logActivity } from "../lib/activity";
+import { CURRENCY_CODE, CURRENCY_SYMBOL } from "../lib/region";
 
 const router: IRouter = Router();
 
@@ -55,7 +56,7 @@ router.post("/financial-entries", requirePermission("financial", "write"), async
       category: b.category,
       descriptionAr: b.descriptionAr || b.category,
       amountMinor: b.amountMinor,
-      currency: b.currency || "SYP",
+      currency: b.currency || CURRENCY_CODE,
       occurredAt: b.occurredAt ? new Date(b.occurredAt) : new Date(),
       createdByUserId: req.appUser?.id ?? null,
     })
@@ -63,7 +64,7 @@ router.post("/financial-entries", requirePermission("financial", "write"), async
   await logActivity({
     kind: "financial_entry",
     titleAr: `قيد مالي: ${b.descriptionAr || b.category}`,
-    descriptionAr: `${b.module === "production" ? "المصنع" : "المتجر"} • ${b.type === "income" ? "إيراد" : "مصروف"} • ${b.amountMinor} ل.س`,
+    descriptionAr: `${b.module === "production" ? "المصنع" : "المتجر"} • ${b.type === "income" ? "إيراد" : "مصروف"} • ${b.amountMinor} ${CURRENCY_SYMBOL}`,
     referenceType: "financial_entry",
     referenceId: inserted[0]!.id,
     actor: req.appUser,

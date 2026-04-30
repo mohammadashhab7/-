@@ -1,13 +1,19 @@
 import { useGetSettings } from "@workspace/api-client-react";
 
-export const DEFAULT_CURRENCY_SYMBOL = "ل.س";
+/**
+ * System-wide regional defaults. These are fallbacks for when admin settings
+ * have not loaded yet; the actual values used at render time still come from
+ * the settings endpoint where applicable (so admin changes propagate).
+ */
+export const DEFAULT_CURRENCY_SYMBOL = "₪";
+const LOCALES: readonly string[] = ["ar-PS", "ar"];
 
 export function formatSyp(
   minor: number | undefined | null,
   symbol: string = DEFAULT_CURRENCY_SYMBOL,
 ): string {
   const n = Number(minor || 0) / 100;
-  const formatted = new Intl.NumberFormat("ar-SY", {
+  const formatted = new Intl.NumberFormat(LOCALES, {
     minimumFractionDigits: 0,
     maximumFractionDigits: 0,
   }).format(n);
@@ -36,8 +42,8 @@ export function useFormatPrice(): (minor: number | undefined | null) => string {
 }
 
 /**
- * React hook returning just the integer part formatted for ar-SY locale,
- * for use when the component lays out the symbol separately in markup.
+ * React hook returning just the integer part formatted in the configured
+ * locale, for use when the component lays out the symbol separately in markup.
  */
 export function useFormatPriceParts(): {
   format: (minor: number | undefined | null) => string;
@@ -47,7 +53,7 @@ export function useFormatPriceParts(): {
   return {
     symbol,
     format: (minor) =>
-      new Intl.NumberFormat("ar-SY", {
+      new Intl.NumberFormat(LOCALES, {
         minimumFractionDigits: 0,
         maximumFractionDigits: 0,
       }).format(Number(minor || 0) / 100),
@@ -55,7 +61,7 @@ export function useFormatPriceParts(): {
 }
 
 export function formatNumber(value: number | undefined | null, fractionDigits: number = 0): string {
-  return new Intl.NumberFormat("ar-SY", {
+  return new Intl.NumberFormat(LOCALES, {
     minimumFractionDigits: fractionDigits,
     maximumFractionDigits: fractionDigits,
   }).format(Number(value || 0));
@@ -68,7 +74,7 @@ export function formatQty(thousandths: number | undefined | null): string {
 export function formatDate(input: string | Date | undefined | null): string {
   if (!input) return "";
   const d = typeof input === "string" ? new Date(input) : input;
-  return new Intl.DateTimeFormat("ar-SY", {
+  return new Intl.DateTimeFormat(LOCALES, {
     year: "numeric",
     month: "long",
     day: "numeric",
@@ -78,7 +84,7 @@ export function formatDate(input: string | Date | undefined | null): string {
 export function formatDateTime(input: string | Date | undefined | null): string {
   if (!input) return "";
   const d = typeof input === "string" ? new Date(input) : input;
-  return new Intl.DateTimeFormat("ar-SY", {
+  return new Intl.DateTimeFormat(LOCALES, {
     year: "numeric",
     month: "short",
     day: "numeric",

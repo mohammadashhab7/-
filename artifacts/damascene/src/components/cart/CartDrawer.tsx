@@ -58,7 +58,7 @@ export default function CartDrawer({ children }: { children: React.ReactNode }) 
 
   const formatCurrency = (minor: number) => {
     const symbol = settings?.currencySymbol || "";
-    const number = new Intl.NumberFormat("ar-SY").format(minor);
+    const number = new Intl.NumberFormat(["ar-PS", "ar"]).format(minor);
     return symbol ? `${number} ${symbol}` : number;
   };
 

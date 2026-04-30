@@ -34,6 +34,7 @@ import {
   mediaAssets,
   users,
 } from "@workspace/db";
+import { CURRENCY_CODE, CURRENCY_SYMBOL, COUNTRY_CODE } from "./lib/region.js";
 
 const log = (...args: unknown[]) => console.log("[seed]", ...args);
 
@@ -73,16 +74,17 @@ async function seedSettings() {
     storeNameAr: "الدمشقي",
     storeNameEn: "Damascene",
     taglineAr: "حلويات شامية أصيلة منذ ١٩٧٢",
-    addressAr: "شارع المتنبي، حي الميدان، دمشق، سوريا",
-    phone: "+963 11 555 1972",
-    email: "info@damascene.sy",
-    currencySymbol: "ل.س",
+    addressAr: "شارع ركب، رام الله، فلسطين",
+    phone: "+970 2 295 1972",
+    email: "info@damascene.ps",
+    countryCode: COUNTRY_CODE,
+    currencySymbol: CURRENCY_SYMBOL,
     taxPercent: 0,
     deliveryFeeMinor: 15000,
     freeDeliveryThresholdMinor: 200000,
     socialFacebook: "https://facebook.com/damascene",
     socialInstagram: "https://instagram.com/damascene",
-    socialWhatsapp: "+963999555111",
+    socialWhatsapp: "+970592202232",
     workingHoursAr: "السبت - الخميس: ٨ صباحاً - ١١ مساءً • الجمعة: ٢ ظهراً - ١١ مساءً",
     metadata: {},
   });
@@ -149,7 +151,7 @@ async function seedRawMaterials() {
     .values(
       data.map((d) => ({
         ...d,
-        currency: "SYP",
+        currency: CURRENCY_CODE,
         reorderThreshold: d.reorderThreshold ?? 0,
       })),
     )
@@ -188,7 +190,7 @@ async function seedProducts(cats: Awaited<ReturnType<typeof seedCategories>>) {
         descriptionAr: d.descriptionAr,
         categoryId: byslug(d.categorySlug).id,
         priceMinor: d.priceMinor,
-        currency: "SYP",
+        currency: CURRENCY_CODE,
         unit: "piece",
         weightGrams: d.weightGrams,
         imageUrl: null,
@@ -681,8 +683,8 @@ async function seedSampleSales(
             status: status as typeof salesOrders.$inferSelect.status,
             paymentMethod: "cod",
             customerName: customers[Math.floor(Math.random() * customers.length)]!,
-            customerPhone: `+9639${Math.floor(10000000 + Math.random() * 89999999)}`,
-            deliveryAddress: "دمشق، حي المالكي، شارع الجلاء، بناية ١٢",
+            customerPhone: `+9705${Math.floor(10000000 + Math.random() * 89999999)}`,
+            deliveryAddress: "رام الله، شارع الإرسال، عمارة الزيتونة",
             subtotalMinor: subtotal,
             deliveryFeeMinor: delivery,
             totalMinor: total,

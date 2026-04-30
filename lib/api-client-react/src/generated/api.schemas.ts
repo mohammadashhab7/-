@@ -71,7 +71,7 @@ export interface Product {
   descriptionEn?: string;
   categoryId?: string;
   categoryNameAr?: string;
-  /** Price in minor units (SYP) */
+  /** Price in minor units (ILS) */
   priceMinor: number;
   currency: string;
   /** kg, piece, box */
@@ -824,6 +824,9 @@ export interface Settings {
   addressAr?: string;
   phone?: string;
   email?: string;
+  /** ISO 3166-1 alpha-2 country code */
+  country: string;
+  /** ISO 4217 currency code */
   currency: string;
   currencySymbol: string;
   taxPercent: number;
@@ -877,6 +880,8 @@ export interface SettingsInput {
   addressAr?: string;
   phone?: string;
   email?: string;
+  /** ISO 3166-1 alpha-2 country code */
+  country?: string;
   currency?: string;
   currencySymbol?: string;
   taxPercent?: number;

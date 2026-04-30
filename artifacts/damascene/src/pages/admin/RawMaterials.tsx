@@ -71,7 +71,7 @@ export default function AdminRawMaterialsPage() {
                   </SelectContent>
                 </Select>
               </div>
-              <div><Label>الكلفة لكل وحدة (ل.س × 100)</Label><Input type="number" required value={form.costPerUnitMinor} onChange={(e) => setForm({ ...form, costPerUnitMinor: Number(e.target.value) })} /></div>
+              <div><Label>الكلفة لكل وحدة (₪ × 100)</Label><Input type="number" required value={form.costPerUnitMinor} onChange={(e) => setForm({ ...form, costPerUnitMinor: Number(e.target.value) })} /></div>
               <div><Label>حد إعادة الطلب</Label><Input type="number" value={form.reorderThreshold} onChange={(e) => setForm({ ...form, reorderThreshold: Number(e.target.value) })} /></div>
               <DialogFooter><Button type="submit">حفظ</Button></DialogFooter>
             </form>

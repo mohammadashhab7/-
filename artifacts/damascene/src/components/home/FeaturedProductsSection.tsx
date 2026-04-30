@@ -115,7 +115,7 @@ export default function FeaturedProductsSection({
                       dir="ltr"
                     >
                       <span className="text-base">
-                        {new Intl.NumberFormat("ar-SY").format(product.priceMinor)}
+                        {new Intl.NumberFormat(["ar-PS", "ar"]).format(product.priceMinor)}
                       </span>
                       <span>{currencySymbol}</span>
                       {product.unit && (

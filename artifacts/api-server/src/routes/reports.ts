@@ -2,6 +2,7 @@ import { Router, type IRouter } from "express";
 import { sql } from "drizzle-orm";
 import { db } from "@workspace/db";
 import { requirePermission } from "../lib/auth";
+import { CURRENCY_CODE } from "../lib/region";
 
 const router: IRouter = Router();
 
@@ -48,7 +49,7 @@ async function bookSummary(
     incomeMinor: income,
     expenseMinor: expense,
     netMinor: income - expense,
-    currency: "SYP",
+    currency: CURRENCY_CODE,
     byCategory: cats.rows.map((r) => ({
       category: r.category,
       type: r.type,
@@ -90,12 +91,12 @@ router.get(
     const lines = ["module,type,category,amount_minor,currency"];
     for (const row of production.byCategory) {
       lines.push(
-        `production,${safe(row.type)},${safe(row.category)},${row.amountMinor},SYP`,
+        `production,${safe(row.type)},${safe(row.category)},${row.amountMinor},${CURRENCY_CODE}`,
       );
     }
     for (const row of store.byCategory) {
       lines.push(
-        `store,${safe(row.type)},${safe(row.category)},${row.amountMinor},SYP`,
+        `store,${safe(row.type)},${safe(row.category)},${row.amountMinor},${CURRENCY_CODE}`,
       );
     }
     res.setHeader("Content-Type", "text/csv; charset=utf-8");
@@ -199,7 +200,7 @@ router.get(
     const lines = ["product_id,product_name_ar,units_sold,revenue_minor,currency"];
     for (const r of rows) {
       const safe = (s: string) => `"${(s ?? "").replace(/"/g, '""')}"`;
-      lines.push(`${r.productId},${safe(r.productNameAr)},${r.unitsSold},${r.revenueMinor},SYP`);
+      lines.push(`${r.productId},${safe(r.productNameAr)},${r.unitsSold},${r.revenueMinor},${CURRENCY_CODE}`);
     }
     res.setHeader("Content-Type", "text/csv; charset=utf-8");
     res.setHeader(
@@ -239,7 +240,7 @@ router.get(
   `);
     const lines = ["date,sales_minor,orders,currency"];
     for (const r of rows.rows) {
-      lines.push(`${r.date},${r.total},${r.count},SYP`);
+      lines.push(`${r.date},${r.total},${r.count},${CURRENCY_CODE}`);
     }
     res.setHeader("Content-Type", "text/csv; charset=utf-8");
     res.setHeader(
@@ -298,7 +299,7 @@ router.get(
       grossProfitMinor: revenue - cogs,
       grossMarginBasisPoints: revenue > 0 ? Math.round(((revenue - cogs) / revenue) * 10000) : 0,
       orders: Number(t.orders),
-      currency: "SYP",
+      currency: CURRENCY_CODE,
       byProduct: byProduct.rows.map((r) => ({
         productId: r.product_id,
         productNameAr: r.name_ar,
@@ -345,7 +346,7 @@ router.get(
     for (const r of byProduct.rows) {
       const rev = Number(r.revenue);
       const cogs = Number(r.cogs);
-      lines.push(`${r.product_id},${safe(r.name_ar)},${r.units},${rev},${cogs},${rev - cogs},SYP`);
+      lines.push(`${r.product_id},${safe(r.name_ar)},${r.units},${rev},${cogs},${rev - cogs},${CURRENCY_CODE}`);
     }
     res.setHeader("Content-Type", "text/csv; charset=utf-8");
     res.setHeader(
@@ -394,7 +395,7 @@ router.get(
       limit 50
     `);
     res.json({
-      currency: "SYP",
+      currency: CURRENCY_CODE,
       totalSpendMinor: Number(totalRow.rows[0]!.total),
       byMaterial: byMaterial.rows.map((r) => ({
         materialId: r.material_id,
@@ -451,7 +452,7 @@ router.get(
       where ${where}
     `);
     res.json({
-      currency: "SYP",
+      currency: CURRENCY_CODE,
       totalOrders: Number(overall.rows[0]!.orders),
       totalRevenueMinor: Number(overall.rows[0]!.total),
       avgOrderValueMinor: Math.round(Number(overall.rows[0]!.avg)),

@@ -125,7 +125,7 @@ export default function AdminProductsPage() {
                   </SelectContent>
                 </Select>
               </div>
-              <div><Label>السعر (ل.س × 100)</Label><Input type="number" required value={form.priceMinor} onChange={(e) => setForm({ ...form, priceMinor: Number(e.target.value) })} /></div>
+              <div><Label>السعر (₪ × 100)</Label><Input type="number" required value={form.priceMinor} onChange={(e) => setForm({ ...form, priceMinor: Number(e.target.value) })} /></div>
               <div><Label>الوزن (غ)</Label><Input type="number" value={form.weightGrams} onChange={(e) => setForm({ ...form, weightGrams: Number(e.target.value) })} /></div>
               <div className="col-span-2">
                 <MediaPicker

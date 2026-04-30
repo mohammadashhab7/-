@@ -46,7 +46,7 @@ export default function DashboardPage() {
 
   const formatCurrency = (minor: number | undefined) => {
     if (minor === undefined) return "0";
-    return new Intl.NumberFormat("ar-SY").format(minor);
+    return new Intl.NumberFormat(["ar-PS", "ar"]).format(minor);
   };
 
   const getActivityIcon = (kind: string) => {

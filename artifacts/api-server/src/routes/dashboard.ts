@@ -2,6 +2,7 @@ import { Router, type IRouter } from "express";
 import { desc, sql } from "drizzle-orm";
 import { db, activityLog } from "@workspace/db";
 import { requirePermission } from "../lib/auth";
+import { CURRENCY_CODE } from "../lib/region";
 
 const router: IRouter = Router();
 
@@ -69,7 +70,7 @@ router.get(
         ? ((thisWeekTotal - lastWeekTotal) / lastWeekTotal) * 100
         : null;
     res.json({
-      currency: "SYP",
+      currency: CURRENCY_CODE,
       todaySalesMinor: Number(today.rows[0]!.total),
       todayOrders: Number(today.rows[0]!.count),
       todayPosSalesMinor: Number(today.rows[0]!.pos_total),

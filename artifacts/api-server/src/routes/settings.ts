@@ -2,6 +2,7 @@ import { Router, type IRouter } from "express";
 import { eq } from "drizzle-orm";
 import { db, settings } from "@workspace/db";
 import { requireStaff, requirePermission } from "../lib/auth";
+import { CURRENCY_CODE } from "../lib/region";
 
 const router: IRouter = Router();
 
@@ -14,7 +15,8 @@ function serialize(s: typeof settings.$inferSelect) {
     addressAr: s.addressAr,
     phone: s.phone,
     email: s.email,
-    currency: "SYP",
+    country: s.countryCode,
+    currency: CURRENCY_CODE,
     currencySymbol: s.currencySymbol,
     taxPercent: s.taxPercent,
     deliveryFeeMinor: s.deliveryFeeMinor,
@@ -60,6 +62,9 @@ router.put("/settings", requirePermission("settings", "write"), async (req, res)
     if (b[k] !== undefined) (updates as Record<string, unknown>)[k] = b[k];
   }
   if (typeof b.taxPercent === "number") updates.taxPercent = b.taxPercent;
+  if (typeof b.country === "string" && /^[A-Za-z]{2}$/.test(b.country)) {
+    updates.countryCode = b.country.toUpperCase();
+  }
   if (b.facebookUrl !== undefined) updates.socialFacebook = b.facebookUrl;
   if (b.instagramUrl !== undefined) updates.socialInstagram = b.instagramUrl;
   if (b.whatsappNumber !== undefined) updates.socialWhatsapp = b.whatsappNumber;

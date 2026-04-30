@@ -13,6 +13,9 @@ export interface Settings {
   addressAr?: string;
   phone?: string;
   email?: string;
+  /** ISO 3166-1 alpha-2 country code */
+  country: string;
+  /** ISO 4217 currency code */
   currency: string;
   currencySymbol: string;
   taxPercent: number;

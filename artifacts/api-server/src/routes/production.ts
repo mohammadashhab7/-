@@ -1,5 +1,6 @@
 import { Router, type IRouter } from "express";
 import { and, desc, eq } from "drizzle-orm";
+import { CURRENCY_CODE, CURRENCY_SYMBOL } from "../lib/region";
 import {
   db,
   productionOrders,
@@ -179,7 +180,7 @@ router.post("/production-orders", requirePermission("production", "write"), asyn
           type: "expense",
           category: "raw_materials",
           amountMinor: totalCost,
-          currency: "SYP",
+          currency: CURRENCY_CODE,
           referenceType: "production_order",
           referenceId: order.id,
           descriptionAr: `تكلفة مواد إنتاج ${product.nameAr} (أمر ${orderNumber})`,
@@ -194,7 +195,7 @@ router.post("/production-orders", requirePermission("production", "write"), asyn
     await logActivity({
       kind: "production_completed",
       titleAr: `إنتاج ${product.nameAr}`,
-      descriptionAr: `${finalOrder.unitsProduced} وحدة بتكلفة ${finalOrder.totalCost} ل.س`,
+      descriptionAr: `${finalOrder.unitsProduced} وحدة بتكلفة ${finalOrder.totalCost} ${CURRENCY_SYMBOL}`,
       referenceType: "production_order",
       referenceId: finalOrder.o.id,
       actor: req.appUser,

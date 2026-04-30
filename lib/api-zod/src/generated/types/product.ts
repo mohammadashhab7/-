@@ -16,7 +16,7 @@ export interface Product {
   descriptionEn?: string;
   categoryId?: string;
   categoryNameAr?: string;
-  /** Price in minor units (SYP) */
+  /** Price in minor units (ILS) */
   priceMinor: number;
   currency: string;
   /** kg, piece, box */

@@ -1,5 +1,6 @@
 import { Router, type IRouter } from "express";
 import { and, desc, eq, gte, lte } from "drizzle-orm";
+import { CURRENCY_CODE } from "../lib/region";
 import {
   db,
   salesOrders,
@@ -144,7 +145,7 @@ function serialize(o: typeof salesOrders.$inferSelect) {
     taxMinor: o.taxMinor,
     deliveryFeeMinor: o.deliveryFeeMinor,
     totalMinor: o.totalMinor,
-    currency: "SYP",
+    currency: CURRENCY_CODE,
     notesAr: o.notesAr,
     placedAt: placedAtIso,
     createdAt: placedAtIso,

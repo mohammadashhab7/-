@@ -183,7 +183,7 @@ export const products = pgTable(
       onDelete: "set null",
     }),
     priceMinor: bigint("price_minor", { mode: "number" }).notNull().default(0),
-    currency: varchar("currency", { length: 8 }).notNull().default("SYP"),
+    currency: varchar("currency", { length: 8 }).notNull().default("ILS"),
     unit: varchar("unit", { length: 16 }).notNull().default("piece"),
     weightGrams: integer("weight_grams"),
     imageUrl: text("image_url"),
@@ -210,7 +210,7 @@ export const rawMaterials = pgTable("raw_materials", {
   unitCostMinor: bigint("unit_cost_minor", { mode: "number" })
     .notNull()
     .default(0),
-  currency: varchar("currency", { length: 8 }).notNull().default("SYP"),
+  currency: varchar("currency", { length: 8 }).notNull().default("ILS"),
   reorderThreshold: integer("reorder_threshold").notNull().default(0),
   supplierAr: text("supplier_ar"),
   notesAr: text("notes_ar"),
@@ -519,7 +519,7 @@ export const payments = pgTable(
     provider: paymentProviderEnum("provider").notNull(),
     status: paymentStatusEnum("status").notNull().default("pending"),
     amountMinor: bigint("amount_minor", { mode: "number" }).notNull().default(0),
-    currency: varchar("currency", { length: 8 }).notNull().default("SYP"),
+    currency: varchar("currency", { length: 8 }).notNull().default("ILS"),
     providerIntentId: text("provider_intent_id"),
     providerClientSecret: text("provider_client_secret"),
     providerPayload: jsonb("provider_payload").$type<Record<string, unknown>>(),
@@ -543,7 +543,7 @@ export const financialEntries = pgTable(
     category: text("category").notNull(),
     descriptionAr: text("description_ar").notNull(),
     amountMinor: bigint("amount_minor", { mode: "number" }).notNull(),
-    currency: varchar("currency", { length: 8 }).notNull().default("SYP"),
+    currency: varchar("currency", { length: 8 }).notNull().default("ILS"),
     occurredAt: timestamp("occurred_at", { withTimezone: true })
       .defaultNow()
       .notNull(),
@@ -654,7 +654,8 @@ export const settings = pgTable("settings", {
   addressAr: text("address_ar"),
   phone: text("phone"),
   email: text("email"),
-  currencySymbol: varchar("currency_symbol", { length: 8 }).notNull().default("ل.س"),
+  countryCode: varchar("country_code", { length: 2 }).notNull().default("PS"),
+  currencySymbol: varchar("currency_symbol", { length: 8 }).notNull().default("₪"),
   taxPercent: integer("tax_percent_basis").notNull().default(0),
   deliveryFeeMinor: bigint("delivery_fee_minor", { mode: "number" })
     .notNull()

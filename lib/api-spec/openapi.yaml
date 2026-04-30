@@ -1454,7 +1454,7 @@ components:
         descriptionEn: { type: string }
         categoryId: { type: string }
         categoryNameAr: { type: string }
-        priceMinor: { type: integer, description: Price in minor units (SYP) }
+        priceMinor: { type: integer, description: Price in minor units (ILS) }
         currency: { type: string }
         unit: { type: string, description: "kg, piece, box" }
         weightGrams: { type: integer }
@@ -2084,7 +2084,7 @@ components:
 
     Settings:
       type: object
-      required: [storeNameAr, currency, currencySymbol, taxPercent]
+      required: [storeNameAr, country, currency, currencySymbol, taxPercent]
       properties:
         storeNameAr: { type: string }
         storeNameEn: { type: string }
@@ -2092,7 +2092,8 @@ components:
         addressAr: { type: string }
         phone: { type: string }
         email: { type: string }
-        currency: { type: string }
+        country: { type: string, description: ISO 3166-1 alpha-2 country code }
+        currency: { type: string, description: ISO 4217 currency code }
         currencySymbol: { type: string }
         taxPercent: { type: integer }
         deliveryFeeMinor: { type: integer }
@@ -2125,6 +2126,7 @@ components:
         addressAr: { type: string }
         phone: { type: string }
         email: { type: string }
+        country: { type: string, description: ISO 3166-1 alpha-2 country code }
         currency: { type: string }
         currencySymbol: { type: string }
         taxPercent: { type: integer }

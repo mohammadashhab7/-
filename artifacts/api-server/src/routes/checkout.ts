@@ -1,6 +1,7 @@
 import { Router, type IRouter } from "express";
 import { eq } from "drizzle-orm";
 import { db, carts, cartItems, settings } from "@workspace/db";
+import { CURRENCY_CODE } from "../lib/region";
 import { loadAppUser } from "../lib/auth";
 import { createSalesOrderInternal } from "./salesOrders";
 import { recordPayment } from "./payments";
@@ -83,7 +84,7 @@ router.post("/checkout", async (req, res) => {
       orderId: order.id,
       provider,
       amountMinor: order.totalMinor,
-      currency: "SYP",
+      currency: CURRENCY_CODE,
       createdByUserId: user?.id ?? null,
     });
     res.status(201).json({

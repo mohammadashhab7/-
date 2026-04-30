@@ -2,6 +2,7 @@ import { Router, type IRouter } from "express";
 import { and, asc, desc, eq, ilike, or, sql } from "drizzle-orm";
 import { db, products, categories } from "@workspace/db";
 import { requireStaff, requirePermission } from "../lib/auth";
+import { CURRENCY_CODE } from "../lib/region";
 
 const router: IRouter = Router();
 
@@ -86,7 +87,7 @@ router.post("/products", requirePermission("products", "write"), async (req, res
       descriptionEn: b.descriptionEn ?? null,
       categoryId: b.categoryId ?? null,
       priceMinor: typeof b.priceMinor === "number" ? b.priceMinor : 0,
-      currency: b.currency || "SYP",
+      currency: b.currency || CURRENCY_CODE,
       unit: b.unit || "piece",
       weightGrams: b.weightGrams ?? null,
       imageUrl: b.imageUrl ?? null,
