@@ -8,16 +8,20 @@ import { Button } from "@/components/ui/button";
 export default function AccountLayout({ children }: { children: ReactNode }) {
   const [location] = useLocation();
   const { signOut } = useClerk();
-  const { data: settings } = useGetSettings();
+  const { data: settings, isPending: settingsPending } = useGetSettings();
   const storeName =
-    (settings as { storeNameAr?: string } | undefined)?.storeNameAr ||
-    "الدمشقي";
+    (settings as { storeNameAr?: string } | undefined)?.storeNameAr ?? "";
+  const settingsLoaded = !settingsPending;
   return (
     <div className="min-h-screen bg-[hsl(40_33%_97%)]">
       <header className="border-b border-border/40 bg-background">
         <div className="container mx-auto flex h-16 items-center justify-between px-4">
           <Link href="~/" className="text-xl font-serif text-primary">
-            {storeName}
+            {settingsLoaded ? (
+              storeName
+            ) : (
+              <span className="inline-block h-5 w-20 rounded bg-primary/10 align-middle animate-pulse" aria-hidden />
+            )}
           </Link>
           <Button
             variant="ghost"

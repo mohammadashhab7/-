@@ -57,7 +57,9 @@ export default function CartDrawer({ children }: { children: React.ReactNode }) 
   };
 
   const formatCurrency = (minor: number) => {
-    return `${new Intl.NumberFormat("ar-SY").format(minor)} ${settings?.currencySymbol || "ل.س"}`;
+    const symbol = settings?.currencySymbol || "";
+    const number = new Intl.NumberFormat("ar-SY").format(minor);
+    return symbol ? `${number} ${symbol}` : number;
   };
 
   return (

@@ -16,10 +16,12 @@ export function formatSyp(
 
 /**
  * React hook that returns the configured currency symbol from store settings.
- * Falls back to the default if settings haven't loaded yet.
+ * Returns an empty string while settings are still loading so the public UI
+ * doesn't briefly flash a hardcoded symbol before the saved value arrives.
  */
 export function useCurrencySymbol(): string {
-  const { data } = useGetSettings();
+  const { data, isPending } = useGetSettings();
+  if (isPending) return "";
   const sym = (data as { currencySymbol?: string } | undefined)?.currencySymbol;
   return sym && sym.length > 0 ? sym : DEFAULT_CURRENCY_SYMBOL;
 }

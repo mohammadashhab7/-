@@ -40,13 +40,15 @@ const ALL_NAV = [...RIGHT_NAV, ...LEFT_NAV];
 
 export default function PublicLayout({ children }: PublicLayoutProps) {
   const [location] = useLocation();
-  const { data: settings } = useGetSettings();
+  const { data: settings, isPending: settingsPending } = useGetSettings();
   const { data: cart } = useGetCart();
   const { user, isSignedIn } = useUser();
   const { signOut } = useClerk();
 
   const cartItemCount = cart?.items.reduce((acc, item) => acc + item.quantity, 0) || 0;
-  const storeName = settings?.storeNameAr || "الدمشقي";
+  // Don't flash a hardcoded brand name before the saved settings arrive.
+  const storeName = settings?.storeNameAr ?? "";
+  const settingsLoaded = !settingsPending;
 
   const isActive = (item: NavItem) =>
     item.matchPrefix ? location.startsWith(item.href) : location === item.href;
@@ -223,9 +225,16 @@ export default function PublicLayout({ children }: PublicLayoutProps) {
           >
             <div className="flex flex-col items-center">
               <div className="relative px-5 sm:px-8 py-2 sm:py-3 rounded-full bg-background shadow-[0_8px_24px_-8px_rgba(0,0,0,0.18)] border border-primary/15 group-hover:border-primary/40 group-hover:shadow-[0_12px_28px_-8px_rgba(0,0,0,0.22)] transition-all duration-300">
-                <span className="font-serif text-2xl sm:text-3xl lg:text-[2rem] font-bold tracking-tight text-primary leading-none">
-                  {storeName}
-                </span>
+                {settingsLoaded ? (
+                  <span className="font-serif text-2xl sm:text-3xl lg:text-[2rem] font-bold tracking-tight text-primary leading-none">
+                    {storeName}
+                  </span>
+                ) : (
+                  <span
+                    className="inline-block h-7 w-24 sm:h-8 sm:w-28 rounded bg-primary/10 animate-pulse"
+                    aria-hidden
+                  />
+                )}
               </div>
               <span className="hidden sm:block text-[10px] tracking-[0.35em] uppercase text-muted-foreground/70 mt-1">
                 Damascene
@@ -242,14 +251,29 @@ export default function PublicLayout({ children }: PublicLayoutProps) {
           <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
             <div className="md:col-span-2">
               <Link href="/" className="inline-block mb-4">
-                <span className="font-serif text-2xl font-bold tracking-tight text-primary">
-                  {storeName}
-                </span>
+                {settingsLoaded ? (
+                  <span className="font-serif text-2xl font-bold tracking-tight text-primary">
+                    {storeName}
+                  </span>
+                ) : (
+                  <span
+                    className="inline-block h-7 w-24 rounded bg-primary/10 animate-pulse"
+                    aria-hidden
+                  />
+                )}
               </Link>
-              <p className="text-muted-foreground text-sm max-w-md leading-relaxed">
-                {settings?.taglineAr ||
-                  "صناع الحلويات الدمشقية العريقة. إرث يمتد لأجيال في تقديم أرقى أنواع البقلاوة والمعمول والحلويات الشرقية الفاخرة."}
-              </p>
+              {settingsLoaded ? (
+                settings?.taglineAr ? (
+                  <p className="text-muted-foreground text-sm max-w-md leading-relaxed">
+                    {settings.taglineAr}
+                  </p>
+                ) : null
+              ) : (
+                <div className="space-y-2 max-w-md">
+                  <span className="block h-3 w-full rounded bg-muted/70 animate-pulse" aria-hidden />
+                  <span className="block h-3 w-2/3 rounded bg-muted/70 animate-pulse" aria-hidden />
+                </div>
+              )}
             </div>
             <div>
               <h3 className="font-semibold mb-4 text-foreground">روابط سريعة</h3>
@@ -286,7 +310,8 @@ export default function PublicLayout({ children }: PublicLayoutProps) {
           </div>
           <div className="border-t border-border mt-12 pt-8 text-center text-sm text-muted-foreground flex flex-col md:flex-row justify-between items-center gap-4">
             <p>
-              © {new Date().getFullYear()} {storeName}. جميع الحقوق محفوظة.
+              © {new Date().getFullYear()}
+              {settingsLoaded && storeName ? ` ${storeName}.` : ""} جميع الحقوق محفوظة.
             </p>
           </div>
         </div>

@@ -4,7 +4,6 @@ import { useEffect, useRef, useState } from "react";
 import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { imgSrc } from "@/lib/imgSrc";
-import heroImg from "@/assets/hero.png";
 
 export type HeroMediaType = "image" | "video" | "slider";
 
@@ -71,8 +70,12 @@ export default function HeroSection({
   const contentY = useTransform(scrollYProgress, [0, 1], ["0%", "40%"]);
   const contentOpacity = useTransform(scrollYProgress, [0, 0.6, 1], [1, 0.5, 0]);
 
-  const resolvedImage = imageUrl ? imgSrc(imageUrl) : heroImg;
-  const resolvedFallback = fallbackImageUrl ? imgSrc(fallbackImageUrl) : resolvedImage;
+  // Only use real CMS-backed media. When nothing is set, show a neutral
+  // muted background instead of flashing a bundled stock image.
+  const resolvedImage = imageUrl ? imgSrc(imageUrl) : null;
+  const resolvedFallback = fallbackImageUrl
+    ? imgSrc(fallbackImageUrl)
+    : resolvedImage;
   const resolvedVideo = videoUrl ? imgSrc(videoUrl) : null;
 
   const wantsVideo = mediaType === "video" || (!mediaType && !!resolvedVideo);
@@ -150,17 +153,23 @@ export default function HeroSection({
             playsInline
             className="w-full h-full object-cover object-center"
             src={resolvedVideo!}
-            poster={resolvedFallback}
+            poster={resolvedFallback ?? undefined}
             aria-label={alt || title || ""}
             onError={() => setVideoFailed(true)}
             data-testid="video-hero"
           />
-        ) : (
+        ) : resolvedFallback ? (
           <img
             src={resolvedFallback}
             alt={alt || title || ""}
             className="w-full h-full object-cover object-center"
             data-testid="img-hero"
+          />
+        ) : (
+          <div
+            className="w-full h-full bg-muted"
+            aria-hidden
+            data-testid="img-hero-placeholder"
           />
         )}
         <div

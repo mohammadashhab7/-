@@ -71,6 +71,7 @@ router.get("/public/products", async (req, res) => {
     .where(and(...filters))
     .orderBy(desc(products.isFeatured), asc(products.sortOrder), asc(products.nameAr));
   const stockSet = await inStockSet(rows.map((r) => r.p.id));
+  res.setHeader("Cache-Control", "no-cache, must-revalidate");
   res.json(rows.map((r) => publicProduct(r.p, r.catName, stockSet.has(r.p.id))));
 });
 
@@ -86,6 +87,7 @@ router.get("/public/products/:slug", async (req, res) => {
     return;
   }
   const stockSet = await inStockSet([rows[0].p.id]);
+  res.setHeader("Cache-Control", "no-cache, must-revalidate");
   res.json(publicProduct(rows[0].p, rows[0].catName, stockSet.has(rows[0].p.id)));
 });
 
@@ -95,6 +97,7 @@ router.get("/public/categories", async (_req, res) => {
     .from(categories)
     .where(eq(categories.isActive, true))
     .orderBy(asc(categories.sortOrder), asc(categories.nameAr));
+  res.setHeader("Cache-Control", "no-cache, must-revalidate");
   res.json(
     rows.map((c) => ({
       id: c.id,
@@ -116,6 +119,7 @@ router.get("/public/featured", async (_req, res) => {
     .orderBy(asc(products.sortOrder), asc(products.nameAr))
     .limit(12);
   const stockSet = await inStockSet(rows.map((r) => r.p.id));
+  res.setHeader("Cache-Control", "no-cache, must-revalidate");
   res.json(rows.map((r) => publicProduct(r.p, r.catName, stockSet.has(r.p.id))));
 });
 

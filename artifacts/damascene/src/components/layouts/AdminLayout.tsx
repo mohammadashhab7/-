@@ -68,10 +68,10 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
   const { user } = useUser();
   const { signOut } = useClerk();
   const { data: me } = useGetMe();
-  const { data: settings } = useGetSettings();
+  const { data: settings, isPending: settingsPending } = useGetSettings();
   const storeName =
-    (settings as { storeNameAr?: string } | undefined)?.storeNameAr ||
-    "الدمشقي";
+    (settings as { storeNameAr?: string } | undefined)?.storeNameAr ?? "";
+  const settingsLoaded = !settingsPending;
 
   const isPos = location.startsWith("/pos");
 
@@ -113,7 +113,10 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
       <div className="min-h-screen flex flex-col bg-background font-sans text-foreground">
         <header className="h-14 border-b bg-card flex items-center justify-between px-4 shrink-0">
           <div className="flex items-center gap-4">
-            <span className="font-serif text-xl font-bold text-primary">نقطة البيع - {storeName}</span>
+            <span className="font-serif text-xl font-bold text-primary">
+              نقطة البيع
+              {settingsLoaded && storeName ? ` - ${storeName}` : ""}
+            </span>
           </div>
           <div className="flex items-center gap-4">
              <Button variant="outline" size="sm" asChild data-testid="button-exit-pos">
@@ -134,7 +137,11 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
       <aside className="hidden md:flex w-64 flex-col border-l border-border bg-card shrink-0 h-screen sticky top-0">
         <div className="h-16 flex items-center px-6 border-b border-border">
           <Link href="/" className="font-serif text-2xl font-bold text-primary" data-testid="link-admin-logo">
-            {storeName}
+            {settingsLoaded ? (
+              storeName
+            ) : (
+              <span className="inline-block h-6 w-20 rounded bg-primary/10 align-middle animate-pulse" aria-hidden />
+            )}
           </Link>
         </div>
         <ScrollArea className="flex-1">
@@ -183,7 +190,13 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
             </SheetTrigger>
             <SheetContent side="right" className="w-[280px] p-0 flex flex-col">
               <div className="h-16 flex items-center px-6 border-b border-border shrink-0">
-                <span className="font-serif text-2xl font-bold text-primary">{storeName}</span>
+                <span className="font-serif text-2xl font-bold text-primary">
+                  {settingsLoaded ? (
+                    storeName
+                  ) : (
+                    <span className="inline-block h-6 w-20 rounded bg-primary/10 align-middle animate-pulse" aria-hidden />
+                  )}
+                </span>
               </div>
               <ScrollArea className="flex-1">
                 <NavItems />

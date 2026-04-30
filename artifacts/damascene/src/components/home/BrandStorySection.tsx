@@ -4,7 +4,6 @@ import { motion, useScroll, useTransform } from "framer-motion";
 import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { imgSrc } from "@/lib/imgSrc";
-import atelierImg from "@/assets/atelier.png";
 
 export interface BrandStorySectionProps {
   title?: string;
@@ -42,7 +41,7 @@ export default function BrandStorySection({
   mobileImageUrl,
   mobileVideoUrl,
   alt,
-  eyebrow = "حكاية الدمشقي",
+  eyebrow,
 }: BrandStorySectionProps) {
   const ref = useRef<HTMLElement>(null);
   const isMobile = useIsMobile();
@@ -55,12 +54,13 @@ export default function BrandStorySection({
   const imageY = useTransform(scrollYProgress, [0, 1], ["-12%", "12%"]);
   const imageScale = useTransform(scrollYProgress, [0, 0.5, 1], [1.05, 1, 1.05]);
 
-  // Choose image / video per viewport. Fall back to desktop variants if mobile
-  // counterparts aren't set, then to bundled atelier asset for image.
+  // Choose image / video per viewport, falling back to desktop variants if
+  // mobile counterparts aren't set. We never fall back to a bundled stock
+  // image — if the CMS block has no media, the slot stays empty.
   const chosenImageUrl = isMobile && mobileImageUrl ? mobileImageUrl : imageUrl;
   const chosenVideoUrl = isMobile && mobileVideoUrl ? mobileVideoUrl : videoUrl;
 
-  const resolvedImage = chosenImageUrl ? imgSrc(chosenImageUrl) : atelierImg;
+  const resolvedImage = chosenImageUrl ? imgSrc(chosenImageUrl) : null;
   const resolvedVideo = chosenVideoUrl ? imgSrc(chosenVideoUrl) : null;
 
   // Reset failure flag whenever the chosen video URL changes (e.g. switching
@@ -141,7 +141,7 @@ export default function BrandStorySection({
               {showVideo ? (
                 <motion.video
                   src={resolvedVideo!}
-                  poster={resolvedImage}
+                  poster={resolvedImage ?? undefined}
                   autoPlay
                   muted
                   loop
@@ -152,7 +152,7 @@ export default function BrandStorySection({
                   onError={() => setVideoFailed(true)}
                   data-testid="video-story"
                 />
-              ) : (
+              ) : resolvedImage ? (
                 <motion.img
                   src={resolvedImage}
                   alt={altText}
@@ -160,7 +160,7 @@ export default function BrandStorySection({
                   style={{ y: imageY, scale: imageScale }}
                   data-testid="img-story"
                 />
-              )}
+              ) : null}
               <div className="absolute inset-0 ring-1 ring-inset ring-black/5 rounded-2xl" />
             </div>
           </motion.div>

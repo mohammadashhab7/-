@@ -18,8 +18,7 @@ export default function AdminPosPage() {
   const { data: settings } = useGetSettings();
   const currencySymbol = useCurrencySymbol();
   const storeName =
-    (settings as { storeNameAr?: string } | undefined)?.storeNameAr ||
-    "الدمشقي";
+    (settings as { storeNameAr?: string } | undefined)?.storeNameAr ?? "";
   const createOrder = useCreateSalesOrder();
   const { toast } = useToast();
   const [search, setSearch] = useState("");

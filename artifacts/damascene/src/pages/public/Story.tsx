@@ -8,10 +8,18 @@ type BlockMetadata = {
 };
 
 export default function StoryPage() {
-  const { data: blocks } = useListContentBlocks({ page: "story" });
+  const { data: blocks, isPending } = useListContentBlocks({ page: "story" });
   const heroBlock = blocks?.find((b) => b.key === "story_hero");
   const heroMeta = (heroBlock?.metadata ?? {}) as BlockMetadata;
   const bodyBlocks = blocks?.filter((b) => b.key !== "story_hero") ?? [];
+
+  // Only treat the page as "empty" once the query has resolved. While loading
+  // we render nothing to avoid flashing a hardcoded "قصتنا" header that then
+  // gets replaced by the real CMS content.
+  const hasResolved = !isPending;
+  const showFallbackHeader = hasResolved && !heroBlock;
+  const showEmptyMessage =
+    hasResolved && !heroBlock && bodyBlocks.length === 0;
 
   return (
     <div>
@@ -50,23 +58,23 @@ export default function StoryPage() {
         </section>
       )}
       <div className="container mx-auto max-w-4xl px-4 py-16">
-        {!heroBlock && (
+        {showFallbackHeader && (
           <header className="text-center mb-12">
             <h1 className="font-serif text-4xl md:text-5xl text-primary mb-4">قصتنا</h1>
             <p className="text-foreground/70 text-lg">إرث دمشقي يتوارث منذ أكثر من قرن</p>
           </header>
         )}
         <div className="prose prose-lg mx-auto text-foreground/80 leading-loose space-y-6">
-          {bodyBlocks.length > 0 ? (
-            bodyBlocks.map((b) => (
-              <section key={b.id}>
-                {b.titleAr && <h2 className="font-serif text-2xl text-primary mt-8 mb-3">{b.titleAr}</h2>}
-                {b.contentAr && <p className="whitespace-pre-line">{b.contentAr}</p>}
-              </section>
-            ))
-          ) : (
-            !heroBlock && <p className="text-center text-foreground/60">لا يوجد محتوى متاح حالياً.</p>
-          )}
+          {bodyBlocks.length > 0
+            ? bodyBlocks.map((b) => (
+                <section key={b.id}>
+                  {b.titleAr && <h2 className="font-serif text-2xl text-primary mt-8 mb-3">{b.titleAr}</h2>}
+                  {b.contentAr && <p className="whitespace-pre-line">{b.contentAr}</p>}
+                </section>
+              ))
+            : showEmptyMessage && (
+                <p className="text-center text-foreground/60">لا يوجد محتوى متاح حالياً.</p>
+              )}
         </div>
       </div>
     </div>

@@ -9,8 +9,9 @@ type ContactMetadata = {
 };
 
 export default function ContactPage() {
-  const { data: settings } = useGetSettings();
+  const { data: settings, isPending: settingsPending } = useGetSettings();
   const { data: blocks } = useListContentBlocks({ page: "contact" });
+  const settingsLoaded = !settingsPending;
   const heroBlock = blocks?.find((b) => b.key === "contact_hero" || b.key === "contact_main");
   const visitBlock = blocks?.find((b) => b.key === "contact_visit");
   const contactMeta = (heroBlock?.metadata ?? {}) as ContactMetadata;
@@ -38,21 +39,39 @@ export default function ContactPage() {
               <MapPin className="h-5 w-5 text-primary mt-1" />
               <div>
                 <div className="font-medium">العنوان</div>
-                <div className="text-foreground/70">{settings?.addressAr || "—"}</div>
+                <div className="text-foreground/70">
+                  {settingsLoaded ? (
+                    settings?.addressAr || "—"
+                  ) : (
+                    <span className="inline-block h-4 w-40 rounded bg-muted/70 align-middle animate-pulse" aria-hidden />
+                  )}
+                </div>
               </div>
             </div>
             <div className="flex items-start gap-3">
               <Phone className="h-5 w-5 text-primary mt-1" />
               <div>
                 <div className="font-medium">الهاتف</div>
-                <div className="text-foreground/70 ltr-numbers">{settings?.phone || "—"}</div>
+                <div className="text-foreground/70 ltr-numbers">
+                  {settingsLoaded ? (
+                    settings?.phone || "—"
+                  ) : (
+                    <span className="inline-block h-4 w-32 rounded bg-muted/70 align-middle animate-pulse" aria-hidden />
+                  )}
+                </div>
               </div>
             </div>
             <div className="flex items-start gap-3">
               <Mail className="h-5 w-5 text-primary mt-1" />
               <div>
                 <div className="font-medium">البريد الإلكتروني</div>
-                <div className="text-foreground/70">{settings?.email || "—"}</div>
+                <div className="text-foreground/70">
+                  {settingsLoaded ? (
+                    settings?.email || "—"
+                  ) : (
+                    <span className="inline-block h-4 w-44 rounded bg-muted/70 align-middle animate-pulse" aria-hidden />
+                  )}
+                </div>
               </div>
             </div>
             {hoursAr && (

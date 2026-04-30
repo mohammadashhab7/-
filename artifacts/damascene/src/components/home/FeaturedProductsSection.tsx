@@ -28,7 +28,7 @@ export default function FeaturedProductsSection({
   title,
   ctaLabel,
   ctaHref = "/shop",
-  eyebrow = "مختاراتنا",
+  eyebrow,
   products,
 }: FeaturedProductsSectionProps) {
   const currencySymbol = useCurrencySymbol();

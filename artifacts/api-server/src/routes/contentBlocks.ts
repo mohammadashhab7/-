@@ -40,6 +40,8 @@ router.get("/content-blocks", async (req, res) => {
     .from(contentBlocks)
     .where(filters.length ? filters[0] : undefined)
     .orderBy(asc(contentBlocks.key));
+  // Always revalidate so the public site never shows stale CMS content.
+  res.setHeader("Cache-Control", "no-cache, must-revalidate");
   res.json(rows.map(serialize));
 });
 
@@ -53,6 +55,7 @@ router.get("/content-blocks/:key", async (req, res) => {
     res.status(404).json({ error: "NOT_FOUND" });
     return;
   }
+  res.setHeader("Cache-Control", "no-cache, must-revalidate");
   res.json(serialize(rows[0]));
 });
 

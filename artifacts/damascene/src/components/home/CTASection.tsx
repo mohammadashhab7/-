@@ -13,20 +13,20 @@ export interface CTASectionProps {
   eyebrow?: string;
 }
 
-const DEFAULT_TITLE = "ذق إرث دمشق في كل قطعة";
-const DEFAULT_BODY = "اكتشف مجموعتنا المختارة بعناية من أجود الحلويات الشرقية، صُنعت بأيدي حرفيينا وفق وصفات توارثتها أجيالنا.";
-const DEFAULT_PRIMARY = "تصفح المتجر";
-const DEFAULT_PRIMARY_HREF = "/shop";
-
 export default function CTASection({
-  title = DEFAULT_TITLE,
-  body = DEFAULT_BODY,
-  ctaPrimaryLabel = DEFAULT_PRIMARY,
-  ctaPrimaryHref = DEFAULT_PRIMARY_HREF,
+  title,
+  body,
+  ctaPrimaryLabel,
+  ctaPrimaryHref = "/shop",
   ctaSecondaryLabel,
   ctaSecondaryHref = "/contact",
   eyebrow,
 }: CTASectionProps) {
+  // Render only when the CMS block actually has content. Mirrors the loading
+  // pattern used by QualitySection / BrandStorySection so we never flash a
+  // hardcoded default before the saved CMS copy arrives.
+  if (!title && !body && !ctaPrimaryLabel && !ctaSecondaryLabel) return null;
+
   return (
     <section
       className="relative py-28 md:py-40 bg-gradient-to-br from-primary via-primary to-[hsl(var(--primary)/0.85)] overflow-hidden"

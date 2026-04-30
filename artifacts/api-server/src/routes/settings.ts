@@ -35,6 +35,9 @@ async function getOrCreate() {
 
 router.get("/settings", async (_req, res) => {
   const s = await getOrCreate();
+  // Always revalidate so admin changes (storefront name, currency, contact info)
+  // surface immediately on the public site.
+  res.setHeader("Cache-Control", "no-cache, must-revalidate");
   res.json(serialize(s));
 });
 
