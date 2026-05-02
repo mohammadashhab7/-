@@ -642,7 +642,14 @@ router.post(
   },
 );
 
-// POST /wholesale-orders/:id/cancel — draft|confirmed → cancelled
+// POST /wholesale-orders/:id/cancel — draft|confirmed → cancelled.
+//
+// NOTE (Task #28 known gap, follow-up Task #30): cancelling a *delivered*
+// wholesale order would have to reverse all four legs (factory income, buyer
+// expense, factory stock-out, buyer stock-in) atomically. That reversal is not
+// implemented yet; until #30 lands, delivered orders return 409
+// `CANNOT_CANCEL_DELIVERED` and operators must reverse manually via financial
+// adjustments. Documented in replit.md (Multi-division section).
 router.post(
   "/wholesale-orders/:id/cancel",
   requirePermission("transfers", "write"),
@@ -650,6 +657,15 @@ router.post(
     const id = req.params.id as string;
     const check = await ensureCanMutate(req, res, id);
     if (!check.ok) return;
+
+    if (check.row.status === "delivered") {
+      res.status(409).json({
+        error: "CANNOT_CANCEL_DELIVERED",
+        detail:
+          "Reversal of delivered wholesale orders is not implemented yet (follow-up Task #30). Reverse manually via financial adjustments.",
+      });
+      return;
+    }
 
     const updated = await db
       .update(wholesaleOrders)
