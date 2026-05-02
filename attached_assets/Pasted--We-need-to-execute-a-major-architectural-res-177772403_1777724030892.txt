@@ -1,0 +1,190 @@
+أكيد — هذا النص كامل **جاهز للنسخ مباشرة** 👇
+
+---
+
+We need to execute a major architectural restructuring of the current system into a multi-division business platform.
+
+STRICT RULES:
+Do NOT rebuild the system from scratch.
+Do NOT break any existing functionality (products, POS, orders, inventory, finance, dashboard).
+Keep the current UI as much as possible.
+Focus on refactoring logic, structure, and data separation.
+All changes must be scalable, clean, and production-ready.
+
+CORE OBJECTIVE:
+Transform the system into 4 fully structured divisions:
+
+1. Factory / Workshop
+2. Showroom A
+3. Showroom B
+4. Showroom C
+
+The system must support future expansion (adding more showrooms) without needing restructuring.
+
+FACTORY (WORKSHOP):
+The factory is a separate operational entity with different logic. It is responsible for:
+
+* Raw materials inventory management
+* Production processes
+* Finished goods inventory
+* Full financial system (income, expenses, profit)
+* Selling products to:
+
+  * Showrooms (internal clients)
+  * External wholesale customers
+
+CRITICAL BUSINESS RULE:
+The relationship between Factory and Showrooms is DIRECT SALES, not stock transfer and not supply.
+Every movement of goods from Factory to any Showroom must be treated as a sales transaction.
+This means:
+
+* The Factory creates a sales invoice
+* The Showroom is treated as a customer
+* The Factory records revenue
+* The Showroom records an expense and stock increase
+
+SHOWROOMS (3 BRANCHES):
+Each showroom must behave as a fully independent business unit.
+
+Each showroom must include:
+
+1. Financial System:
+
+* Revenue tracking
+* Expense tracking
+* Profit calculation
+* Cash flow
+* Employee salaries
+* Daily and monthly reports
+
+2. POS / Cashier System:
+
+* Walk-in customer sales
+* Invoice generation
+* Payment handling
+* Daily closing reports
+* Order history
+
+3. Inventory System:
+
+* Tracks finished goods only
+* Stock increases through purchases from Factory
+* Stock decreases through sales
+* Low stock alerts
+* Stock valuation
+
+4. Employee Management:
+
+* Staff accounts per showroom
+* Roles and permissions
+* Optional attendance tracking and activity logs
+
+RELATIONSHIP MODEL:
+Factory to Showrooms:
+
+* Showrooms are treated as clients
+* Factory sells and showroom buys
+* Every transaction generates an invoice (not internal transfer)
+
+Showroom to Customers:
+
+* Standard POS sales flow
+
+SYSTEM ARCHITECTURE REQUIREMENTS:
+
+1. Multi-Division Separation:
+   Each unit must have isolated data:
+
+* Factory
+* Showroom A
+* Showroom B
+* Showroom C
+
+2. Central Admin Control:
+   A super admin must be able to:
+
+* View all divisions
+* Access consolidated reports
+* Manage system-wide settings
+
+3. Role-Based Access:
+
+* Each showroom user can only access their showroom data
+* Factory users can only access factory data
+
+4. Scalable Design:
+
+* Ability to add unlimited showrooms later
+* Use a structure such as business_unit_id or branch_id
+
+5. Unified Product System:
+
+* Products are defined once globally
+* Shared across factory and showrooms
+* No duplication
+
+6. Financial Integrity:
+
+* Every movement must have an accounting impact
+* No silent stock transfers
+* All transactions must be traceable
+
+KEY FLOWS:
+
+1. Factory Production Flow:
+   Raw materials → Production → Finished goods
+
+2. Factory Sale to Showroom:
+
+* Factory creates invoice
+* Showroom receives purchase
+* Stock increases in showroom
+* Expense recorded in showroom
+* Revenue recorded in factory
+
+3. Showroom Sale Flow:
+   Stock → POS sale → Revenue
+
+DATABASE AND LOGIC EXPECTATIONS:
+
+* Introduce entities such as:
+
+  * Business Units (Factory and Showrooms)
+  * Transactions (Sales and Purchases)
+  * Inventory per unit
+* Maintain compatibility with existing data
+* Migrate current data safely into the new structure
+
+REPORTING REQUIREMENTS:
+
+* Per showroom:
+
+  * Sales
+  * Expenses
+  * Profit
+* Factory:
+
+  * Production cost
+  * Sales
+  * Profit
+* Global:
+
+  * Consolidated financial overview
+
+DO NOT:
+
+* Do NOT mix inventory between units
+* Do NOT treat factory to showroom as internal transfer
+* Do NOT duplicate products
+* Do NOT break existing UI or workflows
+
+EXPECTED OUTPUT:
+
+* Clean modular architecture
+* Updated database structure
+* Clear financial flows
+* Fully working POS, inventory, and finance per showroom
+* Factory system integrated but logically separate
+* System ready for real-world use and scaling
+
+---
