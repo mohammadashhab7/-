@@ -399,6 +399,68 @@ export interface TransferStatusUpdate {
   status: TransferStatus;
 }
 
+export type WholesaleOrderStatus =
+  (typeof WholesaleOrderStatus)[keyof typeof WholesaleOrderStatus];
+
+export const WholesaleOrderStatus = {
+  draft: "draft",
+  confirmed: "confirmed",
+  delivered: "delivered",
+  cancelled: "cancelled",
+} as const;
+
+export interface WholesaleOrderItem {
+  id: string;
+  productId: string;
+  productNameAr: string;
+  quantity: number;
+  unitPriceMinor: number;
+  unitCostMinor: number;
+  lineTotalMinor: number;
+}
+
+export interface WholesaleOrder {
+  id: string;
+  orderNumber: string;
+  sellerBusinessUnitId: string;
+  sellerNameAr?: string | null;
+  buyerBusinessUnitId: string;
+  buyerNameAr?: string | null;
+  fromLocationId: string;
+  toLocationId: string;
+  status: WholesaleOrderStatus;
+  statusLabelAr?: string;
+  totalMinor: number;
+  currency: string;
+  notesAr?: string | null;
+  items: WholesaleOrderItem[];
+  createdAt: string;
+  confirmedAt?: string | null;
+  deliveredAt?: string | null;
+  cancelledAt?: string | null;
+}
+
+export type WholesaleOrderInputItemsItem = {
+  productId: string;
+  /** @minimum 1 */
+  quantity: number;
+  /** @minimum 0 */
+  unitPriceMinor: number;
+};
+
+export interface WholesaleOrderInput {
+  /** Optional. Required only for owner/admin without an active business unit. */
+  sellerBusinessUnitId?: string;
+  buyerBusinessUnitId: string;
+  notesAr?: string;
+  items: WholesaleOrderInputItemsItem[];
+}
+
+export interface WholesaleOrderStatusUpdate {
+  id: string;
+  status: WholesaleOrderStatus;
+}
+
 export type OrderStatus = (typeof OrderStatus)[keyof typeof OrderStatus];
 
 export const OrderStatus = {

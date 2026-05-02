@@ -764,6 +764,140 @@ export const CancelTransferResponse = zod.object({
   status: zod.enum(["pending", "approved", "completed", "cancelled"]),
 });
 
+/**
+ * @summary List wholesale invoices (factory→showroom B2B)
+ */
+export const ListWholesaleOrdersResponseItem = zod.object({
+  id: zod.string(),
+  orderNumber: zod.string(),
+  sellerBusinessUnitId: zod.string(),
+  sellerNameAr: zod.string().nullish(),
+  buyerBusinessUnitId: zod.string(),
+  buyerNameAr: zod.string().nullish(),
+  fromLocationId: zod.string(),
+  toLocationId: zod.string(),
+  status: zod.enum(["draft", "confirmed", "delivered", "cancelled"]),
+  statusLabelAr: zod.string().optional(),
+  totalMinor: zod.number(),
+  currency: zod.string(),
+  notesAr: zod.string().nullish(),
+  items: zod.array(
+    zod.object({
+      id: zod.string(),
+      productId: zod.string(),
+      productNameAr: zod.string(),
+      quantity: zod.number(),
+      unitPriceMinor: zod.number(),
+      unitCostMinor: zod.number(),
+      lineTotalMinor: zod.number(),
+    }),
+  ),
+  createdAt: zod.coerce.date(),
+  confirmedAt: zod.coerce.date().nullish(),
+  deliveredAt: zod.coerce.date().nullish(),
+  cancelledAt: zod.coerce.date().nullish(),
+});
+export const ListWholesaleOrdersResponse = zod.array(
+  ListWholesaleOrdersResponseItem,
+);
+
+/**
+ * @summary Create a wholesale invoice draft (factory only)
+ */
+
+export const createWholesaleOrderBodyItemsItemUnitPriceMinorMin = 0;
+
+export const CreateWholesaleOrderBody = zod.object({
+  sellerBusinessUnitId: zod
+    .string()
+    .optional()
+    .describe(
+      "Optional. Required only for owner\/admin without an active business unit.",
+    ),
+  buyerBusinessUnitId: zod.string(),
+  notesAr: zod.string().optional(),
+  items: zod.array(
+    zod.object({
+      productId: zod.string(),
+      quantity: zod.number().min(1),
+      unitPriceMinor: zod
+        .number()
+        .min(createWholesaleOrderBodyItemsItemUnitPriceMinorMin),
+    }),
+  ),
+});
+
+export const GetWholesaleOrderParams = zod.object({
+  id: zod.coerce.string(),
+});
+
+export const GetWholesaleOrderResponse = zod.object({
+  id: zod.string(),
+  orderNumber: zod.string(),
+  sellerBusinessUnitId: zod.string(),
+  sellerNameAr: zod.string().nullish(),
+  buyerBusinessUnitId: zod.string(),
+  buyerNameAr: zod.string().nullish(),
+  fromLocationId: zod.string(),
+  toLocationId: zod.string(),
+  status: zod.enum(["draft", "confirmed", "delivered", "cancelled"]),
+  statusLabelAr: zod.string().optional(),
+  totalMinor: zod.number(),
+  currency: zod.string(),
+  notesAr: zod.string().nullish(),
+  items: zod.array(
+    zod.object({
+      id: zod.string(),
+      productId: zod.string(),
+      productNameAr: zod.string(),
+      quantity: zod.number(),
+      unitPriceMinor: zod.number(),
+      unitCostMinor: zod.number(),
+      lineTotalMinor: zod.number(),
+    }),
+  ),
+  createdAt: zod.coerce.date(),
+  confirmedAt: zod.coerce.date().nullish(),
+  deliveredAt: zod.coerce.date().nullish(),
+  cancelledAt: zod.coerce.date().nullish(),
+});
+
+/**
+ * @summary Move draft → confirmed (no stock movement)
+ */
+export const ConfirmWholesaleOrderParams = zod.object({
+  id: zod.coerce.string(),
+});
+
+export const ConfirmWholesaleOrderResponse = zod.object({
+  id: zod.string(),
+  status: zod.enum(["draft", "confirmed", "delivered", "cancelled"]),
+});
+
+/**
+ * @summary Move confirmed → delivered (atomic stock + revenue + expense)
+ */
+export const DeliverWholesaleOrderParams = zod.object({
+  id: zod.coerce.string(),
+});
+
+export const DeliverWholesaleOrderResponse = zod.object({
+  id: zod.string(),
+  status: zod.enum(["draft", "confirmed", "delivered", "cancelled"]),
+});
+
+/**
+ * @summary Cancel a draft or confirmed wholesale invoice
+ */
+export const CancelWholesaleOrderParams = zod.object({
+  id: zod.coerce.string(),
+});
+
+export const CancelWholesaleOrderResponse = zod.object({
+  id: zod.string(),
+  status: zod.enum(["draft", "confirmed", "delivered", "cancelled"]),
+});
+
 export const listSalesOrdersQueryLimitMax = 500;
 
 export const ListSalesOrdersQueryParams = zod.object({

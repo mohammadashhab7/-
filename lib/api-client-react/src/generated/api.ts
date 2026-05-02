@@ -93,6 +93,9 @@ import type {
   UpdateCartItemBody,
   UpdateMediaBody,
   UpdateSalesOrderStatusBody,
+  WholesaleOrder,
+  WholesaleOrderInput,
+  WholesaleOrderStatusUpdate,
 } from "./api.schemas";
 
 import { customFetch } from "../custom-fetch";
@@ -3332,6 +3335,508 @@ export const useCancelTransfer = <
   TContext
 > => {
   return useMutation(getCancelTransferMutationOptions(options));
+};
+
+/**
+ * @summary List wholesale invoices (factory→showroom B2B)
+ */
+export const getListWholesaleOrdersUrl = () => {
+  return `/api/wholesale-orders`;
+};
+
+export const listWholesaleOrders = async (
+  options?: RequestInit,
+): Promise<WholesaleOrder[]> => {
+  return customFetch<WholesaleOrder[]>(getListWholesaleOrdersUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getListWholesaleOrdersQueryKey = () => {
+  return [`/api/wholesale-orders`] as const;
+};
+
+export const getListWholesaleOrdersQueryOptions = <
+  TData = Awaited<ReturnType<typeof listWholesaleOrders>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof listWholesaleOrders>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getListWholesaleOrdersQueryKey();
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof listWholesaleOrders>>
+  > = ({ signal }) => listWholesaleOrders({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listWholesaleOrders>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type ListWholesaleOrdersQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listWholesaleOrders>>
+>;
+export type ListWholesaleOrdersQueryError = ErrorType<unknown>;
+
+/**
+ * @summary List wholesale invoices (factory→showroom B2B)
+ */
+
+export function useListWholesaleOrders<
+  TData = Awaited<ReturnType<typeof listWholesaleOrders>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof listWholesaleOrders>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getListWholesaleOrdersQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Create a wholesale invoice draft (factory only)
+ */
+export const getCreateWholesaleOrderUrl = () => {
+  return `/api/wholesale-orders`;
+};
+
+export const createWholesaleOrder = async (
+  wholesaleOrderInput: WholesaleOrderInput,
+  options?: RequestInit,
+): Promise<WholesaleOrder> => {
+  return customFetch<WholesaleOrder>(getCreateWholesaleOrderUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(wholesaleOrderInput),
+  });
+};
+
+export const getCreateWholesaleOrderMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createWholesaleOrder>>,
+    TError,
+    { data: BodyType<WholesaleOrderInput> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof createWholesaleOrder>>,
+  TError,
+  { data: BodyType<WholesaleOrderInput> },
+  TContext
+> => {
+  const mutationKey = ["createWholesaleOrder"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof createWholesaleOrder>>,
+    { data: BodyType<WholesaleOrderInput> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return createWholesaleOrder(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CreateWholesaleOrderMutationResult = NonNullable<
+  Awaited<ReturnType<typeof createWholesaleOrder>>
+>;
+export type CreateWholesaleOrderMutationBody = BodyType<WholesaleOrderInput>;
+export type CreateWholesaleOrderMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Create a wholesale invoice draft (factory only)
+ */
+export const useCreateWholesaleOrder = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createWholesaleOrder>>,
+    TError,
+    { data: BodyType<WholesaleOrderInput> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof createWholesaleOrder>>,
+  TError,
+  { data: BodyType<WholesaleOrderInput> },
+  TContext
+> => {
+  return useMutation(getCreateWholesaleOrderMutationOptions(options));
+};
+
+export const getGetWholesaleOrderUrl = (id: string) => {
+  return `/api/wholesale-orders/${id}`;
+};
+
+export const getWholesaleOrder = async (
+  id: string,
+  options?: RequestInit,
+): Promise<WholesaleOrder> => {
+  return customFetch<WholesaleOrder>(getGetWholesaleOrderUrl(id), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetWholesaleOrderQueryKey = (id: string) => {
+  return [`/api/wholesale-orders/${id}`] as const;
+};
+
+export const getGetWholesaleOrderQueryOptions = <
+  TData = Awaited<ReturnType<typeof getWholesaleOrder>>,
+  TError = ErrorType<unknown>,
+>(
+  id: string,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getWholesaleOrder>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetWholesaleOrderQueryKey(id);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getWholesaleOrder>>
+  > = ({ signal }) => getWholesaleOrder(id, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: !!id,
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof getWholesaleOrder>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetWholesaleOrderQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getWholesaleOrder>>
+>;
+export type GetWholesaleOrderQueryError = ErrorType<unknown>;
+
+export function useGetWholesaleOrder<
+  TData = Awaited<ReturnType<typeof getWholesaleOrder>>,
+  TError = ErrorType<unknown>,
+>(
+  id: string,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getWholesaleOrder>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetWholesaleOrderQueryOptions(id, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Move draft → confirmed (no stock movement)
+ */
+export const getConfirmWholesaleOrderUrl = (id: string) => {
+  return `/api/wholesale-orders/${id}/confirm`;
+};
+
+export const confirmWholesaleOrder = async (
+  id: string,
+  options?: RequestInit,
+): Promise<WholesaleOrderStatusUpdate> => {
+  return customFetch<WholesaleOrderStatusUpdate>(
+    getConfirmWholesaleOrderUrl(id),
+    {
+      ...options,
+      method: "POST",
+    },
+  );
+};
+
+export const getConfirmWholesaleOrderMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof confirmWholesaleOrder>>,
+    TError,
+    { id: string },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof confirmWholesaleOrder>>,
+  TError,
+  { id: string },
+  TContext
+> => {
+  const mutationKey = ["confirmWholesaleOrder"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof confirmWholesaleOrder>>,
+    { id: string }
+  > = (props) => {
+    const { id } = props ?? {};
+
+    return confirmWholesaleOrder(id, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type ConfirmWholesaleOrderMutationResult = NonNullable<
+  Awaited<ReturnType<typeof confirmWholesaleOrder>>
+>;
+
+export type ConfirmWholesaleOrderMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Move draft → confirmed (no stock movement)
+ */
+export const useConfirmWholesaleOrder = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof confirmWholesaleOrder>>,
+    TError,
+    { id: string },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof confirmWholesaleOrder>>,
+  TError,
+  { id: string },
+  TContext
+> => {
+  return useMutation(getConfirmWholesaleOrderMutationOptions(options));
+};
+
+/**
+ * @summary Move confirmed → delivered (atomic stock + revenue + expense)
+ */
+export const getDeliverWholesaleOrderUrl = (id: string) => {
+  return `/api/wholesale-orders/${id}/deliver`;
+};
+
+export const deliverWholesaleOrder = async (
+  id: string,
+  options?: RequestInit,
+): Promise<WholesaleOrderStatusUpdate> => {
+  return customFetch<WholesaleOrderStatusUpdate>(
+    getDeliverWholesaleOrderUrl(id),
+    {
+      ...options,
+      method: "POST",
+    },
+  );
+};
+
+export const getDeliverWholesaleOrderMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof deliverWholesaleOrder>>,
+    TError,
+    { id: string },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof deliverWholesaleOrder>>,
+  TError,
+  { id: string },
+  TContext
+> => {
+  const mutationKey = ["deliverWholesaleOrder"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof deliverWholesaleOrder>>,
+    { id: string }
+  > = (props) => {
+    const { id } = props ?? {};
+
+    return deliverWholesaleOrder(id, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type DeliverWholesaleOrderMutationResult = NonNullable<
+  Awaited<ReturnType<typeof deliverWholesaleOrder>>
+>;
+
+export type DeliverWholesaleOrderMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Move confirmed → delivered (atomic stock + revenue + expense)
+ */
+export const useDeliverWholesaleOrder = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof deliverWholesaleOrder>>,
+    TError,
+    { id: string },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof deliverWholesaleOrder>>,
+  TError,
+  { id: string },
+  TContext
+> => {
+  return useMutation(getDeliverWholesaleOrderMutationOptions(options));
+};
+
+/**
+ * @summary Cancel a draft or confirmed wholesale invoice
+ */
+export const getCancelWholesaleOrderUrl = (id: string) => {
+  return `/api/wholesale-orders/${id}/cancel`;
+};
+
+export const cancelWholesaleOrder = async (
+  id: string,
+  options?: RequestInit,
+): Promise<WholesaleOrderStatusUpdate> => {
+  return customFetch<WholesaleOrderStatusUpdate>(
+    getCancelWholesaleOrderUrl(id),
+    {
+      ...options,
+      method: "POST",
+    },
+  );
+};
+
+export const getCancelWholesaleOrderMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof cancelWholesaleOrder>>,
+    TError,
+    { id: string },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof cancelWholesaleOrder>>,
+  TError,
+  { id: string },
+  TContext
+> => {
+  const mutationKey = ["cancelWholesaleOrder"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof cancelWholesaleOrder>>,
+    { id: string }
+  > = (props) => {
+    const { id } = props ?? {};
+
+    return cancelWholesaleOrder(id, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CancelWholesaleOrderMutationResult = NonNullable<
+  Awaited<ReturnType<typeof cancelWholesaleOrder>>
+>;
+
+export type CancelWholesaleOrderMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Cancel a draft or confirmed wholesale invoice
+ */
+export const useCancelWholesaleOrder = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof cancelWholesaleOrder>>,
+    TError,
+    { id: string },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof cancelWholesaleOrder>>,
+  TError,
+  { id: string },
+  TContext
+> => {
+  return useMutation(getCancelWholesaleOrderMutationOptions(options));
 };
 
 export const getListSalesOrdersUrl = (params?: ListSalesOrdersParams) => {

@@ -13,7 +13,8 @@ export async function logActivity(args: {
     | "transfer_cancelled"
     | "low_stock"
     | "financial_entry"
-    | "user_action";
+    | "user_action"
+    | "wholesale_order";
   titleAr: string;
   descriptionAr?: string | null;
   referenceType?: string | null;

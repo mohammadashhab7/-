@@ -37,6 +37,7 @@ import AdminRecipesPage from "@/pages/admin/Recipes";
 import AdminInventoryPage from "@/pages/admin/Inventory";
 import AdminProductionPage from "@/pages/admin/Production";
 import AdminTransfersPage from "@/pages/admin/Transfers";
+import AdminWholesalePage from "@/pages/admin/Wholesale";
 import AdminPosPage from "@/pages/admin/Pos";
 import AdminClosingPage from "@/pages/admin/DailyClosing";
 import AdminOrdersPage from "@/pages/admin/Orders";
@@ -101,6 +102,7 @@ function Router() {
               <Route path="/inventory"><PermissionRoute module="inventory"><AdminInventoryPage /></PermissionRoute></Route>
               <Route path="/production"><PermissionRoute module="production"><AdminProductionPage /></PermissionRoute></Route>
               <Route path="/transfers"><PermissionRoute module="transfers"><AdminTransfersPage /></PermissionRoute></Route>
+              <Route path="/wholesale-orders"><PermissionRoute module="transfers"><AdminWholesalePage /></PermissionRoute></Route>
 
               {/* Production sub-section aliases */}
               <Route path="/production/materials"><PermissionRoute module="raw_materials"><AdminRawMaterialsPage /></PermissionRoute></Route>

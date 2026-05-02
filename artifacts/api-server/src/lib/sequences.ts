@@ -77,6 +77,16 @@ export async function nextTransferNumber() {
   return `TRF-${year}-${pad(seq, 4)}`;
 }
 
+export async function nextWholesaleNumber() {
+  const year = new Date().getFullYear();
+  const seq = await nextCounter(
+    `WH-${year}`,
+    "order_number",
+    "wholesale_orders",
+  );
+  return `WH-${year}-${pad(seq, 4)}`;
+}
+
 export async function nextEmployeeNumber() {
   const seq = await nextCounter(`EMP`, "employee_number", "employees");
   return `EMP-${pad(seq, 4)}`;

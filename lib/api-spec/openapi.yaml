@@ -678,6 +678,98 @@ paths:
             application/json:
               schema: { $ref: "#/components/schemas/TransferStatusUpdate" }
 
+  /wholesale-orders:
+    get:
+      operationId: listWholesaleOrders
+      tags: [wholesale]
+      summary: List wholesale invoices (factory→showroom B2B)
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/WholesaleOrder" }
+    post:
+      operationId: createWholesaleOrder
+      tags: [wholesale]
+      summary: Create a wholesale invoice draft (factory only)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/WholesaleOrderInput" }
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/WholesaleOrder" }
+  /wholesale-orders/{id}:
+    get:
+      operationId: getWholesaleOrder
+      tags: [wholesale]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/WholesaleOrder" }
+  /wholesale-orders/{id}/confirm:
+    post:
+      operationId: confirmWholesaleOrder
+      tags: [wholesale]
+      summary: Move draft → confirmed (no stock movement)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Confirmed
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/WholesaleOrderStatusUpdate" }
+  /wholesale-orders/{id}/deliver:
+    post:
+      operationId: deliverWholesaleOrder
+      tags: [wholesale]
+      summary: Move confirmed → delivered (atomic stock + revenue + expense)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Delivered
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/WholesaleOrderStatusUpdate" }
+  /wholesale-orders/{id}/cancel:
+    post:
+      operationId: cancelWholesaleOrder
+      tags: [wholesale]
+      summary: Cancel a draft or confirmed wholesale invoice
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Cancelled
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/WholesaleOrderStatusUpdate" }
+
   /sales-orders:
     get:
       operationId: listSalesOrders
@@ -1803,6 +1895,69 @@ components:
       properties:
         id: { type: string }
         status: { $ref: "#/components/schemas/TransferStatus" }
+
+    WholesaleOrderStatus:
+      type: string
+      enum: [draft, confirmed, delivered, cancelled]
+    WholesaleOrder:
+      type: object
+      required: [id, orderNumber, sellerBusinessUnitId, buyerBusinessUnitId, fromLocationId, toLocationId, status, totalMinor, currency, items, createdAt]
+      properties:
+        id: { type: string }
+        orderNumber: { type: string }
+        sellerBusinessUnitId: { type: string }
+        sellerNameAr: { type: string, nullable: true }
+        buyerBusinessUnitId: { type: string }
+        buyerNameAr: { type: string, nullable: true }
+        fromLocationId: { type: string }
+        toLocationId: { type: string }
+        status: { $ref: "#/components/schemas/WholesaleOrderStatus" }
+        statusLabelAr: { type: string }
+        totalMinor: { type: integer }
+        currency: { type: string }
+        notesAr: { type: string, nullable: true }
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/WholesaleOrderItem" }
+        createdAt: { type: string, format: date-time }
+        confirmedAt: { type: string, format: date-time, nullable: true }
+        deliveredAt: { type: string, format: date-time, nullable: true }
+        cancelledAt: { type: string, format: date-time, nullable: true }
+    WholesaleOrderItem:
+      type: object
+      required: [id, productId, productNameAr, quantity, unitPriceMinor, unitCostMinor, lineTotalMinor]
+      properties:
+        id: { type: string }
+        productId: { type: string }
+        productNameAr: { type: string }
+        quantity: { type: integer }
+        unitPriceMinor: { type: integer }
+        unitCostMinor: { type: integer }
+        lineTotalMinor: { type: integer }
+    WholesaleOrderInput:
+      type: object
+      required: [buyerBusinessUnitId, items]
+      properties:
+        sellerBusinessUnitId:
+          type: string
+          description: Optional. Required only for owner/admin without an active business unit.
+        buyerBusinessUnitId: { type: string }
+        notesAr: { type: string }
+        items:
+          type: array
+          items:
+            type: object
+            required: [productId, quantity, unitPriceMinor]
+            properties:
+              productId: { type: string }
+              quantity: { type: integer, minimum: 1 }
+              unitPriceMinor: { type: integer, minimum: 0 }
+    WholesaleOrderStatusUpdate:
+      type: object
+      required: [id, status]
+      properties:
+        id: { type: string }
+        status: { $ref: "#/components/schemas/WholesaleOrderStatus" }
 
     OrderStatus:
       type: string

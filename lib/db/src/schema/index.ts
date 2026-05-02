@@ -66,6 +66,13 @@ export const transferStatusEnum = pgEnum("transfer_status", [
   "cancelled",
 ]);
 
+export const wholesaleOrderStatusEnum = pgEnum("wholesale_order_status", [
+  "draft",
+  "confirmed",
+  "delivered",
+  "cancelled",
+]);
+
 export const orderStatusEnum = pgEnum("order_status", [
   "pending_payment",
   "paid",
@@ -143,6 +150,7 @@ export const activityKindEnum = pgEnum("activity_kind", [
   "low_stock",
   "financial_entry",
   "user_action",
+  "wholesale_order",
 ]);
 
 const createdAt = timestamp("created_at", { withTimezone: true })
@@ -457,6 +465,72 @@ export const transferItems = pgTable("transfer_items", {
     .notNull()
     .default(0),
 });
+
+export const wholesaleOrders = pgTable(
+  "wholesale_orders",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    orderNumber: varchar("order_number", { length: 32 }).notNull().unique(),
+    sellerBusinessUnitId: uuid("seller_business_unit_id")
+      .notNull()
+      .references(() => businessUnits.id, { onDelete: "restrict" }),
+    buyerBusinessUnitId: uuid("buyer_business_unit_id")
+      .notNull()
+      .references(() => businessUnits.id, { onDelete: "restrict" }),
+    fromLocationId: uuid("from_location_id")
+      .notNull()
+      .references(() => inventoryLocations.id),
+    toLocationId: uuid("to_location_id")
+      .notNull()
+      .references(() => inventoryLocations.id),
+    status: wholesaleOrderStatusEnum("status").notNull().default("draft"),
+    totalMinor: bigint("total_minor", { mode: "number" }).notNull().default(0),
+    currency: varchar("currency", { length: 8 }).notNull().default("ILS"),
+    notesAr: text("notes_ar"),
+    createdByUserId: uuid("created_by_user_id").references(() => users.id),
+    confirmedByUserId: uuid("confirmed_by_user_id").references(() => users.id),
+    confirmedAt: timestamp("confirmed_at", { withTimezone: true }),
+    deliveredByUserId: uuid("delivered_by_user_id").references(() => users.id),
+    deliveredAt: timestamp("delivered_at", { withTimezone: true }),
+    cancelledByUserId: uuid("cancelled_by_user_id").references(() => users.id),
+    cancelledAt: timestamp("cancelled_at", { withTimezone: true }),
+    createdAt,
+    updatedAt,
+  },
+  (t) => [
+    index("wholesale_orders_seller_idx").on(t.sellerBusinessUnitId),
+    index("wholesale_orders_buyer_idx").on(t.buyerBusinessUnitId),
+    index("wholesale_orders_status_idx").on(t.status),
+    index("wholesale_orders_created_idx").on(t.createdAt),
+  ],
+);
+
+export const wholesaleOrderItems = pgTable(
+  "wholesale_order_items",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    wholesaleOrderId: uuid("wholesale_order_id")
+      .notNull()
+      .references(() => wholesaleOrders.id, { onDelete: "cascade" }),
+    productId: uuid("product_id")
+      .notNull()
+      .references(() => products.id),
+    productNameAr: text("product_name_ar").notNull(),
+    quantity: integer("quantity").notNull(),
+    unitPriceMinor: bigint("unit_price_minor", { mode: "number" })
+      .notNull()
+      .default(0),
+    unitCostMinor: bigint("unit_cost_minor", { mode: "number" })
+      .notNull()
+      .default(0),
+    lineTotalMinor: bigint("line_total_minor", { mode: "number" })
+      .notNull()
+      .default(0),
+  },
+  (t) => [
+    index("wholesale_order_items_order_idx").on(t.wholesaleOrderId),
+  ],
+);
 
 export const carts = pgTable("carts", {
   id: uuid("id").defaultRandom().primaryKey(),
