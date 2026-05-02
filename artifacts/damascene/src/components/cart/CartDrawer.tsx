@@ -57,9 +57,16 @@ export default function CartDrawer({ children }: { children: React.ReactNode }) 
   };
 
   const formatCurrency = (minor: number) => {
+    const safe = Number.isFinite(minor) ? minor : 0;
     const symbol = settings?.currencySymbol || "";
-    const number = new Intl.NumberFormat("en-US").format(minor);
+    const number = new Intl.NumberFormat("en-US").format(safe);
     return symbol ? `${number} ${symbol}` : number;
+  };
+
+  const getLineTotal = (item: { lineTotalMinor?: number; unitPriceMinor?: number; quantity: number }) => {
+    if (Number.isFinite(item.lineTotalMinor)) return item.lineTotalMinor as number;
+    if (Number.isFinite(item.unitPriceMinor)) return (item.unitPriceMinor as number) * item.quantity;
+    return 0;
   };
 
   return (
@@ -144,7 +151,7 @@ export default function CartDrawer({ children }: { children: React.ReactNode }) 
                         </Button>
                       </div>
                       <span className="font-medium text-sm text-primary" dir="ltr">
-                        {formatCurrency(item.lineTotalMinor)}
+                        {formatCurrency(getLineTotal(item))}
                       </span>
                     </div>
                   </div>

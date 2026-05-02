@@ -63,9 +63,9 @@ async function serializeCart(cart: typeof carts.$inferSelect) {
     productSlug: x.p.slug,
     quantity: x.ci.quantity,
     unitPriceMinor: x.p.priceMinor,
-    totalMinor: x.p.priceMinor * x.ci.quantity,
+    lineTotalMinor: x.p.priceMinor * x.ci.quantity,
   }));
-  const subtotal = lineItems.reduce((s, it) => s + it.totalMinor, 0);
+  const subtotal = lineItems.reduce((s, it) => s + it.lineTotalMinor, 0);
   const totalQuantity = lineItems.reduce((s, it) => s + it.quantity, 0);
   return {
     id: cart.id,
