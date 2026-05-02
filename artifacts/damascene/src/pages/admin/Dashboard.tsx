@@ -36,7 +36,7 @@ import {
 import { useCurrencySymbol, formatDate as fmtDate, formatDateTime as fmtDateTime } from "@/lib/format";
 
 export default function DashboardPage() {
-  const [division, setDivision] = React.useState<DivisionFilter>("all");
+  const { activeBu } = useBusinessUnit();
   const { data: kpis, isLoading: isLoadingKpis } = useGetDashboardKpis();
   const { data: salesTrend, isLoading: isLoadingTrend } = useGetSalesTrend({ days: 7 });
   const { data: topProducts, isLoading: isLoadingTop } = useGetTopProducts({ limit: 5 });
@@ -44,8 +44,11 @@ export default function DashboardPage() {
   const { data: lowStock } = useListLowStock();
   const currencySymbol = useCurrencySymbol();
 
-  const showStore = division === "all" || division === "store";
-  const showWorkshop = division === "all" || division === "workshop";
+  // Derive which KPI groups to show from the currently active business unit.
+  // No active BU = "all divisions" view (privileged users) → show both.
+  // Showroom BU → storefront/POS KPIs only. Factory BU → workshop KPIs only.
+  const showStore = !activeBu || activeBu.kind === "showroom";
+  const showWorkshop = !activeBu || activeBu.kind === "factory";
 
   const formatCurrency = (minor: number | undefined) => {
     if (minor === undefined) return "0";
@@ -67,20 +70,11 @@ export default function DashboardPage() {
       <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
         <div>
           <h1 className="text-3xl font-serif font-bold text-foreground tracking-tight">نظرة عامة</h1>
-          <p className="text-muted-foreground mt-1">ملخص أداء العمليات والمبيعات.</p>
+          <p className="text-muted-foreground mt-1">
+            ملخص أداء العمليات والمبيعات
+            {activeBu ? ` — ${activeBu.nameAr}` : " — كل الأقسام"}.
+          </p>
         </div>
-        <Tabs
-          value={division}
-          onValueChange={(v) => setDivision(v as DivisionFilter)}
-          className="w-full md:w-auto"
-          data-testid="dashboard-division-tabs"
-        >
-          <TabsList>
-            <TabsTrigger value="all" data-testid="tab-all">{DIVISION_LABEL_AR.all}</TabsTrigger>
-            <TabsTrigger value="workshop" data-testid="tab-workshop">{DIVISION_LABEL_AR.workshop}</TabsTrigger>
-            <TabsTrigger value="store" data-testid="tab-store">{DIVISION_LABEL_AR.store}</TabsTrigger>
-          </TabsList>
-        </Tabs>
       </div>
 
       {/* KPIs */}
