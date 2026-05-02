@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
 import { eq, ne } from "drizzle-orm";
-import { db, users } from "@workspace/db";
+import { db, users, businessUnits } from "@workspace/db";
 import { requireOwnerOrAdmin } from "../lib/auth";
 
 const router: IRouter = Router();
@@ -68,6 +68,19 @@ router.patch("/admin/users/:id", requireOwnerOrAdmin(), async (req, res) => {
         assignedBusinessUnitId,
       )
     ) {
+      // Verify the BU exists and is active so we return a deterministic 400
+      // instead of letting the FK insert blow up as a 500.
+      const bu = (
+        await db
+          .select({ id: businessUnits.id, isActive: businessUnits.isActive })
+          .from(businessUnits)
+          .where(eq(businessUnits.id, assignedBusinessUnitId))
+          .limit(1)
+      )[0];
+      if (!bu || !bu.isActive) {
+        res.status(400).json({ error: "INVALID_BUSINESS_UNIT_ID" });
+        return;
+      }
       updates.assignedBusinessUnitId = assignedBusinessUnitId;
     } else {
       res.status(400).json({ error: "INVALID_BUSINESS_UNIT_ID" });
