@@ -1,0 +1,322 @@
+Continue the implementation of the system restructuring task from the exact point where it was previously stopped and perform a full system audit.
+IMPORTANT RULES:
+Do NOT restart the task from the beginning.
+Do NOT rebuild completed parts.
+Do NOT overwrite existing working features.
+Analyze the current project state and continue on top of it.
+All changes must be safe, incremental, and production-ready.
+
+CORE OBJECTIVE:
+Transform the system into a multi-division architecture:
+
+
+Factory / Workshop
+
+
+Showroom A
+
+
+Showroom B
+
+
+Showroom C
+
+
+The system must be scalable to support more showrooms in the future.
+
+CRITICAL BUSINESS RULE:
+The relationship between Factory and Showrooms is DIRECT SALES (NOT stock transfer).
+
+
+Factory → Showroom must always be a SALES INVOICE
+
+
+Factory records revenue
+
+
+Showroom records expense + stock increase
+
+
+Showroom is treated as a customer (client account)
+
+
+
+STEP 1: ANALYZE CURRENT SYSTEM STATE
+
+
+Detect what has already been implemented
+
+
+Identify completed vs incomplete modules
+
+
+Review database structure and relationships
+
+
+Detect duplicated logic or broken flows
+
+
+Understand how inventory, finance, and POS currently behave
+
+
+
+STEP 2: CONTINUE IMPLEMENTATION
+Complete all missing or partially built components:
+A) Business Units Structure:
+
+
+Ensure clear support for:
+
+
+Factory
+
+
+Showroom A
+
+
+Showroom B
+
+
+Showroom C
+
+
+
+
+Complete any missing logic or links
+
+
+
+B) Financial Separation:
+
+
+Ensure each unit has its own:
+
+
+Revenue tracking
+
+
+Expense tracking
+
+
+Profit calculation
+
+
+
+
+Fix any shared or mixed financial data
+
+
+
+C) Factory → Showroom Sales Flow:
+
+
+Ensure full implementation of:
+
+
+Sales invoice from Factory
+
+
+Purchase record in Showroom
+
+
+
+
+Link transactions properly
+
+
+Ensure correct accounting impact
+
+
+
+D) Inventory per Unit:
+
+
+Ensure inventory is fully separated per business unit
+
+
+Fix any shared inventory issues
+
+
+Ensure:
+
+
+Factory has its own stock
+
+
+Each showroom has independent stock
+
+
+
+
+
+E) POS System per Showroom:
+
+
+Verify POS is working per showroom
+
+
+Complete missing parts:
+
+
+Sales processing
+
+
+Invoice generation
+
+
+Daily closing reports
+
+
+
+
+
+F) Roles & Permissions:
+
+
+Showroom users can ONLY access their showroom data
+
+
+Factory users can ONLY access factory data
+
+
+Admin can access everything
+
+
+
+G) Data Integrity:
+
+
+Fix:
+
+
+Incorrect stock movements
+
+
+Missing financial records
+
+
+Broken relationships between modules
+
+
+Any inconsistency in transactions
+
+
+
+
+
+STEP 3: FULL SYSTEM AUDIT (VERY IMPORTANT)
+Perform a complete system-wide check:
+
+
+Validate all database relations
+
+
+Validate all financial flows
+
+
+Validate inventory consistency
+
+
+Check for:
+
+
+Bugs
+
+
+Broken logic
+
+
+Missing links
+
+
+Data inconsistencies
+
+
+
+
+Ensure all modules are correctly connected:
+
+
+Factory
+
+
+Showrooms
+
+
+POS
+
+
+Inventory
+
+
+Finance
+
+
+
+
+If any issue is found:
+
+
+FIX it directly (do not just report it)
+
+
+
+STEP 4: CLEANUP & OPTIMIZATION
+
+
+Remove duplicate logic
+
+
+Simplify where possible
+
+
+Ensure clean and scalable architecture
+
+
+Maintain backward compatibility
+
+
+
+STEP 5: STABILITY REQUIREMENTS
+
+
+Do NOT break existing working features
+
+
+Ensure system runs without errors
+
+
+Keep UI intact as much as possible
+
+
+All updates must be safe and stable
+
+
+
+EXPECTED RESULT:
+
+
+Fully functional multi-division system
+
+
+Clear separation between Factory and Showrooms
+
+
+Correct financial flows (sales, expenses, profit)
+
+
+Independent inventory per unit
+
+
+Fully working POS per showroom
+
+
+Clean, scalable architecture
+
+
+System audited, cleaned, and free of critical issues
+
+
+
+GOAL:
+Seamlessly continue development from the current state, complete all remaining parts, fix all issues, and deliver a stable, production-ready system.
