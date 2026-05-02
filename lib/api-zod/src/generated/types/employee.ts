@@ -18,4 +18,6 @@ export interface Employee {
   notesAr?: string;
   isActive: boolean;
   createdAt: Date;
+  /** Business unit this employee is scoped to. */
+  businessUnitId?: string | null;
 }

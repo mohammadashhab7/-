@@ -126,6 +126,11 @@ export const attendanceStatusEnum = pgEnum("attendance_status", [
 
 export const mediaKindEnum = pgEnum("media_kind", ["image", "video", "document"]);
 
+export const businessUnitKindEnum = pgEnum("business_unit_kind", [
+  "factory",
+  "showroom",
+]);
+
 export const activityKindEnum = pgEnum("activity_kind", [
   "order_placed",
   "order_status_changed",
@@ -147,6 +152,22 @@ const updatedAt = timestamp("updated_at", { withTimezone: true })
   .defaultNow()
   .notNull();
 
+export const businessUnits = pgTable(
+  "business_units",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    slug: varchar("slug", { length: 64 }).notNull().unique(),
+    kind: businessUnitKindEnum("kind").notNull(),
+    nameAr: text("name_ar").notNull(),
+    nameEn: text("name_en"),
+    displayOrder: integer("display_order").notNull().default(0),
+    isActive: boolean("is_active").notNull().default(true),
+    createdAt,
+    updatedAt,
+  },
+  (t) => [index("business_units_kind_idx").on(t.kind)],
+);
+
 export const users = pgTable(
   "users",
   {
@@ -160,10 +181,17 @@ export const users = pgTable(
     permissions: jsonb("permissions").$type<string[]>().notNull().default(sql`'[]'::jsonb`),
     isActive: boolean("is_active").notNull().default(true),
     avatarUrl: text("avatar_url"),
+    assignedBusinessUnitId: uuid("assigned_business_unit_id").references(
+      () => businessUnits.id,
+      { onDelete: "set null" },
+    ),
     createdAt,
     updatedAt,
   },
-  (t) => [index("users_role_idx").on(t.role)],
+  (t) => [
+    index("users_role_idx").on(t.role),
+    index("users_business_unit_idx").on(t.assignedBusinessUnitId),
+  ],
 );
 
 export const categories = pgTable("categories", {
@@ -260,14 +288,22 @@ export const recipeItems = pgTable(
   (t) => [index("recipe_items_recipe_idx").on(t.recipeId)],
 );
 
-export const inventoryLocations = pgTable("inventory_locations", {
-  id: uuid("id").defaultRandom().primaryKey(),
-  code: varchar("code", { length: 32 }).notNull().unique(),
-  nameAr: text("name_ar").notNull(),
-  kind: inventoryLocationKindEnum("kind").notNull(),
-  isActive: boolean("is_active").notNull().default(true),
-  createdAt,
-});
+export const inventoryLocations = pgTable(
+  "inventory_locations",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    code: varchar("code", { length: 32 }).notNull().unique(),
+    nameAr: text("name_ar").notNull(),
+    kind: inventoryLocationKindEnum("kind").notNull(),
+    businessUnitId: uuid("business_unit_id").references(
+      () => businessUnits.id,
+      { onDelete: "restrict" },
+    ),
+    isActive: boolean("is_active").notNull().default(true),
+    createdAt,
+  },
+  (t) => [index("inventory_locations_bu_idx").on(t.businessUnitId)],
+);
 
 export const stockLevels = pgTable(
   "stock_levels",
@@ -328,31 +364,39 @@ export const inventoryLedger = pgTable(
   ],
 );
 
-export const productionOrders = pgTable("production_orders", {
-  id: uuid("id").defaultRandom().primaryKey(),
-  orderNumber: varchar("order_number", { length: 32 }).notNull().unique(),
-  recipeId: uuid("recipe_id")
-    .notNull()
-    .references(() => recipes.id, { onDelete: "restrict" }),
-  productId: uuid("product_id")
-    .notNull()
-    .references(() => products.id, { onDelete: "restrict" }),
-  batchCount: integer("batch_count").notNull().default(1),
-  unitsProduced: integer("units_produced").notNull().default(0),
-  totalCostMinor: bigint("total_cost_minor", { mode: "number" })
-    .notNull()
-    .default(0),
-  unitCostMinor: bigint("unit_cost_minor", { mode: "number" })
-    .notNull()
-    .default(0),
-  status: productionOrderStatusEnum("status").notNull().default("planned"),
-  notesAr: text("notes_ar"),
-  startedAt: timestamp("started_at", { withTimezone: true }),
-  completedAt: timestamp("completed_at", { withTimezone: true }),
-  createdByUserId: uuid("created_by_user_id").references(() => users.id),
-  createdAt,
-  updatedAt,
-});
+export const productionOrders = pgTable(
+  "production_orders",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    orderNumber: varchar("order_number", { length: 32 }).notNull().unique(),
+    recipeId: uuid("recipe_id")
+      .notNull()
+      .references(() => recipes.id, { onDelete: "restrict" }),
+    productId: uuid("product_id")
+      .notNull()
+      .references(() => products.id, { onDelete: "restrict" }),
+    batchCount: integer("batch_count").notNull().default(1),
+    unitsProduced: integer("units_produced").notNull().default(0),
+    totalCostMinor: bigint("total_cost_minor", { mode: "number" })
+      .notNull()
+      .default(0),
+    unitCostMinor: bigint("unit_cost_minor", { mode: "number" })
+      .notNull()
+      .default(0),
+    status: productionOrderStatusEnum("status").notNull().default("planned"),
+    notesAr: text("notes_ar"),
+    startedAt: timestamp("started_at", { withTimezone: true }),
+    completedAt: timestamp("completed_at", { withTimezone: true }),
+    businessUnitId: uuid("business_unit_id").references(
+      () => businessUnits.id,
+      { onDelete: "set null" },
+    ),
+    createdByUserId: uuid("created_by_user_id").references(() => users.id),
+    createdAt,
+    updatedAt,
+  },
+  (t) => [index("production_orders_bu_idx").on(t.businessUnitId)],
+);
 
 export const productionOrderItems = pgTable("production_order_items", {
   id: uuid("id").defaultRandom().primaryKey(),
@@ -371,26 +415,34 @@ export const productionOrderItems = pgTable("production_order_items", {
     .default(0),
 });
 
-export const transfers = pgTable("transfers", {
-  id: uuid("id").defaultRandom().primaryKey(),
-  transferNumber: varchar("transfer_number", { length: 32 }).notNull().unique(),
-  fromLocationId: uuid("from_location_id")
-    .notNull()
-    .references(() => inventoryLocations.id),
-  toLocationId: uuid("to_location_id")
-    .notNull()
-    .references(() => inventoryLocations.id),
-  status: transferStatusEnum("status").notNull().default("completed"),
-  notesAr: text("notes_ar"),
-  createdByUserId: uuid("created_by_user_id").references(() => users.id),
-  approvedByUserId: uuid("approved_by_user_id").references(() => users.id),
-  approvedAt: timestamp("approved_at", { withTimezone: true }),
-  completedByUserId: uuid("completed_by_user_id").references(() => users.id),
-  completedAt: timestamp("completed_at", { withTimezone: true }),
-  cancelledByUserId: uuid("cancelled_by_user_id").references(() => users.id),
-  cancelledAt: timestamp("cancelled_at", { withTimezone: true }),
-  createdAt,
-});
+export const transfers = pgTable(
+  "transfers",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    transferNumber: varchar("transfer_number", { length: 32 }).notNull().unique(),
+    fromLocationId: uuid("from_location_id")
+      .notNull()
+      .references(() => inventoryLocations.id),
+    toLocationId: uuid("to_location_id")
+      .notNull()
+      .references(() => inventoryLocations.id),
+    status: transferStatusEnum("status").notNull().default("completed"),
+    notesAr: text("notes_ar"),
+    businessUnitId: uuid("business_unit_id").references(
+      () => businessUnits.id,
+      { onDelete: "set null" },
+    ),
+    createdByUserId: uuid("created_by_user_id").references(() => users.id),
+    approvedByUserId: uuid("approved_by_user_id").references(() => users.id),
+    approvedAt: timestamp("approved_at", { withTimezone: true }),
+    completedByUserId: uuid("completed_by_user_id").references(() => users.id),
+    completedAt: timestamp("completed_at", { withTimezone: true }),
+    cancelledByUserId: uuid("cancelled_by_user_id").references(() => users.id),
+    cancelledAt: timestamp("cancelled_at", { withTimezone: true }),
+    createdAt,
+  },
+  (t) => [index("transfers_bu_idx").on(t.businessUnitId)],
+);
 
 export const transferItems = pgTable("transfer_items", {
   id: uuid("id").defaultRandom().primaryKey(),
@@ -468,6 +520,10 @@ export const salesOrders = pgTable(
       .defaultNow()
       .notNull(),
     completedAt: timestamp("completed_at", { withTimezone: true }),
+    businessUnitId: uuid("business_unit_id").references(
+      () => businessUnits.id,
+      { onDelete: "set null" },
+    ),
     createdAt,
     updatedAt,
   },
@@ -476,6 +532,7 @@ export const salesOrders = pgTable(
     index("sales_orders_status_idx").on(t.status),
     index("sales_orders_placed_idx").on(t.placedAt),
     index("sales_orders_customer_idx").on(t.customerUserId),
+    index("sales_orders_bu_idx").on(t.businessUnitId),
   ],
 );
 
@@ -498,33 +555,44 @@ export const salesOrderItems = pgTable("sales_order_items", {
   totalMinor: bigint("total_minor", { mode: "number" }).notNull().default(0),
 });
 
-export const dailyClosings = pgTable("daily_closings", {
-  id: uuid("id").defaultRandom().primaryKey(),
-  closingDate: date("closing_date").notNull().unique(),
-  totalSalesMinor: bigint("total_sales_minor", { mode: "number" })
-    .notNull()
-    .default(0),
-  cashSalesMinor: bigint("cash_sales_minor", { mode: "number" })
-    .notNull()
-    .default(0),
-  cardSalesMinor: bigint("card_sales_minor", { mode: "number" })
-    .notNull()
-    .default(0),
-  expectedCashMinor: bigint("expected_cash_minor", { mode: "number" })
-    .notNull()
-    .default(0),
-  countedCashMinor: bigint("counted_cash_minor", { mode: "number" })
-    .notNull()
-    .default(0),
-  varianceMinor: bigint("variance_minor", { mode: "number" })
-    .notNull()
-    .default(0),
-  notesAr: text("notes_ar"),
-  closedByUserId: uuid("closed_by_user_id").references(() => users.id),
-  closedAt: timestamp("closed_at", { withTimezone: true })
-    .defaultNow()
-    .notNull(),
-});
+export const dailyClosings = pgTable(
+  "daily_closings",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    closingDate: date("closing_date").notNull(),
+    businessUnitId: uuid("business_unit_id").references(
+      () => businessUnits.id,
+      { onDelete: "set null" },
+    ),
+    totalSalesMinor: bigint("total_sales_minor", { mode: "number" })
+      .notNull()
+      .default(0),
+    cashSalesMinor: bigint("cash_sales_minor", { mode: "number" })
+      .notNull()
+      .default(0),
+    cardSalesMinor: bigint("card_sales_minor", { mode: "number" })
+      .notNull()
+      .default(0),
+    expectedCashMinor: bigint("expected_cash_minor", { mode: "number" })
+      .notNull()
+      .default(0),
+    countedCashMinor: bigint("counted_cash_minor", { mode: "number" })
+      .notNull()
+      .default(0),
+    varianceMinor: bigint("variance_minor", { mode: "number" })
+      .notNull()
+      .default(0),
+    notesAr: text("notes_ar"),
+    closedByUserId: uuid("closed_by_user_id").references(() => users.id),
+    closedAt: timestamp("closed_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (t) => [
+    uniqueIndex("daily_closings_date_bu_idx").on(t.closingDate, t.businessUnitId),
+    index("daily_closings_bu_idx").on(t.businessUnitId),
+  ],
+);
 
 export const payments = pgTable(
   "payments",
@@ -566,6 +634,10 @@ export const financialEntries = pgTable(
       .notNull(),
     referenceType: text("reference_type"),
     referenceId: text("reference_id"),
+    businessUnitId: uuid("business_unit_id").references(
+      () => businessUnits.id,
+      { onDelete: "set null" },
+    ),
     createdByUserId: uuid("created_by_user_id").references(() => users.id),
     createdAt,
   },
@@ -573,28 +645,37 @@ export const financialEntries = pgTable(
     index("fin_module_idx").on(t.module),
     index("fin_type_idx").on(t.type),
     index("fin_occurred_idx").on(t.occurredAt),
+    index("fin_bu_idx").on(t.businessUnitId),
   ],
 );
 
-export const employees = pgTable("employees", {
-  id: uuid("id").defaultRandom().primaryKey(),
-  employeeNumber: varchar("employee_number", { length: 32 }).notNull().unique(),
-  nameAr: text("name_ar").notNull(),
-  nameEn: text("name_en"),
-  positionAr: text("position_ar").notNull(),
-  department: varchar("department", { length: 32 }).notNull().default("production"),
-  phone: text("phone"),
-  email: text("email"),
-  nationalId: text("national_id"),
-  hireDate: date("hire_date").notNull(),
-  monthlySalaryMinor: bigint("monthly_salary_minor", { mode: "number" })
-    .notNull()
-    .default(0),
-  isActive: boolean("is_active").notNull().default(true),
-  notesAr: text("notes_ar"),
-  createdAt,
-  updatedAt,
-});
+export const employees = pgTable(
+  "employees",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    employeeNumber: varchar("employee_number", { length: 32 }).notNull().unique(),
+    nameAr: text("name_ar").notNull(),
+    nameEn: text("name_en"),
+    positionAr: text("position_ar").notNull(),
+    department: varchar("department", { length: 32 }).notNull().default("production"),
+    phone: text("phone"),
+    email: text("email"),
+    nationalId: text("national_id"),
+    hireDate: date("hire_date").notNull(),
+    monthlySalaryMinor: bigint("monthly_salary_minor", { mode: "number" })
+      .notNull()
+      .default(0),
+    isActive: boolean("is_active").notNull().default(true),
+    notesAr: text("notes_ar"),
+    businessUnitId: uuid("business_unit_id").references(
+      () => businessUnits.id,
+      { onDelete: "set null" },
+    ),
+    createdAt,
+    updatedAt,
+  },
+  (t) => [index("employees_bu_idx").on(t.businessUnitId)],
+);
 
 export const attendanceRecords = pgTable(
   "attendance_records",

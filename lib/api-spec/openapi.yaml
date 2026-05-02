@@ -70,6 +70,20 @@ paths:
             application/json:
               schema: { $ref: "#/components/schemas/Me" }
 
+  /business-units:
+    get:
+      operationId: listBusinessUnits
+      tags: [auth]
+      summary: List all business units (factory + showrooms)
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/BusinessUnit" }
+
   /admin/users:
     get:
       operationId: listAdminUsers
@@ -1453,6 +1467,10 @@ components:
         permissions:
           type: array
           items: { type: string }
+        assignedBusinessUnitId:
+          type: string
+          nullable: true
+          description: Default business unit for non-owner/admin users (null for global / unscoped users).
 
     AdminUser:
       type: object
@@ -1467,7 +1485,22 @@ components:
           type: array
           items: { type: string }
         isActive: { type: boolean }
+        assignedBusinessUnitId:
+          type: string
+          nullable: true
         createdAt: { type: string, format: date-time }
+
+    BusinessUnit:
+      type: object
+      required: [id, slug, kind, nameAr, displayOrder, isActive]
+      properties:
+        id: { type: string }
+        slug: { type: string, description: "Stable machine slug (e.g. factory, showroom_a)" }
+        kind: { type: string, enum: [factory, showroom] }
+        nameAr: { type: string }
+        nameEn: { type: string, nullable: true }
+        displayOrder: { type: integer }
+        isActive: { type: boolean }
 
     Category:
       type: object
@@ -1629,6 +1662,10 @@ components:
         code: { type: string }
         nameAr: { type: string }
         kind: { type: string, enum: [production, store] }
+        businessUnitId:
+          type: string
+          nullable: true
+          description: "Business unit (factory, showroom_a, showroom_b, showroom_c) this location belongs to."
 
     StockLevel:
       type: object
@@ -1909,6 +1946,9 @@ components:
         refType: { type: string }
         refId: { type: string }
         occurredOn: { type: string, format: date }
+        businessUnitId:
+          type: string
+          nullable: true
         createdById: { type: string }
         createdAt: { type: string, format: date-time }
     FinancialEntryInput:
@@ -2059,6 +2099,10 @@ components:
         notesAr: { type: string }
         isActive: { type: boolean }
         createdAt: { type: string, format: date-time }
+        businessUnitId:
+          type: string
+          nullable: true
+          description: "Business unit this employee is scoped to."
     EmployeeInput:
       type: object
       required: [fullNameAr, role, baseSalaryMinor, hiredOn]

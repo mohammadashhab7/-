@@ -36,7 +36,29 @@ export const GetMeResponse = zod.object({
     .enum(["admin", "manager", "production", "store", "cashier", "customer"])
     .optional(),
   permissions: zod.array(zod.string()).optional(),
+  assignedBusinessUnitId: zod
+    .string()
+    .nullish()
+    .describe(
+      "Default business unit for non-owner\/admin users (null for global \/ unscoped users).",
+    ),
 });
+
+/**
+ * @summary List all business units (factory + showrooms)
+ */
+export const ListBusinessUnitsResponseItem = zod.object({
+  id: zod.string(),
+  slug: zod.string().describe("Stable machine slug (e.g. factory, showroom_a)"),
+  kind: zod.enum(["factory", "showroom"]),
+  nameAr: zod.string(),
+  nameEn: zod.string().nullish(),
+  displayOrder: zod.number(),
+  isActive: zod.boolean(),
+});
+export const ListBusinessUnitsResponse = zod.array(
+  ListBusinessUnitsResponseItem,
+);
 
 /**
  * @summary List staff users
@@ -56,6 +78,7 @@ export const ListAdminUsersResponseItem = zod.object({
   ]),
   permissions: zod.array(zod.string()).optional(),
   isActive: zod.boolean(),
+  assignedBusinessUnitId: zod.string().nullish(),
   createdAt: zod.coerce.date(),
 });
 export const ListAdminUsersResponse = zod.array(ListAdminUsersResponseItem);
@@ -87,6 +110,7 @@ export const UpdateAdminUserResponse = zod.object({
   ]),
   permissions: zod.array(zod.string()).optional(),
   isActive: zod.boolean(),
+  assignedBusinessUnitId: zod.string().nullish(),
   createdAt: zod.coerce.date(),
 });
 
@@ -507,6 +531,12 @@ export const ListInventoryLocationsResponseItem = zod.object({
   code: zod.string(),
   nameAr: zod.string(),
   kind: zod.enum(["production", "store"]),
+  businessUnitId: zod
+    .string()
+    .nullish()
+    .describe(
+      "Business unit (factory, showroom_a, showroom_b, showroom_c) this location belongs to.",
+    ),
 });
 export const ListInventoryLocationsResponse = zod.array(
   ListInventoryLocationsResponseItem,
@@ -1323,6 +1353,7 @@ export const ListFinancialEntriesResponseItem = zod.object({
   refType: zod.string().optional(),
   refId: zod.string().optional(),
   occurredOn: zod.coerce.date(),
+  businessUnitId: zod.string().nullish(),
   createdById: zod.string().optional(),
   createdAt: zod.coerce.date(),
 });
@@ -1525,6 +1556,10 @@ export const ListEmployeesResponseItem = zod.object({
   notesAr: zod.string().optional(),
   isActive: zod.boolean(),
   createdAt: zod.coerce.date(),
+  businessUnitId: zod
+    .string()
+    .nullish()
+    .describe("Business unit this employee is scoped to."),
 });
 export const ListEmployeesResponse = zod.array(ListEmployeesResponseItem);
 
@@ -1555,6 +1590,10 @@ export const GetEmployeeResponse = zod.object({
   notesAr: zod.string().optional(),
   isActive: zod.boolean(),
   createdAt: zod.coerce.date(),
+  businessUnitId: zod
+    .string()
+    .nullish()
+    .describe("Business unit this employee is scoped to."),
 });
 
 export const UpdateEmployeeParams = zod.object({
@@ -1584,6 +1623,10 @@ export const UpdateEmployeeResponse = zod.object({
   notesAr: zod.string().optional(),
   isActive: zod.boolean(),
   createdAt: zod.coerce.date(),
+  businessUnitId: zod
+    .string()
+    .nullish()
+    .describe("Business unit this employee is scoped to."),
 });
 
 export const ListAttendanceParams = zod.object({

@@ -12,4 +12,6 @@ export interface InventoryLocation {
   code: string;
   nameAr: string;
   kind: InventoryLocationKind;
+  /** Business unit (factory, showroom_a, showroom_b, showroom_c) this location belongs to. */
+  businessUnitId?: string | null;
 }

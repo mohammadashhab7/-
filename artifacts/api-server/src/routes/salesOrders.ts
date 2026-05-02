@@ -11,7 +11,7 @@ import {
   dailyClosings,
   users,
 } from "@workspace/db";
-import { requireStaff, requirePermission } from "../lib/auth";
+import { requirePermission } from "../lib/auth";
 import {
   applyLedgerEntry,
   getLocationByCode,
@@ -20,6 +20,7 @@ import {
 } from "../lib/inventory";
 import { nextOrderNumber } from "../lib/sequences";
 import { logActivity } from "../lib/activity";
+import { getActiveBusinessUnit } from "../lib/businessUnit";
 
 type OrderStatus = typeof salesOrders.$inferSelect.status;
 
@@ -72,6 +73,7 @@ export async function postSaleRevenue(
     amountMinor: order.totalMinor,
     referenceType: "sales_order",
     referenceId: order.id,
+    businessUnitId: order.businessUnitId ?? null,
     createdByUserId: byUserId,
   });
 }
@@ -123,6 +125,7 @@ async function reverseSaleRevenue(
     amountMinor: order.totalMinor,
     referenceType: refType,
     referenceId: order.id,
+    businessUnitId: order.businessUnitId ?? null,
     createdByUserId: byUserId,
   });
 }
@@ -155,6 +158,17 @@ function serialize(o: typeof salesOrders.$inferSelect) {
 
 router.get("/sales-orders", requirePermission("orders", "read"), async (req, res) => {
   const { channel, status, dateFrom, dateTo, limit } = req.query;
+  let activeBu;
+  try {
+    activeBu = await getActiveBusinessUnit(req);
+  } catch (err) {
+    const code = (err as Error & { code?: string }).code;
+    if (code === "BU_REQUIRED" || code === "INVALID_BUSINESS_UNIT") {
+      res.status(400).json({ error: code });
+      return;
+    }
+    throw err;
+  }
   const filters = [];
   if (typeof channel === "string")
     filters.push(eq(salesOrders.channel, channel as "pos" | "online"));
@@ -162,6 +176,7 @@ router.get("/sales-orders", requirePermission("orders", "read"), async (req, res
     filters.push(eq(salesOrders.status, status as typeof salesOrders.$inferSelect.status));
   if (typeof dateFrom === "string") filters.push(gte(salesOrders.placedAt, new Date(dateFrom)));
   if (typeof dateTo === "string") filters.push(lte(salesOrders.placedAt, new Date(dateTo)));
+  if (activeBu) filters.push(eq(salesOrders.businessUnitId, activeBu.id));
   const lim = Math.min(typeof limit === "string" ? parseInt(limit, 10) || 50 : 50, 200);
   const rows = await db
     .select()
@@ -193,15 +208,24 @@ export async function createSalesOrderInternal(args: {
   const sourceLoc = await getLocationByCode("STORE");
   if (!sourceLoc) throw new Error("LOCATIONS_NOT_SEEDED");
 
+  // The legacy single-store model maps every sale to the source location's
+  // business unit. For Task 24 this is always Showroom A (STORE). Task 25
+  // introduces multi-showroom POS routing.
+  const orderBusinessUnitId = sourceLoc.businessUnitId;
+
   // POS closing lock: once a day has been closed, no further POS sales for
   // that day can be created.  Online sales are unaffected.
   if (args.channel === "pos") {
     const today = new Date();
     const dateStr = today.toISOString().slice(0, 10);
+    const closingFilters = [eq(dailyClosings.closingDate, dateStr)];
+    if (orderBusinessUnitId) {
+      closingFilters.push(eq(dailyClosings.businessUnitId, orderBusinessUnitId));
+    }
     const closed = await db
       .select()
       .from(dailyClosings)
-      .where(eq(dailyClosings.closingDate, dateStr))
+      .where(and(...closingFilters))
       .limit(1);
     if (closed[0]) {
       const e = new Error("POS_DAY_CLOSED");
@@ -281,6 +305,7 @@ export async function createSalesOrderInternal(args: {
           args.cashReceivedMinor != null ? args.cashReceivedMinor - total : null,
         cashierUserId: args.cashierUserId ?? null,
         completedAt: args.channel === "pos" ? new Date() : null,
+        businessUnitId: orderBusinessUnitId,
       })
       .returning();
     const created = insertedOrder[0]!;
@@ -374,12 +399,27 @@ router.post("/sales-orders", requirePermission("orders", "write"), async (req, r
 });
 
 router.get("/sales-orders/:id", requirePermission("orders", "read"), async (req, res) => {
+  let activeBu;
+  try {
+    activeBu = await getActiveBusinessUnit(req);
+  } catch (err) {
+    const code = (err as Error & { code?: string }).code;
+    if (code === "BU_REQUIRED" || code === "INVALID_BUSINESS_UNIT") {
+      res.status(400).json({ error: code });
+      return;
+    }
+    throw err;
+  }
   const rows = await db
     .select()
     .from(salesOrders)
     .where(eq(salesOrders.id, String(req.params.id)))
     .limit(1);
   if (!rows[0]) {
+    res.status(404).json({ error: "NOT_FOUND" });
+    return;
+  }
+  if (activeBu && rows[0].businessUnitId !== activeBu.id) {
     res.status(404).json({ error: "NOT_FOUND" });
     return;
   }
@@ -425,6 +465,26 @@ router.get("/sales-orders/:id", requirePermission("orders", "read"), async (req,
 });
 
 router.patch("/sales-orders/:id/status", requirePermission("orders", "write"), async (req, res) => {
+  let activeBu;
+  try {
+    activeBu = await getActiveBusinessUnit(req);
+  } catch (err) {
+    const code = (err as Error & { code?: string }).code;
+    if (code === "BU_REQUIRED" || code === "INVALID_BUSINESS_UNIT") {
+      res.status(400).json({ error: code });
+      return;
+    }
+    throw err;
+  }
+  if (activeBu) {
+    const ord = (
+      await db.select({ businessUnitId: salesOrders.businessUnitId }).from(salesOrders).where(eq(salesOrders.id, String(req.params.id))).limit(1)
+    )[0];
+    if (!ord || ord.businessUnitId !== activeBu.id) {
+      res.status(404).json({ error: "NOT_FOUND" });
+      return;
+    }
+  }
   const { status, notesAr } = req.body ?? {};
   const ALL_STATUSES: OrderStatus[] = [
     "pending_payment",

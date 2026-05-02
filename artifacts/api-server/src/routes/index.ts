@@ -25,6 +25,7 @@ import contentBlocksRouter from "./contentBlocks";
 import mediaRouter from "./media";
 import settingsRouter from "./settings";
 import paymentsRouter from "./payments";
+import businessUnitsRouter from "./businessUnits";
 
 const router: IRouter = Router();
 
@@ -54,5 +55,6 @@ router.use(contentBlocksRouter);
 router.use(mediaRouter);
 router.use(settingsRouter);
 router.use(paymentsRouter);
+router.use(businessUnitsRouter);
 
 export default router;

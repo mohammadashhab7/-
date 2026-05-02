@@ -1,4 +1,4 @@
-import { Router, type IRouter } from "express";
+import { Router, type IRouter, type Request, type Response } from "express";
 import { and, asc, desc, eq, gte, lte } from "drizzle-orm";
 import {
   db,
@@ -7,10 +7,24 @@ import {
   salaryRecords,
   financialEntries,
 } from "@workspace/db";
-import { requireStaff, requirePermission } from "../lib/auth";
+import { requirePermission } from "../lib/auth";
 import { nextEmployeeNumber } from "../lib/sequences";
+import { getActiveBusinessUnit } from "../lib/businessUnit";
 
 const router: IRouter = Router();
+
+async function resolveBuOr400(req: Request, res: Response) {
+  try {
+    return { ok: true as const, bu: await getActiveBusinessUnit(req) };
+  } catch (err) {
+    const code = (err as Error & { code?: string }).code;
+    if (code === "BU_REQUIRED" || code === "INVALID_BUSINESS_UNIT") {
+      res.status(400).json({ error: code });
+      return { ok: false as const };
+    }
+    throw err;
+  }
+}
 
 function serialize(e: typeof employees.$inferSelect) {
   return {
@@ -26,11 +40,18 @@ function serialize(e: typeof employees.$inferSelect) {
     monthlySalaryMinor: e.monthlySalaryMinor,
     isActive: e.isActive,
     notesAr: e.notesAr,
+    businessUnitId: e.businessUnitId ?? null,
   };
 }
 
-router.get("/employees", requirePermission("employees", "read"), async (_req, res) => {
-  const rows = await db.select().from(employees).orderBy(asc(employees.nameAr));
+router.get("/employees", requirePermission("employees", "read"), async (req, res) => {
+  const r = await resolveBuOr400(req, res);
+  if (!r.ok) return;
+  const rows = await db
+    .select()
+    .from(employees)
+    .where(r.bu ? eq(employees.businessUnitId, r.bu.id) : undefined)
+    .orderBy(asc(employees.nameAr));
   res.json(rows.map(serialize));
 });
 
@@ -41,6 +62,8 @@ router.post("/employees", requirePermission("employees", "write"), async (req, r
     return;
   }
   const employeeNumber = b.employeeNumber || (await nextEmployeeNumber());
+  const r = await resolveBuOr400(req, res);
+  if (!r.ok) return;
   const inserted = await db
     .insert(employees)
     .values({
@@ -56,16 +79,20 @@ router.post("/employees", requirePermission("employees", "write"), async (req, r
         typeof b.monthlySalaryMinor === "number" ? b.monthlySalaryMinor : 0,
       isActive: typeof b.isActive === "boolean" ? b.isActive : true,
       notesAr: b.notesAr ?? null,
+      businessUnitId: r.bu?.id ?? null,
     })
     .returning();
   res.status(201).json(serialize(inserted[0]!));
 });
 
 router.get("/employees/salaries", requirePermission("employees", "read"), async (req, res) => {
+  const r = await resolveBuOr400(req, res);
+  if (!r.ok) return;
   const { employeeId, periodMonth, limit } = req.query;
   const filters = [];
   if (typeof employeeId === "string") filters.push(eq(salaryRecords.employeeId, employeeId));
   if (typeof periodMonth === "string") filters.push(eq(salaryRecords.periodMonth, periodMonth));
+  if (r.bu) filters.push(eq(employees.businessUnitId, r.bu.id));
   const lim = Math.min(typeof limit === "string" ? parseInt(limit, 10) || 100 : 100, 500);
   const rows = await db
     .select({ s: salaryRecords, e: employees })
@@ -91,6 +118,8 @@ router.get("/employees/salaries", requirePermission("employees", "read"), async 
 });
 
 router.post("/employees/salaries", requirePermission("employees", "write"), async (req, res) => {
+  const r = await resolveBuOr400(req, res);
+  if (!r.ok) return;
   const b = req.body ?? {};
   if (!b.employeeId || !b.periodMonth) {
     res.status(400).json({ error: "VALIDATION" });
@@ -100,6 +129,10 @@ router.post("/employees/salaries", requirePermission("employees", "write"), asyn
     await db.select().from(employees).where(eq(employees.id, b.employeeId)).limit(1)
   )[0];
   if (!emp) {
+    res.status(404).json({ error: "EMPLOYEE_NOT_FOUND" });
+    return;
+  }
+  if (r.bu && emp.businessUnitId !== r.bu.id) {
     res.status(404).json({ error: "EMPLOYEE_NOT_FOUND" });
     return;
   }
@@ -130,6 +163,7 @@ router.post("/employees/salaries", requirePermission("employees", "write"), asyn
       referenceType: "salary",
       referenceId: rows[0]!.id,
       createdByUserId: req.appUser?.id ?? null,
+      businessUnitId: emp.businessUnitId ?? null,
     });
     return rows;
   });
@@ -147,8 +181,14 @@ router.post("/employees/salaries", requirePermission("employees", "write"), asyn
 });
 
 router.get("/employees/:id", requirePermission("employees", "read"), async (req, res) => {
+  const r = await resolveBuOr400(req, res);
+  if (!r.ok) return;
   const rows = await db.select().from(employees).where(eq(employees.id, String(req.params.id))).limit(1);
   if (!rows[0]) {
+    res.status(404).json({ error: "NOT_FOUND" });
+    return;
+  }
+  if (r.bu && rows[0].businessUnitId !== r.bu.id) {
     res.status(404).json({ error: "NOT_FOUND" });
     return;
   }
@@ -156,6 +196,19 @@ router.get("/employees/:id", requirePermission("employees", "read"), async (req,
 });
 
 router.patch("/employees/:id", requirePermission("employees", "write"), async (req, res) => {
+  const r = await resolveBuOr400(req, res);
+  if (!r.ok) return;
+  const existing = (
+    await db.select().from(employees).where(eq(employees.id, String(req.params.id))).limit(1)
+  )[0];
+  if (!existing) {
+    res.status(404).json({ error: "NOT_FOUND" });
+    return;
+  }
+  if (r.bu && existing.businessUnitId !== r.bu.id) {
+    res.status(404).json({ error: "NOT_FOUND" });
+    return;
+  }
   const b = req.body ?? {};
   const updates: Partial<typeof employees.$inferInsert> = { updatedAt: new Date() };
   for (const k of [
@@ -184,7 +237,30 @@ router.patch("/employees/:id", requirePermission("employees", "write"), async (r
   res.json(serialize(updated[0]));
 });
 
+async function ensureEmployeeInBu(
+  req: Request,
+  res: Response,
+  employeeId: string,
+): Promise<{ ok: true } | { ok: false }> {
+  const r = await resolveBuOr400(req, res);
+  if (!r.ok) return { ok: false };
+  const e = (
+    await db.select().from(employees).where(eq(employees.id, employeeId)).limit(1)
+  )[0];
+  if (!e) {
+    res.status(404).json({ error: "NOT_FOUND" });
+    return { ok: false };
+  }
+  if (r.bu && e.businessUnitId !== r.bu.id) {
+    res.status(404).json({ error: "NOT_FOUND" });
+    return { ok: false };
+  }
+  return { ok: true };
+}
+
 router.get("/employees/:id/attendance", requirePermission("employees", "read"), async (req, res) => {
+  const guard = await ensureEmployeeInBu(req, res, String(req.params.id));
+  if (!guard.ok) return;
   const { fromDate, toDate } = req.query;
   const filters = [eq(attendanceRecords.employeeId, String(req.params.id))];
   if (typeof fromDate === "string") filters.push(gte(attendanceRecords.workDate, fromDate));
@@ -207,6 +283,8 @@ router.get("/employees/:id/attendance", requirePermission("employees", "read"), 
 });
 
 router.post("/employees/:id/attendance", requirePermission("employees", "write"), async (req, res) => {
+  const guard = await ensureEmployeeInBu(req, res, String(req.params.id));
+  if (!guard.ok) return;
   const b = req.body ?? {};
   if (!b.workDate || !b.status) {
     res.status(400).json({ error: "VALIDATION" });

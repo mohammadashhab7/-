@@ -1,4 +1,4 @@
-import { Router, type IRouter } from "express";
+import { Router, type IRouter, type Request, type Response } from "express";
 import { and, desc, eq, lt, sql } from "drizzle-orm";
 import {
   db,
@@ -8,16 +8,34 @@ import {
   rawMaterials,
   products,
 } from "@workspace/db";
-import { requireStaff, requirePermission } from "../lib/auth";
+import { requirePermission } from "../lib/auth";
 import { applyLedgerEntry } from "../lib/inventory";
+import { getActiveBusinessUnit } from "../lib/businessUnit";
 
 const router: IRouter = Router();
 
-router.get("/inventory/locations", requirePermission("inventory", "read"), async (_req, res) => {
+async function resolveBu(req: Request, res: Response) {
+  try {
+    return { ok: true as const, bu: await getActiveBusinessUnit(req) };
+  } catch (err) {
+    const code = (err as Error & { code?: string }).code;
+    if (code === "BU_REQUIRED" || code === "INVALID_BUSINESS_UNIT") {
+      res.status(400).json({ error: code });
+      return { ok: false as const };
+    }
+    throw err;
+  }
+}
+
+router.get("/inventory/locations", requirePermission("inventory", "read"), async (req, res) => {
+  const r = await resolveBu(req, res);
+  if (!r.ok) return;
+  const filters = [eq(inventoryLocations.isActive, true)];
+  if (r.bu) filters.push(eq(inventoryLocations.businessUnitId, r.bu.id));
   const rows = await db
     .select()
     .from(inventoryLocations)
-    .where(eq(inventoryLocations.isActive, true));
+    .where(and(...filters));
   res.json(
     rows.map((l) => ({
       id: l.id,
@@ -25,16 +43,20 @@ router.get("/inventory/locations", requirePermission("inventory", "read"), async
       nameAr: l.nameAr,
       kind: l.kind,
       isActive: l.isActive,
+      businessUnitId: l.businessUnitId ?? null,
     })),
   );
 });
 
 router.get("/inventory/stock", requirePermission("inventory", "read"), async (req, res) => {
+  const r = await resolveBu(req, res);
+  if (!r.ok) return;
   const { locationId, itemType } = req.query;
   const filters = [];
   if (typeof locationId === "string") filters.push(eq(stockLevels.locationId, locationId));
   if (typeof itemType === "string")
     filters.push(eq(stockLevels.itemType, itemType as "raw_material" | "product"));
+  if (r.bu) filters.push(eq(inventoryLocations.businessUnitId, r.bu.id));
   const rows = await db
     .select({
       s: stockLevels,
@@ -65,6 +87,8 @@ router.get("/inventory/stock", requirePermission("inventory", "read"), async (re
 });
 
 router.get("/inventory/ledger", requirePermission("inventory", "read"), async (req, res) => {
+  const r = await resolveBu(req, res);
+  if (!r.ok) return;
   const { locationId, itemType, itemId, limit } = req.query;
   const filters = [];
   if (typeof locationId === "string") filters.push(eq(inventoryLedger.locationId, locationId));
@@ -74,6 +98,7 @@ router.get("/inventory/ledger", requirePermission("inventory", "read"), async (r
     if (itemType === "raw_material") filters.push(eq(inventoryLedger.materialId, itemId));
     else filters.push(eq(inventoryLedger.productId, itemId));
   }
+  if (r.bu) filters.push(eq(inventoryLocations.businessUnitId, r.bu.id));
   const lim = Math.min(typeof limit === "string" ? parseInt(limit, 10) || 100 : 100, 500);
   const rows = await db
     .select({
@@ -110,10 +135,21 @@ router.get("/inventory/ledger", requirePermission("inventory", "read"), async (r
 });
 
 router.post("/inventory/adjustments", requirePermission("inventory", "write"), async (req, res) => {
+  const r = await resolveBu(req, res);
+  if (!r.ok) return;
   const b = req.body ?? {};
   if (!b.locationId || !b.itemType || typeof b.quantityDelta !== "number") {
     res.status(400).json({ error: "VALIDATION" });
     return;
+  }
+  if (r.bu) {
+    const loc = (
+      await db.select().from(inventoryLocations).where(eq(inventoryLocations.id, b.locationId)).limit(1)
+    )[0];
+    if (!loc || loc.businessUnitId !== r.bu.id) {
+      res.status(404).json({ error: "LOCATION_NOT_FOUND" });
+      return;
+    }
   }
   const entry = await applyLedgerEntry({
     locationId: b.locationId,
@@ -138,8 +174,13 @@ router.post("/inventory/adjustments", requirePermission("inventory", "write"), a
   });
 });
 
-router.get("/inventory/low-stock", requirePermission("inventory", "read"), async (_req, res) => {
+router.get("/inventory/low-stock", requirePermission("inventory", "read"), async (req, res) => {
+  const r = await resolveBu(req, res);
+  if (!r.ok) return;
   // Aggregate stock per item across all locations; flag items at/below reorder threshold.
+  // When scoped to a BU, sum only stock at locations belonging to that BU so that
+  // showroom A doesn't see showroom B's inventory toward thresholds.
+  const buId = r.bu?.id ?? null;
   const lowProducts = await db.execute<{
     item_id: string;
     item_name_ar: string;
@@ -149,14 +190,19 @@ router.get("/inventory/low-stock", requirePermission("inventory", "read"), async
   }>(sql`
     select p.id as item_id,
            p.name_ar as item_name_ar,
-           coalesce(sum(sl.quantity_thousandths), 0)::text as total_quantity,
+           coalesce(sum(case when sl.location_id is not null
+                              and (${buId}::text is null or il.business_unit_id = ${buId})
+                             then sl.quantity_thousandths else 0 end), 0)::text as total_quantity,
            p.reorder_threshold as reorder,
            p.unit as unit
     from products p
     left join stock_levels sl on sl.product_id = p.id and sl.item_type = 'product'
+    left join inventory_locations il on il.id = sl.location_id
     where p.reorder_threshold > 0
     group by p.id, p.name_ar, p.reorder_threshold, p.unit
-    having coalesce(sum(sl.quantity_thousandths), 0) <= p.reorder_threshold
+    having coalesce(sum(case when sl.location_id is not null
+                              and (${buId}::text is null or il.business_unit_id = ${buId})
+                             then sl.quantity_thousandths else 0 end), 0) <= p.reorder_threshold
   `);
   const lowMaterials = await db.execute<{
     item_id: string;
@@ -167,14 +213,19 @@ router.get("/inventory/low-stock", requirePermission("inventory", "read"), async
   }>(sql`
     select rm.id as item_id,
            rm.name_ar as item_name_ar,
-           coalesce(sum(sl.quantity_thousandths), 0)::text as total_quantity,
+           coalesce(sum(case when sl.location_id is not null
+                              and (${buId}::text is null or il.business_unit_id = ${buId})
+                             then sl.quantity_thousandths else 0 end), 0)::text as total_quantity,
            rm.reorder_threshold as reorder,
            rm.unit as unit
     from raw_materials rm
     left join stock_levels sl on sl.material_id = rm.id and sl.item_type = 'raw_material'
+    left join inventory_locations il on il.id = sl.location_id
     where rm.reorder_threshold > 0
     group by rm.id, rm.name_ar, rm.reorder_threshold, rm.unit
-    having coalesce(sum(sl.quantity_thousandths), 0) <= rm.reorder_threshold
+    having coalesce(sum(case when sl.location_id is not null
+                              and (${buId}::text is null or il.business_unit_id = ${buId})
+                             then sl.quantity_thousandths else 0 end), 0) <= rm.reorder_threshold
   `);
   const out = [
     ...lowProducts.rows.map((r) => ({

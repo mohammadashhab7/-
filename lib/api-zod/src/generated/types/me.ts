@@ -15,4 +15,6 @@ export interface Me {
   imageUrl?: string;
   role?: UserRole;
   permissions?: string[];
+  /** Default business unit for non-owner/admin users (null for global / unscoped users). */
+  assignedBusinessUnitId?: string | null;
 }

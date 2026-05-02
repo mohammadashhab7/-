@@ -17,6 +17,7 @@ router.get("/me", async (req, res) => {
     imageUrl: u.avatarUrl ?? undefined,
     role: u.role,
     permissions: u.permissions ?? [],
+    assignedBusinessUnitId: u.assignedBusinessUnitId ?? null,
   });
 });
 

@@ -1,4 +1,4 @@
-import { Router, type IRouter } from "express";
+import { Router, type IRouter, type Request, type Response } from "express";
 import { and, desc, eq, inArray } from "drizzle-orm";
 import {
   db,
@@ -15,17 +15,30 @@ import {
 } from "../lib/inventory";
 import { nextTransferNumber } from "../lib/sequences";
 import { logActivity } from "../lib/activity";
+import { getActiveBusinessUnit } from "../lib/businessUnit";
 
 const router: IRouter = Router();
 
 type TransferStatus = "pending" | "approved" | "completed" | "cancelled";
 
-router.get("/transfers", requirePermission("transfers", "read"), async (_req, res) => {
+router.get("/transfers", requirePermission("transfers", "read"), async (req, res) => {
+  let activeBu;
+  try {
+    activeBu = await getActiveBusinessUnit(req);
+  } catch (err) {
+    const code = (err as Error & { code?: string }).code;
+    if (code === "BU_REQUIRED" || code === "INVALID_BUSINESS_UNIT") {
+      res.status(400).json({ error: code });
+      return;
+    }
+    throw err;
+  }
   const rows = await db
     .select({
       t: transfers,
     })
     .from(transfers)
+    .where(activeBu ? eq(transfers.businessUnitId, activeBu.id) : undefined)
     .orderBy(desc(transfers.createdAt))
     .limit(100);
   const all = await Promise.all(
@@ -69,6 +82,17 @@ router.get("/transfers", requirePermission("transfers", "read"), async (_req, re
 });
 
 router.post("/transfers", requirePermission("transfers", "write"), async (req, res) => {
+  let activeBu;
+  try {
+    activeBu = await getActiveBusinessUnit(req);
+  } catch (err) {
+    const code = (err as Error & { code?: string }).code;
+    if (code === "BU_REQUIRED" || code === "INVALID_BUSINESS_UNIT") {
+      res.status(400).json({ error: code });
+      return;
+    }
+    throw err;
+  }
   const b = req.body ?? {};
   if (
     !b.fromLocationId ||
@@ -82,6 +106,18 @@ router.post("/transfers", requirePermission("transfers", "write"), async (req, r
   if (b.fromLocationId === b.toLocationId) {
     res.status(400).json({ error: "SAME_LOCATION" });
     return;
+  }
+  if (activeBu) {
+    // Scoped users may only transfer FROM a location they own. The destination
+    // can be any location (cross-BU shipments are allowed and visible to both
+    // sides via the source-BU stamp on the transfer row).
+    const fromLoc = (
+      await db.select().from(inventoryLocations).where(eq(inventoryLocations.id, b.fromLocationId)).limit(1)
+    )[0];
+    if (!fromLoc || fromLoc.businessUnitId !== activeBu.id) {
+      res.status(404).json({ error: "LOCATION_NOT_FOUND" });
+      return;
+    }
   }
 
   // Only "pending" or "completed" are valid create-time statuses. Reject other inputs
@@ -118,6 +154,14 @@ router.post("/transfers", requirePermission("transfers", "write"), async (req, r
 
       const transferNumber = await nextTransferNumber();
       const now = new Date();
+      // Stamp the transfer with the source location's business unit so scoped
+      // views can attribute outbound transfers to the originating BU.
+      const fromLocRows = await tx
+        .select({ businessUnitId: inventoryLocations.businessUnitId })
+        .from(inventoryLocations)
+        .where(eq(inventoryLocations.id, b.fromLocationId))
+        .limit(1);
+      const transferBuId = fromLocRows[0]?.businessUnitId ?? null;
       const created = await tx
         .insert(transfers)
         .values({
@@ -130,6 +174,7 @@ router.post("/transfers", requirePermission("transfers", "write"), async (req, r
           completedByUserId:
             requestedStatus === "completed" ? req.appUser?.id ?? null : null,
           completedAt: requestedStatus === "completed" ? now : null,
+          businessUnitId: transferBuId,
         })
         .returning();
       const tRow = created[0]!;
@@ -213,11 +258,35 @@ router.post("/transfers", requirePermission("transfers", "write"), async (req, r
   }
 });
 
+async function ensureTransferInBu(req: Request, res: Response, id: string) {
+  let activeBu;
+  try {
+    activeBu = await getActiveBusinessUnit(req);
+  } catch (err) {
+    const code = (err as Error & { code?: string }).code;
+    if (code === "BU_REQUIRED" || code === "INVALID_BUSINESS_UNIT") {
+      res.status(400).json({ error: code });
+      return false;
+    }
+    throw err;
+  }
+  if (!activeBu) return true;
+  const t = (
+    await db.select({ businessUnitId: transfers.businessUnitId }).from(transfers).where(eq(transfers.id, id)).limit(1)
+  )[0];
+  if (!t || t.businessUnitId !== activeBu.id) {
+    res.status(404).json({ error: "NOT_FOUND" });
+    return false;
+  }
+  return true;
+}
+
 router.post(
   "/transfers/:id/approve",
   requirePermission("transfers", "write"),
   async (req, res) => {
     const id = req.params.id as string;
+    if (!(await ensureTransferInBu(req, res, id))) return;
     // Atomic conditional update: only transition if currently pending. This avoids the
     // read-then-update race where two concurrent approvers could both pass the check.
     const updated = await db
@@ -258,6 +327,7 @@ router.post(
   requirePermission("transfers", "write"),
   async (req, res) => {
     const id = req.params.id as string;
+    if (!(await ensureTransferInBu(req, res, id))) return;
     try {
       const result = await db.transaction(async (tx) => {
         // Atomic conditional state transition: claim the row by flipping the status
@@ -379,6 +449,7 @@ router.post(
   requirePermission("transfers", "write"),
   async (req, res) => {
     const id = req.params.id as string;
+    if (!(await ensureTransferInBu(req, res, id))) return;
     // Atomic conditional update: only transition from pending/approved to cancelled.
     // Prevents the read-then-update race where complete + cancel could both succeed.
     const updated = await db

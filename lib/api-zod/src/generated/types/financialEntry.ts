@@ -19,6 +19,7 @@ export interface FinancialEntry {
   refType?: string;
   refId?: string;
   occurredOn: Date;
+  businessUnitId?: string | null;
   createdById?: string;
   createdAt: Date;
 }

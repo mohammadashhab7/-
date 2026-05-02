@@ -33,6 +33,7 @@ import {
   dailyClosings,
   mediaAssets,
   users,
+  businessUnits,
 } from "@workspace/db";
 import { CURRENCY_CODE, CURRENCY_SYMBOL, COUNTRY_CODE } from "./lib/region.js";
 
@@ -64,7 +65,31 @@ async function clearAll() {
   await db.delete(contentBlocks);
   await db.delete(mediaAssets);
   await db.delete(inventoryLocations);
+  await db
+    .update(users)
+    .set({ assignedBusinessUnitId: null })
+    .where(sql`assigned_business_unit_id is not null`);
+  await db.delete(businessUnits);
   await db.delete(settings);
+}
+
+async function seedBusinessUnits() {
+  log("business units...");
+  const rows = await db
+    .insert(businessUnits)
+    .values([
+      { slug: "factory", kind: "factory", nameAr: "المعمل", nameEn: "Factory", displayOrder: 10 },
+      { slug: "showroom_a", kind: "showroom", nameAr: "معرض الميدان", nameEn: "Showroom A", displayOrder: 20 },
+      { slug: "showroom_b", kind: "showroom", nameAr: "معرض الإرسال", nameEn: "Showroom B", displayOrder: 30 },
+      { slug: "showroom_c", kind: "showroom", nameAr: "معرض البيرة", nameEn: "Showroom C", displayOrder: 40 },
+    ])
+    .returning();
+  return {
+    factory: rows.find((r) => r.slug === "factory")!,
+    showroomA: rows.find((r) => r.slug === "showroom_a")!,
+    showroomB: rows.find((r) => r.slug === "showroom_b")!,
+    showroomC: rows.find((r) => r.slug === "showroom_c")!,
+  };
 }
 
 async function seedSettings() {
@@ -90,20 +115,24 @@ async function seedSettings() {
   });
 }
 
-async function seedLocations() {
+async function seedLocations(bus: Awaited<ReturnType<typeof seedBusinessUnits>>) {
   log("locations...");
   const rows = await db
     .insert(inventoryLocations)
     .values([
-      { code: "PROD-RAW", nameAr: "مخزن المواد الخام - المعمل", kind: "production_raw" },
-      { code: "PROD-FIN", nameAr: "مخزن الإنتاج النهائي - المعمل", kind: "production_finished" },
-      { code: "STORE", nameAr: "مخزن المعرض - الميدان", kind: "store" },
+      { code: "PROD-RAW", nameAr: "مخزن المواد الخام - المعمل", kind: "production_raw", businessUnitId: bus.factory.id },
+      { code: "PROD-FIN", nameAr: "مخزن الإنتاج النهائي - المعمل", kind: "production_finished", businessUnitId: bus.factory.id },
+      { code: "STORE", nameAr: "مخزن المعرض - الميدان", kind: "store", businessUnitId: bus.showroomA.id },
+      { code: "STORE-B", nameAr: "مخزن معرض الإرسال", kind: "store", businessUnitId: bus.showroomB.id },
+      { code: "STORE-C", nameAr: "مخزن معرض البيرة", kind: "store", businessUnitId: bus.showroomC.id },
     ])
     .returning();
   return {
     raw: rows.find((r) => r.code === "PROD-RAW")!,
     fin: rows.find((r) => r.code === "PROD-FIN")!,
     store: rows.find((r) => r.code === "STORE")!,
+    storeB: rows.find((r) => r.code === "STORE-B")!,
+    storeC: rows.find((r) => r.code === "STORE-C")!,
   };
 }
 
@@ -416,20 +445,20 @@ async function seedRecipes(
   }
 }
 
-async function seedEmployees() {
+async function seedEmployees(bus: Awaited<ReturnType<typeof seedBusinessUnits>>) {
   log("employees...");
   const data = [
-    { num: "EMP-0001", nameAr: "أبو سامر الدمشقي", positionAr: "رئيس المعمل", department: "production", salary: 4500000, hire: "2018-03-15" },
-    { num: "EMP-0002", nameAr: "محمد العبد الله", positionAr: "معلم بقلاوة", department: "production", salary: 3200000, hire: "2019-07-20" },
-    { num: "EMP-0003", nameAr: "أحمد الخوري", positionAr: "معلم معمول", department: "production", salary: 2800000, hire: "2020-02-10" },
-    { num: "EMP-0004", nameAr: "خالد رمضان", positionAr: "معلم كنافة", department: "production", salary: 2900000, hire: "2020-09-05" },
-    { num: "EMP-0005", nameAr: "ياسر الحلبي", positionAr: "مساعد إنتاج", department: "production", salary: 1800000, hire: "2022-01-12" },
-    { num: "EMP-0006", nameAr: "سامر السعدي", positionAr: "مدير المعرض", department: "store", salary: 3500000, hire: "2017-06-01" },
-    { num: "EMP-0007", nameAr: "ليلى مرعي", positionAr: "كاشير", department: "store", salary: 2200000, hire: "2021-04-18" },
-    { num: "EMP-0008", nameAr: "نور الحاج", positionAr: "كاشير", department: "store", salary: 2200000, hire: "2022-08-11" },
-    { num: "EMP-0009", nameAr: "عمر السمان", positionAr: "بائع وتغليف", department: "store", salary: 1700000, hire: "2023-03-20" },
-    { num: "EMP-0010", nameAr: "فادي الزين", positionAr: "سائق توصيل", department: "delivery", salary: 1800000, hire: "2022-11-02" },
-    { num: "EMP-0011", nameAr: "ليليان أبو طوق", positionAr: "محاسبة", department: "admin", salary: 2800000, hire: "2019-01-15" },
+    { num: "EMP-0001", nameAr: "أبو سامر الدمشقي", positionAr: "رئيس المعمل", department: "production", salary: 4500000, hire: "2018-03-15", buId: bus.factory.id },
+    { num: "EMP-0002", nameAr: "محمد العبد الله", positionAr: "معلم بقلاوة", department: "production", salary: 3200000, hire: "2019-07-20", buId: bus.factory.id },
+    { num: "EMP-0003", nameAr: "أحمد الخوري", positionAr: "معلم معمول", department: "production", salary: 2800000, hire: "2020-02-10", buId: bus.factory.id },
+    { num: "EMP-0004", nameAr: "خالد رمضان", positionAr: "معلم كنافة", department: "production", salary: 2900000, hire: "2020-09-05", buId: bus.factory.id },
+    { num: "EMP-0005", nameAr: "ياسر الحلبي", positionAr: "مساعد إنتاج", department: "production", salary: 1800000, hire: "2022-01-12", buId: bus.factory.id },
+    { num: "EMP-0006", nameAr: "سامر السعدي", positionAr: "مدير المعرض", department: "store", salary: 3500000, hire: "2017-06-01", buId: bus.showroomA.id },
+    { num: "EMP-0007", nameAr: "ليلى مرعي", positionAr: "كاشير", department: "store", salary: 2200000, hire: "2021-04-18", buId: bus.showroomA.id },
+    { num: "EMP-0008", nameAr: "نور الحاج", positionAr: "كاشير", department: "store", salary: 2200000, hire: "2022-08-11", buId: bus.showroomA.id },
+    { num: "EMP-0009", nameAr: "عمر السمان", positionAr: "بائع وتغليف", department: "store", salary: 1700000, hire: "2023-03-20", buId: bus.showroomA.id },
+    { num: "EMP-0010", nameAr: "فادي الزين", positionAr: "سائق توصيل", department: "delivery", salary: 1800000, hire: "2022-11-02", buId: bus.showroomA.id },
+    { num: "EMP-0011", nameAr: "ليليان أبو طوق", positionAr: "محاسبة", department: "admin", salary: 2800000, hire: "2019-01-15", buId: null },
   ];
   await db.insert(employees).values(
     data.map((d) => ({
@@ -440,6 +469,7 @@ async function seedEmployees() {
       hireDate: d.hire,
       monthlySalaryMinor: d.salary,
       isActive: true,
+      businessUnitId: d.buId,
     })),
   );
 }
@@ -592,6 +622,7 @@ async function seedOpeningStock(
 
 async function seedSampleSales(
   prods: Record<string, { id: string; nameAr: string; priceMinor: number; sku: string }>,
+  showroomAId: string,
 ) {
   log("sample sales orders...");
   const productList = Object.values(prods);
@@ -631,6 +662,7 @@ async function seedSampleSales(
             costMinor: Math.round(total * 0.45),
             placedAt,
             completedAt: placedAt,
+            businessUnitId: showroomAId,
           })
           .returning()
       )[0]!;
@@ -654,6 +686,7 @@ async function seedSampleSales(
         occurredAt: placedAt,
         referenceType: "sales_order",
         referenceId: order.id,
+        businessUnitId: showroomAId,
       });
       orderCounter++;
     }
@@ -691,6 +724,7 @@ async function seedSampleSales(
             costMinor: Math.round(total * 0.45),
             placedAt,
             completedAt: status === "completed" ? placedAt : null,
+            businessUnitId: showroomAId,
           })
           .returning()
       )[0]!;
@@ -715,6 +749,7 @@ async function seedSampleSales(
           occurredAt: placedAt,
           referenceType: "sales_order",
           referenceId: order.id,
+          businessUnitId: showroomAId,
         });
       }
       orderCounter++;
@@ -736,7 +771,7 @@ function pickRandomItems(
   }));
 }
 
-async function seedExpenses() {
+async function seedExpenses(bus: Awaited<ReturnType<typeof seedBusinessUnits>>) {
   log("financial expenses (rent, utilities)...");
   const months = 3;
   const now = new Date();
@@ -750,6 +785,7 @@ async function seedExpenses() {
         descriptionAr: `إيجار المعرض - ${d.toISOString().slice(0, 7)}`,
         amountMinor: 2500000,
         occurredAt: d,
+        businessUnitId: bus.showroomA.id,
       },
       {
         module: "production",
@@ -758,6 +794,7 @@ async function seedExpenses() {
         descriptionAr: `إيجار المعمل - ${d.toISOString().slice(0, 7)}`,
         amountMinor: 4000000,
         occurredAt: d,
+        businessUnitId: bus.factory.id,
       },
       {
         module: "production",
@@ -766,6 +803,7 @@ async function seedExpenses() {
         descriptionAr: `فواتير الطاقة - ${d.toISOString().slice(0, 7)}`,
         amountMinor: 850000,
         occurredAt: d,
+        businessUnitId: bus.factory.id,
       },
       {
         module: "store",
@@ -774,6 +812,7 @@ async function seedExpenses() {
         descriptionAr: `فواتير المعرض - ${d.toISOString().slice(0, 7)}`,
         amountMinor: 350000,
         occurredAt: d,
+        businessUnitId: bus.showroomA.id,
       },
     ]);
   }
@@ -805,16 +844,17 @@ async function seedActivity() {
 async function main() {
   await clearAll();
   await seedSettings();
-  const locs = await seedLocations();
+  const bus = await seedBusinessUnits();
+  const locs = await seedLocations(bus);
   const cats = await seedCategories();
   const mats = await seedRawMaterials();
   const prods = await seedProducts(cats);
   await seedRecipes(prods, mats);
-  await seedEmployees();
+  await seedEmployees(bus);
   await seedContent();
   await seedOpeningStock(locs, mats, prods);
-  await seedSampleSales(prods);
-  await seedExpenses();
+  await seedSampleSales(prods, bus.showroomA.id);
+  await seedExpenses(bus);
   await seedActivity();
   log("done!");
   log("------------------------------------------------------------");

@@ -22,6 +22,7 @@ import type {
   AdminUser,
   AttendanceInput,
   AttendanceRecord,
+  BusinessUnit,
   Cart,
   Category,
   CategoryInput,
@@ -308,6 +309,81 @@ export function useGetMe<
   request?: SecondParameter<typeof customFetch>;
 }): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
   const queryOptions = getGetMeQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary List all business units (factory + showrooms)
+ */
+export const getListBusinessUnitsUrl = () => {
+  return `/api/business-units`;
+};
+
+export const listBusinessUnits = async (
+  options?: RequestInit,
+): Promise<BusinessUnit[]> => {
+  return customFetch<BusinessUnit[]>(getListBusinessUnitsUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getListBusinessUnitsQueryKey = () => {
+  return [`/api/business-units`] as const;
+};
+
+export const getListBusinessUnitsQueryOptions = <
+  TData = Awaited<ReturnType<typeof listBusinessUnits>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof listBusinessUnits>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getListBusinessUnitsQueryKey();
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof listBusinessUnits>>
+  > = ({ signal }) => listBusinessUnits({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listBusinessUnits>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type ListBusinessUnitsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listBusinessUnits>>
+>;
+export type ListBusinessUnitsQueryError = ErrorType<unknown>;
+
+/**
+ * @summary List all business units (factory + showrooms)
+ */
+
+export function useListBusinessUnits<
+  TData = Awaited<ReturnType<typeof listBusinessUnits>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof listBusinessUnits>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getListBusinessUnitsQueryOptions(options);
 
   const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
     queryKey: QueryKey;

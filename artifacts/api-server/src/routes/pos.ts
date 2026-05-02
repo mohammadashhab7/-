@@ -1,9 +1,23 @@
-import { Router, type IRouter } from "express";
-import { eq, sql } from "drizzle-orm";
+import { Router, type IRouter, type Request, type Response } from "express";
+import { and, eq, sql } from "drizzle-orm";
 import { db, dailyClosings } from "@workspace/db";
 import { requirePermission } from "../lib/auth";
+import { getActiveBusinessUnit } from "../lib/businessUnit";
 
 const router: IRouter = Router();
+
+async function resolveBuOr400(req: Request, res: Response) {
+  try {
+    return { ok: true as const, bu: await getActiveBusinessUnit(req) };
+  } catch (err) {
+    const code = (err as Error & { code?: string }).code;
+    if (code === "BU_REQUIRED" || code === "INVALID_BUSINESS_UNIT") {
+      res.status(400).json({ error: code });
+      return { ok: false as const };
+    }
+    throw err;
+  }
+}
 
 function dayBounds(dateStr: string): { from: Date; to: Date } {
   const from = new Date(`${dateStr}T00:00:00.000Z`);
@@ -24,7 +38,14 @@ type PosTotalsRow = {
   [key: string]: unknown;
 };
 
-async function fetchPosTotals(from: Date, to: Date): Promise<PosTotalsRow> {
+async function fetchPosTotals(
+  from: Date,
+  to: Date,
+  businessUnitId: string | null,
+): Promise<PosTotalsRow> {
+  const buFilter = businessUnitId
+    ? sql`and business_unit_id = ${businessUnitId}`
+    : sql``;
   const rows = await db.execute<PosTotalsRow>(sql`
     select
       coalesce(sum(total_minor), 0)::text as total,
@@ -37,6 +58,7 @@ async function fetchPosTotals(from: Date, to: Date): Promise<PosTotalsRow> {
       count(*)::text as count
     from sales_orders
     where channel = 'pos' and placed_at >= ${from} and placed_at < ${to}
+    ${buFilter}
   `);
   return rows.rows[0]!;
 }
@@ -47,13 +69,18 @@ router.get(
   async (req, res) => {
     const date = String(req.params.date);
     const { from, to } = dayBounds(date);
+    const r = await resolveBuOr400(req, res);
+    if (!r.ok) return;
+    const buId = r.bu?.id ?? null;
+    const closingFilters = [eq(dailyClosings.closingDate, date)];
+    if (buId) closingFilters.push(eq(dailyClosings.businessUnitId, buId));
     const existing = await db
       .select()
       .from(dailyClosings)
-      .where(eq(dailyClosings.closingDate, date))
+      .where(and(...closingFilters))
       .limit(1);
 
-    const t = await fetchPosTotals(from, to);
+    const t = await fetchPosTotals(from, to, buId);
     res.json({
       date,
       isClosed: !!existing[0],
@@ -104,15 +131,20 @@ router.post(
           ? body.notesAr
           : null;
     const { from, to } = dayBounds(date);
-    const t = await fetchPosTotals(from, to);
+    const r = await resolveBuOr400(req, res);
+    if (!r.ok) return;
+    const buId = r.bu?.id ?? null;
+    const t = await fetchPosTotals(from, to, buId);
     const expectedCash = Number(t.cash);
     const counted = counted_in ?? expectedCash;
     const variance = counted - expectedCash;
 
+    const closingFilters = [eq(dailyClosings.closingDate, date)];
+    if (buId) closingFilters.push(eq(dailyClosings.businessUnitId, buId));
     const existing = await db
       .select()
       .from(dailyClosings)
-      .where(eq(dailyClosings.closingDate, date))
+      .where(and(...closingFilters))
       .limit(1);
 
     let row;
@@ -148,6 +180,7 @@ router.post(
             varianceMinor: variance,
             notesAr: note_in,
             closedByUserId: req.appUser?.id ?? null,
+            businessUnitId: buId,
           })
           .returning()
       )[0]!;

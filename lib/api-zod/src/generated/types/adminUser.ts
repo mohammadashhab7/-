@@ -15,5 +15,6 @@ export interface AdminUser {
   role: UserRole;
   permissions?: string[];
   isActive: boolean;
+  assignedBusinessUnitId?: string | null;
   createdAt: Date;
 }

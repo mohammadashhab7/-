@@ -1,15 +1,33 @@
 import { Router, type IRouter } from "express";
-import { desc, sql } from "drizzle-orm";
+import { desc, sql, type SQL } from "drizzle-orm";
 import { db, activityLog } from "@workspace/db";
 import { requirePermission } from "../lib/auth";
 import { CURRENCY_CODE } from "../lib/region";
+import { getActiveBusinessUnit } from "../lib/businessUnit";
 
 const router: IRouter = Router();
 
 router.get(
   "/dashboard/kpis",
   requirePermission("reports", "read"),
-  async (_req, res) => {
+  async (req, res) => {
+    let activeBu;
+    try {
+      activeBu = await getActiveBusinessUnit(req);
+    } catch (err) {
+      const code = (err as Error & { code?: string }).code;
+      if (code === "BU_REQUIRED" || code === "INVALID_BUSINESS_UNIT") {
+        res.status(400).json({ error: code });
+        return;
+      }
+      throw err;
+    }
+    const buId = activeBu?.id ?? null;
+    // Inline SQL fragments scoped by business_unit_id when set. They are
+    // prefixed with `and` because they always follow an existing WHERE clause.
+    const buSales: SQL = buId ? sql`and business_unit_id = ${buId}` : sql``;
+    const buFinancial: SQL = buId ? sql`and business_unit_id = ${buId}` : sql``;
+    const buProduction: SQL = buId ? sql`and business_unit_id = ${buId}` : sql``;
     const today = await db.execute<{
       total: string;
       count: string;
@@ -24,7 +42,7 @@ router.get(
            count(*) filter (where channel='pos')::text as pos_count,
            coalesce(sum(case when channel='online' then total_minor else 0 end), 0)::text as online_total,
            count(*) filter (where channel='online')::text as online_count
-    from sales_orders where placed_at::date = now()::date
+    from sales_orders where placed_at::date = now()::date ${buSales}
   `);
     const thisWeek = await db.execute<{ total: string; count: string }>(sql`
     select coalesce(sum(total_minor), 0)::text as total,
@@ -32,6 +50,7 @@ router.get(
     from sales_orders
     where placed_at >= date_trunc('week', now())
       and placed_at < date_trunc('week', now()) + interval '7 days'
+      ${buSales}
   `);
     const lastWeek = await db.execute<{ total: string; count: string }>(sql`
     select coalesce(sum(total_minor), 0)::text as total,
@@ -39,29 +58,35 @@ router.get(
     from sales_orders
     where placed_at >= date_trunc('week', now()) - interval '7 days'
       and placed_at < date_trunc('week', now())
+      ${buSales}
   `);
     const month = await db.execute<{ total: string; count: string }>(sql`
     select coalesce(sum(total_minor), 0)::text as total,
            count(*)::text as count
     from sales_orders where date_trunc('month', placed_at) = date_trunc('month', now())
+      ${buSales}
   `);
     const pending = await db.execute<{ count: string }>(sql`
     select count(*)::text as count from sales_orders
     where channel='online' and status in ('pending', 'pending_payment', 'paid', 'confirmed', 'preparing', 'ready', 'out_for_delivery')
+      ${buSales}
   `);
     const lowStock = await db.execute<{ count: string }>(sql`
     select count(*)::text as count from stock_levels sl
     join products p on p.id = sl.product_id
+    join inventory_locations il on il.id = sl.location_id
     where sl.item_type='product' and p.reorder_threshold > 0 and sl.quantity_thousandths < p.reorder_threshold
+      ${buId ? sql`and il.business_unit_id = ${buId}` : sql``}
   `);
     const openProd = await db.execute<{ count: string }>(sql`
     select count(*)::text as count from production_orders
-    where status in ('planned', 'in_progress')
+    where status in ('planned', 'in_progress') ${buProduction}
   `);
     const cashOnHand = await db.execute<{ total: string }>(sql`
     select coalesce(sum(total_minor), 0)::text as total from sales_orders
     where channel='pos' and payment_method='cash'
       and placed_at::date = now()::date
+      ${buSales}
   `);
     const workshopMonthExpense = await db.execute<{ total: string }>(sql`
     select coalesce(sum(amount_minor), 0)::text as total
@@ -69,20 +94,24 @@ router.get(
     where module = 'production'
       and type = 'expense'
       and date_trunc('month', occurred_at) = date_trunc('month', now())
+      ${buFinancial}
   `);
     const workshopMonthProd = await db.execute<{ count: string }>(sql`
     select count(*)::text as count
     from production_orders
     where status = 'completed'
       and date_trunc('month', completed_at) = date_trunc('month', now())
+      ${buProduction}
   `);
     const workshopRawLowStock = await db.execute<{ count: string }>(sql`
     select count(*)::text as count
     from stock_levels sl
     join raw_materials rm on rm.id = sl.material_id
+    join inventory_locations il on il.id = sl.location_id
     where sl.item_type = 'raw_material'
       and rm.reorder_threshold > 0
       and sl.quantity_thousandths < rm.reorder_threshold
+      ${buId ? sql`and il.business_unit_id = ${buId}` : sql``}
   `);
     const thisWeekTotal = Number(thisWeek.rows[0]!.total);
     const lastWeekTotal = Number(lastWeek.rows[0]!.total);

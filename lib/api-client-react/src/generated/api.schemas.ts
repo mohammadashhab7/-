@@ -28,6 +28,8 @@ export interface Me {
   imageUrl?: string;
   role?: UserRole;
   permissions?: string[];
+  /** Default business unit for non-owner/admin users (null for global / unscoped users). */
+  assignedBusinessUnitId?: string | null;
 }
 
 export interface AdminUser {
@@ -38,7 +40,27 @@ export interface AdminUser {
   role: UserRole;
   permissions?: string[];
   isActive: boolean;
+  assignedBusinessUnitId?: string | null;
   createdAt: string;
+}
+
+export type BusinessUnitKind =
+  (typeof BusinessUnitKind)[keyof typeof BusinessUnitKind];
+
+export const BusinessUnitKind = {
+  factory: "factory",
+  showroom: "showroom",
+} as const;
+
+export interface BusinessUnit {
+  id: string;
+  /** Stable machine slug (e.g. factory, showroom_a) */
+  slug: string;
+  kind: BusinessUnitKind;
+  nameAr: string;
+  nameEn?: string | null;
+  displayOrder: number;
+  isActive: boolean;
 }
 
 export interface Category {
@@ -187,6 +209,8 @@ export interface InventoryLocation {
   code: string;
   nameAr: string;
   kind: InventoryLocationKind;
+  /** Business unit (factory, showroom_a, showroom_b, showroom_c) this location belongs to. */
+  businessUnitId?: string | null;
 }
 
 export type StockLevelItemType =
@@ -563,6 +587,7 @@ export interface FinancialEntry {
   refType?: string;
   refId?: string;
   occurredOn: string;
+  businessUnitId?: string | null;
   createdById?: string;
   createdAt: string;
 }
@@ -736,6 +761,8 @@ export interface Employee {
   notesAr?: string;
   isActive: boolean;
   createdAt: string;
+  /** Business unit this employee is scoped to. */
+  businessUnitId?: string | null;
 }
 
 export interface EmployeeInput {

@@ -14,6 +14,8 @@ export * from "./attendanceInput";
 export * from "./attendanceInputStatus";
 export * from "./attendanceRecord";
 export * from "./attendanceRecordStatus";
+export * from "./businessUnit";
+export * from "./businessUnitKind";
 export * from "./cart";
 export * from "./cartItem";
 export * from "./category";

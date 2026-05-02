@@ -16,6 +16,7 @@ function serialize(u: typeof users.$inferSelect) {
     permissions: u.permissions,
     isActive: u.isActive,
     avatarUrl: u.avatarUrl,
+    assignedBusinessUnitId: u.assignedBusinessUnitId ?? null,
     createdAt: u.createdAt.toISOString(),
   };
 }
@@ -39,8 +40,23 @@ type AllowedRole = (typeof ALLOWED_ROLES)[number];
 
 router.patch("/admin/users/:id", requireOwnerOrAdmin(), async (req, res) => {
   const id = String(req.params.id);
-  const { role, permissions, isActive } = req.body ?? {};
+  const { role, permissions, isActive, assignedBusinessUnitId } = req.body ?? {};
   const updates: Partial<typeof users.$inferInsert> = { updatedAt: new Date() };
+  if (assignedBusinessUnitId !== undefined) {
+    if (assignedBusinessUnitId === null) {
+      updates.assignedBusinessUnitId = null;
+    } else if (
+      typeof assignedBusinessUnitId === "string" &&
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
+        assignedBusinessUnitId,
+      )
+    ) {
+      updates.assignedBusinessUnitId = assignedBusinessUnitId;
+    } else {
+      res.status(400).json({ error: "INVALID_BUSINESS_UNIT_ID" });
+      return;
+    }
+  }
   if (role !== undefined) {
     if (typeof role !== "string" || !ALLOWED_ROLES.includes(role as AllowedRole)) {
       res.status(400).json({ error: "INVALID_ROLE", allowed: ALLOWED_ROLES });

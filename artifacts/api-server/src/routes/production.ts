@@ -11,7 +11,7 @@ import {
   products,
   financialEntries,
 } from "@workspace/db";
-import { requireStaff, requirePermission } from "../lib/auth";
+import { requirePermission } from "../lib/auth";
 import {
   applyLedgerEntry,
   getLocationByCode,
@@ -20,6 +20,7 @@ import {
 } from "../lib/inventory";
 import { nextProductionNumber } from "../lib/sequences";
 import { logActivity } from "../lib/activity";
+import { getActiveBusinessUnit, loadBusinessUnitBySlug } from "../lib/businessUnit";
 
 const router: IRouter = Router();
 
@@ -45,9 +46,27 @@ function serialize(o: typeof productionOrders.$inferSelect, productNameAr?: stri
 router.get("/production-orders", requirePermission("production", "read"), async (req, res) => {
   const { status, limit } = req.query;
   const lim = Math.min(typeof limit === "string" ? parseInt(limit, 10) || 50 : 50, 200);
+  let activeBu;
+  try {
+    activeBu = await getActiveBusinessUnit(req);
+  } catch (err) {
+    const code = (err as Error & { code?: string }).code;
+    if (code === "BU_REQUIRED" || code === "INVALID_BUSINESS_UNIT") {
+      res.status(400).json({ error: code });
+      return;
+    }
+    throw err;
+  }
   const filters = [];
   if (typeof status === "string")
     filters.push(eq(productionOrders.status, status as typeof productionOrders.$inferSelect.status));
+  // Production orders only ever belong to the factory; if a non-factory BU
+  // is selected, return no rows. If null (admin global view) → return all.
+  if (activeBu && activeBu.kind !== "factory") {
+    res.json([]);
+    return;
+  }
+  if (activeBu) filters.push(eq(productionOrders.businessUnitId, activeBu.id));
   const rows = await db
     .select({ o: productionOrders, name: products.nameAr })
     .from(productionOrders)
@@ -85,6 +104,31 @@ router.post("/production-orders", requirePermission("production", "write"), asyn
     res.status(500).json({ error: "LOCATIONS_NOT_SEEDED" });
     return;
   }
+  const factoryBu = await loadBusinessUnitBySlug("factory");
+  // Production must be attributable to the factory BU. If the seed is missing
+  // we fail loudly rather than silently writing a NULL business_unit_id, which
+  // would otherwise let a scoped user bypass the FACTORY_ONLY gate below.
+  if (!factoryBu) {
+    res.status(500).json({ error: "CONFIG_ERROR_FACTORY_BU_MISSING" });
+    return;
+  }
+  // Production can only happen in the factory. Reject scoped non-factory users
+  // (e.g. showroom staff) up front rather than silently misattributing the order.
+  let activeBuForCreate;
+  try {
+    activeBuForCreate = await getActiveBusinessUnit(req);
+  } catch (err) {
+    const code = (err as Error & { code?: string }).code;
+    if (code === "BU_REQUIRED" || code === "INVALID_BUSINESS_UNIT") {
+      res.status(400).json({ error: code });
+      return;
+    }
+    throw err;
+  }
+  if (activeBuForCreate && activeBuForCreate.id !== factoryBu.id) {
+    res.status(403).json({ error: "FACTORY_ONLY" });
+    return;
+  }
 
   try {
     const finalOrder = await db.transaction(async (tx) => {
@@ -116,6 +160,7 @@ router.post("/production-orders", requirePermission("production", "write"), asyn
           startedAt: new Date(),
           completedAt: new Date(),
           createdByUserId: req.appUser?.id ?? null,
+          businessUnitId: factoryBu.id,
         })
         .returning();
       const order = created[0]!;
@@ -186,6 +231,7 @@ router.post("/production-orders", requirePermission("production", "write"), asyn
           descriptionAr: `تكلفة مواد إنتاج ${product.nameAr} (أمر ${orderNumber})`,
           occurredAt: new Date(),
           createdByUserId: req.appUser?.id ?? null,
+          businessUnitId: factoryBu.id,
         });
       }
 
@@ -213,6 +259,17 @@ router.post("/production-orders", requirePermission("production", "write"), asyn
 });
 
 router.get("/production-orders/:id", requirePermission("production", "read"), async (req, res) => {
+  let activeBu;
+  try {
+    activeBu = await getActiveBusinessUnit(req);
+  } catch (err) {
+    const code = (err as Error & { code?: string }).code;
+    if (code === "BU_REQUIRED" || code === "INVALID_BUSINESS_UNIT") {
+      res.status(400).json({ error: code });
+      return;
+    }
+    throw err;
+  }
   const rows = await db
     .select({ o: productionOrders, name: products.nameAr })
     .from(productionOrders)
@@ -220,6 +277,10 @@ router.get("/production-orders/:id", requirePermission("production", "read"), as
     .where(eq(productionOrders.id, String(req.params.id)))
     .limit(1);
   if (!rows[0]) {
+    res.status(404).json({ error: "NOT_FOUND" });
+    return;
+  }
+  if (activeBu && rows[0].o.businessUnitId !== activeBu.id) {
     res.status(404).json({ error: "NOT_FOUND" });
     return;
   }
