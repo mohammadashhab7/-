@@ -245,6 +245,7 @@ router.post("/production-orders", requirePermission("production", "write"), asyn
       referenceType: "production_order",
       referenceId: finalOrder.o.id,
       actor: req.appUser,
+      businessUnitId: factoryBu.id,
     });
 
     res.status(201).json(serialize(finalOrder.o, product.nameAr));

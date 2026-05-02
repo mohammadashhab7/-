@@ -13,6 +13,7 @@ import AdminLayout from "@/components/layouts/AdminLayout";
 import AccountLayout from "@/components/layouts/AccountLayout";
 import { useGetMe } from "@workspace/api-client-react";
 import { PermissionRoute } from "@/components/PermissionRoute";
+import { DivisionRoute } from "@/components/DivisionRoute";
 import { BusinessUnitProvider } from "@/contexts/BusinessUnitContext";
 
 import HomePage from "@/pages/public/Home";
@@ -99,26 +100,30 @@ function Router() {
               <Route path="/products"><PermissionRoute module="products"><AdminProductsPage /></PermissionRoute></Route>
               <Route path="/categories"><PermissionRoute module="categories"><AdminCategoriesPage /></PermissionRoute></Route>
 
-              <Route path="/raw-materials"><PermissionRoute module="raw_materials"><AdminRawMaterialsPage /></PermissionRoute></Route>
-              <Route path="/recipes"><PermissionRoute module="recipes"><AdminRecipesPage /></PermissionRoute></Route>
-              <Route path="/inventory"><PermissionRoute module="inventory"><AdminInventoryPage /></PermissionRoute></Route>
-              <Route path="/production"><PermissionRoute module="production"><AdminProductionPage /></PermissionRoute></Route>
-              <Route path="/transfers"><PermissionRoute module="transfers"><AdminTransfersPage /></PermissionRoute></Route>
+              {/* Factory-only routes */}
+              <Route path="/raw-materials"><DivisionRoute kind="factory"><PermissionRoute module="raw_materials"><AdminRawMaterialsPage /></PermissionRoute></DivisionRoute></Route>
+              <Route path="/recipes"><DivisionRoute kind="factory"><PermissionRoute module="recipes"><AdminRecipesPage /></PermissionRoute></DivisionRoute></Route>
+              <Route path="/production"><DivisionRoute kind="factory"><PermissionRoute module="production"><AdminProductionPage /></PermissionRoute></DivisionRoute></Route>
               <Route path="/wholesale-orders"><PermissionRoute module="transfers"><AdminWholesalePage /></PermissionRoute></Route>
 
-              {/* Production sub-section aliases */}
-              <Route path="/production/materials"><PermissionRoute module="raw_materials"><AdminRawMaterialsPage /></PermissionRoute></Route>
-              <Route path="/production/recipes"><PermissionRoute module="recipes"><AdminRecipesPage /></PermissionRoute></Route>
-              <Route path="/production/orders"><PermissionRoute module="production"><AdminProductionPage /></PermissionRoute></Route>
+              {/* Shared inventory + transfers — both factory and showroom use them. */}
+              <Route path="/inventory"><PermissionRoute module="inventory"><AdminInventoryPage /></PermissionRoute></Route>
+              <Route path="/transfers"><PermissionRoute module="transfers"><AdminTransfersPage /></PermissionRoute></Route>
+
+              {/* Production sub-section aliases (factory-only) */}
+              <Route path="/production/materials"><DivisionRoute kind="factory"><PermissionRoute module="raw_materials"><AdminRawMaterialsPage /></PermissionRoute></DivisionRoute></Route>
+              <Route path="/production/recipes"><DivisionRoute kind="factory"><PermissionRoute module="recipes"><AdminRecipesPage /></PermissionRoute></DivisionRoute></Route>
+              <Route path="/production/orders"><DivisionRoute kind="factory"><PermissionRoute module="production"><AdminProductionPage /></PermissionRoute></DivisionRoute></Route>
 
               {/* Store sub-section aliases */}
               <Route path="/store"><Redirect to="/inventory" /></Route>
               <Route path="/store/inventory"><PermissionRoute module="inventory"><AdminInventoryPage /></PermissionRoute></Route>
               <Route path="/store/transfers"><PermissionRoute module="transfers"><AdminTransfersPage /></PermissionRoute></Route>
 
-              <Route path="/pos"><PermissionRoute module="pos"><AdminPosPage /></PermissionRoute></Route>
-              <Route path="/daily-closing"><PermissionRoute module="pos"><AdminClosingPage /></PermissionRoute></Route>
-              <Route path="/pos/closing"><PermissionRoute module="pos"><AdminClosingPage /></PermissionRoute></Route>
+              {/* Showroom-only routes */}
+              <Route path="/pos"><DivisionRoute kind="showroom"><PermissionRoute module="pos"><AdminPosPage /></PermissionRoute></DivisionRoute></Route>
+              <Route path="/daily-closing"><DivisionRoute kind="showroom"><PermissionRoute module="pos"><AdminClosingPage /></PermissionRoute></DivisionRoute></Route>
+              <Route path="/pos/closing"><DivisionRoute kind="showroom"><PermissionRoute module="pos"><AdminClosingPage /></PermissionRoute></DivisionRoute></Route>
 
               <Route path="/orders"><PermissionRoute module="orders"><AdminOrdersPage /></PermissionRoute></Route>
               <Route path="/sales/orders"><PermissionRoute module="orders"><AdminOrdersPage /></PermissionRoute></Route>

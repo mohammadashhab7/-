@@ -94,6 +94,7 @@ router.post("/financial-entries", requirePermission("financial", "write"), async
     referenceType: "financial_entry",
     referenceId: inserted[0]!.id,
     actor: req.appUser,
+    businessUnitId: activeBu?.id ?? null,
   });
   res.status(201).json(serialize(inserted[0]!));
 });

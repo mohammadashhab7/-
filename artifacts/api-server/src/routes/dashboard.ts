@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { desc, sql, type SQL } from "drizzle-orm";
+import { and, desc, eq, isNull, or, sql, type SQL } from "drizzle-orm";
 import { db, activityLog } from "@workspace/db";
 import { requirePermission } from "../lib/auth";
 import { CURRENCY_CODE } from "../lib/region";
@@ -163,10 +163,32 @@ function mapActivityKind(kind: string): string {
 router.get(
   "/dashboard/recent-activity",
   requirePermission("reports", "read"),
-  async (_req, res) => {
+  async (req, res) => {
+    let activeBu;
+    try {
+      activeBu = await getActiveBusinessUnit(req);
+    } catch (err) {
+      const code = (err as Error & { code?: string }).code;
+      if (code === "BU_REQUIRED" || code === "INVALID_BUSINESS_UNIT") {
+        res.status(400).json({ error: code });
+        return;
+      }
+      throw err;
+    }
+    // When a BU is active, show activities tagged with that BU OR untagged
+    // (NULL — for legacy rows or cross-BU events that should surface
+    // everywhere). Privileged users on the global view see everything.
+    const buFilter =
+      activeBu === null
+        ? undefined
+        : or(
+            eq(activityLog.businessUnitId, activeBu.id),
+            isNull(activityLog.businessUnitId),
+          );
     const rows = await db
       .select()
       .from(activityLog)
+      .where(buFilter ? and(buFilter) : undefined)
       .orderBy(desc(activityLog.createdAt))
       .limit(20);
     res.json(

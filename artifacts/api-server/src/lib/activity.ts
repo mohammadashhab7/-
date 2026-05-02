@@ -20,6 +20,12 @@ export async function logActivity(args: {
   referenceType?: string | null;
   referenceId?: string | null;
   actor?: AppUser | null;
+  /**
+   * Business unit this activity belongs to. NULL for global / cross-BU events
+   * (e.g. catalog edits, settings changes). The recent-activity feed filters
+   * by this column when an active BU is selected.
+   */
+  businessUnitId?: string | null;
   metadata?: Record<string, unknown>;
 }) {
   await db.insert(activityLog).values({
@@ -30,6 +36,7 @@ export async function logActivity(args: {
     referenceId: args.referenceId ?? null,
     actorUserId: args.actor?.id ?? null,
     actorNameAr: args.actor?.nameAr ?? null,
+    businessUnitId: args.businessUnitId ?? null,
     metadata: args.metadata ?? {},
   });
 }

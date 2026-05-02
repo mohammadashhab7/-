@@ -882,8 +882,18 @@ export const activityLog = pgTable(
     referenceId: text("reference_id"),
     actorUserId: uuid("actor_user_id").references(() => users.id),
     actorNameAr: text("actor_name_ar"),
+    // Business unit this activity belongs to. NULL for global / cross-BU
+    // events (e.g. catalog edits, settings changes). Recent-activity feeds
+    // filter by this column when an active BU is selected.
+    businessUnitId: uuid("business_unit_id").references(
+      () => businessUnits.id,
+      { onDelete: "set null" },
+    ),
     metadata: jsonb("metadata").$type<Record<string, unknown>>().notNull().default(sql`'{}'::jsonb`),
     createdAt,
   },
-  (t) => [index("activity_created_idx").on(t.createdAt)],
+  (t) => [
+    index("activity_created_idx").on(t.createdAt),
+    index("activity_bu_idx").on(t.businessUnitId),
+  ],
 );

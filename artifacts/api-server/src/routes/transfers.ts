@@ -263,6 +263,7 @@ router.post("/transfers", requirePermission("transfers", "write"), async (req, r
       referenceType: "transfer",
       referenceId: t.id,
       actor: req.appUser,
+      businessUnitId: t.businessUnitId ?? null,
     });
 
     res.status(201).json({
@@ -346,6 +347,7 @@ router.post(
       referenceType: "transfer",
       referenceId: row.id,
       actor: req.appUser,
+      businessUnitId: row.businessUnitId ?? null,
     });
     res.json({ id: row.id, status: row.status });
   },
@@ -507,6 +509,7 @@ router.post(
         referenceType: "transfer",
         referenceId: result.row.id,
         actor: req.appUser,
+        businessUnitId: result.row.businessUnitId ?? null,
       });
       res.json({ id: result.row.id, status: result.row.status });
     } catch (err) {
@@ -561,6 +564,7 @@ router.post(
       referenceType: "transfer",
       referenceId: row.id,
       actor: req.appUser,
+      businessUnitId: row.businessUnitId ?? null,
     });
     res.json({ id: row.id, status: row.status });
   },

@@ -359,6 +359,7 @@ export async function createSalesOrderInternal(args: {
       (args.channel === "pos" ? "بيع مباشر" : "طلب أونلاين"),
     referenceType: "sales_order",
     referenceId: order.id,
+    businessUnitId: order.businessUnitId ?? null,
     metadata: { totalMinor: order.totalMinor, channel: args.channel },
   });
 
@@ -585,6 +586,7 @@ router.patch("/sales-orders/:id/status", requirePermission("orders", "write"), a
       referenceType: "sales_order",
       referenceId: finalRow.id,
       actor: req.appUser,
+      businessUnitId: finalRow.businessUnitId ?? null,
     });
     res.json(serialize(finalRow));
   } catch (err) {

@@ -1,8 +1,9 @@
-import { Router, type IRouter } from "express";
-import { sql } from "drizzle-orm";
+import { Router, type IRouter, type Request, type Response } from "express";
+import { sql, type SQL } from "drizzle-orm";
 import { db } from "@workspace/db";
 import { requirePermission } from "../lib/auth";
 import { CURRENCY_CODE } from "../lib/region";
+import { getActiveBusinessUnit } from "../lib/businessUnit";
 
 const router: IRouter = Router();
 
@@ -14,15 +15,34 @@ interface BookSummary {
   byCategory: Array<{ category: string; type: string; amountMinor: number }>;
 }
 
+async function resolveActiveBuId(
+  req: Request,
+  res: Response,
+): Promise<{ ok: false } | { ok: true; buId: string | null }> {
+  try {
+    const bu = await getActiveBusinessUnit(req);
+    return { ok: true, buId: bu?.id ?? null };
+  } catch (err) {
+    const code = (err as Error & { code?: string }).code;
+    if (code === "BU_REQUIRED" || code === "INVALID_BUSINESS_UNIT") {
+      res.status(400).json({ error: code });
+      return { ok: false };
+    }
+    throw err;
+  }
+}
+
 async function bookSummary(
   module: "production" | "store" | "all",
-  fromDate?: string,
-  toDate?: string,
+  fromDate: string | undefined,
+  toDate: string | undefined,
+  buId: string | null,
 ): Promise<BookSummary> {
   const conds = [sql`true`];
   if (module !== "all") conds.push(sql`module = ${module}`);
   if (fromDate) conds.push(sql`occurred_at >= ${fromDate}::date`);
   if (toDate) conds.push(sql`occurred_at < (${toDate}::date + interval '1 day')`);
+  if (buId) conds.push(sql`business_unit_id = ${buId}`);
   const where = sql.join(conds, sql` and `);
 
   const totals = await db.execute<{ income: string; expense: string }>(sql`
@@ -62,14 +82,16 @@ router.get(
   "/reports/financial",
   requirePermission("reports", "read"),
   async (req, res) => {
+    const r = await resolveActiveBuId(req, res);
+    if (!r.ok) return;
     const fromDate =
       typeof req.query.dateFrom === "string" ? req.query.dateFrom : undefined;
     const toDate =
       typeof req.query.dateTo === "string" ? req.query.dateTo : undefined;
     const [production, store, combined] = await Promise.all([
-      bookSummary("production", fromDate, toDate),
-      bookSummary("store", fromDate, toDate),
-      bookSummary("all", fromDate, toDate),
+      bookSummary("production", fromDate, toDate, r.buId),
+      bookSummary("store", fromDate, toDate, r.buId),
+      bookSummary("all", fromDate, toDate, r.buId),
     ]);
     res.json({ production, store, combined });
   },
@@ -79,13 +101,15 @@ router.get(
   "/reports/financial.csv",
   requirePermission("reports", "read"),
   async (req, res) => {
+    const r = await resolveActiveBuId(req, res);
+    if (!r.ok) return;
     const fromDate =
       typeof req.query.dateFrom === "string" ? req.query.dateFrom : undefined;
     const toDate =
       typeof req.query.dateTo === "string" ? req.query.dateTo : undefined;
     const [production, store] = await Promise.all([
-      bookSummary("production", fromDate, toDate),
-      bookSummary("store", fromDate, toDate),
+      bookSummary("production", fromDate, toDate, r.buId),
+      bookSummary("store", fromDate, toDate, r.buId),
     ]);
     const safe = (s: string) => `"${(s ?? "").replace(/"/g, '""')}"`;
     const lines = ["module,type,category,amount_minor,currency"];
@@ -112,6 +136,8 @@ router.get(
   "/reports/sales-trend",
   requirePermission("reports", "read"),
   async (req, res) => {
+    const r = await resolveActiveBuId(req, res);
+    if (!r.ok) return;
     const days = Math.min(
       Math.max(
         typeof req.query.days === "string" ? parseInt(req.query.days, 10) : 14,
@@ -119,6 +145,9 @@ router.get(
       ),
       90,
     );
+    const buFilter: SQL = r.buId
+      ? sql`and so.business_unit_id = ${r.buId}`
+      : sql``;
     const rows = await db.execute<{
       date: string;
       total: string;
@@ -131,7 +160,7 @@ router.get(
       coalesce(sum(so.total_minor), 0)::text as total,
       coalesce(count(so.id), 0)::text as count
     from d
-    left join sales_orders so on so.placed_at::date = d.day
+    left join sales_orders so on so.placed_at::date = d.day ${buFilter}
     group by d.day
     order by d.day
   `);
@@ -145,7 +174,14 @@ router.get(
   },
 );
 
-async function topProducts(days: number, limit: number) {
+async function topProducts(
+  days: number,
+  limit: number,
+  buId: string | null,
+) {
+  const buFilter: SQL = buId
+    ? sql`and so.business_unit_id = ${buId}`
+    : sql``;
   const rows = await db.execute<{
     product_id: string;
     name_ar: string;
@@ -157,7 +193,7 @@ async function topProducts(days: number, limit: number) {
       sum(soi.total_minor)::text as revenue
     from sales_order_items soi
     join sales_orders so on so.id = soi.order_id
-    where so.placed_at >= now() - (${days} || ' days')::interval
+    where so.placed_at >= now() - (${days} || ' days')::interval ${buFilter}
     group by soi.product_id, soi.product_name_ar
     order by sum(soi.quantity) desc
     limit ${limit}
@@ -174,6 +210,8 @@ router.get(
   "/reports/top-products",
   requirePermission("reports", "read"),
   async (req, res) => {
+    const r = await resolveActiveBuId(req, res);
+    if (!r.ok) return;
     const limit = Math.min(
       typeof req.query.limit === "string"
         ? parseInt(req.query.limit, 10)
@@ -184,7 +222,7 @@ router.get(
       typeof req.query.days === "string" ? parseInt(req.query.days, 10) : 30,
       90,
     );
-    res.json(await topProducts(days, limit));
+    res.json(await topProducts(days, limit, r.buId));
   },
 );
 
@@ -192,11 +230,13 @@ router.get(
   "/reports/top-products.csv",
   requirePermission("reports", "read"),
   async (req, res) => {
+    const r = await resolveActiveBuId(req, res);
+    if (!r.ok) return;
     const days = Math.min(
       typeof req.query.days === "string" ? parseInt(req.query.days, 10) : 30,
       90,
     );
-    const rows = await topProducts(days, 50);
+    const rows = await topProducts(days, 50, r.buId);
     const lines = ["product_id,product_name_ar,units_sold,revenue_minor,currency"];
     for (const r of rows) {
       const safe = (s: string) => `"${(s ?? "").replace(/"/g, '""')}"`;
@@ -215,6 +255,8 @@ router.get(
   "/reports/sales-trend.csv",
   requirePermission("reports", "read"),
   async (req, res) => {
+    const r = await resolveActiveBuId(req, res);
+    if (!r.ok) return;
     const days = Math.min(
       Math.max(
         typeof req.query.days === "string" ? parseInt(req.query.days, 10) : 14,
@@ -222,6 +264,9 @@ router.get(
       ),
       90,
     );
+    const buFilter: SQL = r.buId
+      ? sql`and so.business_unit_id = ${r.buId}`
+      : sql``;
     const rows = await db.execute<{
       date: string;
       total: string;
@@ -234,7 +279,7 @@ router.get(
       coalesce(sum(so.total_minor), 0)::text as total,
       coalesce(count(so.id), 0)::text as count
     from d
-    left join sales_orders so on so.placed_at::date = d.day
+    left join sales_orders so on so.placed_at::date = d.day ${buFilter}
     group by d.day
     order by d.day
   `);
@@ -255,6 +300,8 @@ router.get(
   "/reports/cogs",
   requirePermission("reports", "read"),
   async (req, res) => {
+    const r = await resolveActiveBuId(req, res);
+    if (!r.ok) return;
     const fromDate =
       typeof req.query.dateFrom === "string" ? req.query.dateFrom : undefined;
     const toDate =
@@ -262,6 +309,7 @@ router.get(
     const conds = [sql`so.status in ('paid','completed','delivered')`];
     if (fromDate) conds.push(sql`so.placed_at >= ${fromDate}::date`);
     if (toDate) conds.push(sql`so.placed_at < (${toDate}::date + interval '1 day')`);
+    if (r.buId) conds.push(sql`so.business_unit_id = ${r.buId}`);
     const where = sql.join(conds, sql` and `);
     const totals = await db.execute<{ revenue: string; cogs: string; orders: string }>(sql`
       select
@@ -316,6 +364,8 @@ router.get(
   "/reports/cogs.csv",
   requirePermission("reports", "read"),
   async (req, res) => {
+    const r = await resolveActiveBuId(req, res);
+    if (!r.ok) return;
     const fromDate =
       typeof req.query.dateFrom === "string" ? req.query.dateFrom : undefined;
     const toDate =
@@ -323,6 +373,7 @@ router.get(
     const conds = [sql`so.status in ('paid','completed','delivered')`];
     if (fromDate) conds.push(sql`so.placed_at >= ${fromDate}::date`);
     if (toDate) conds.push(sql`so.placed_at < (${toDate}::date + interval '1 day')`);
+    if (r.buId) conds.push(sql`so.business_unit_id = ${r.buId}`);
     const where = sql.join(conds, sql` and `);
     const byProduct = await db.execute<{
       product_id: string;
@@ -361,13 +412,16 @@ router.get(
   "/reports/material-spend",
   requirePermission("reports", "read"),
   async (req, res) => {
+    const r = await resolveActiveBuId(req, res);
+    if (!r.ok) return;
     const fromDate =
       typeof req.query.fromDate === "string" ? req.query.fromDate : undefined;
     const toDate =
       typeof req.query.toDate === "string" ? req.query.toDate : undefined;
     const where = sql`po.status = 'completed'
       ${fromDate ? sql` and po.completed_at >= ${fromDate}::date` : sql``}
-      ${toDate ? sql` and po.completed_at < (${toDate}::date + interval '1 day')` : sql``}`;
+      ${toDate ? sql` and po.completed_at < (${toDate}::date + interval '1 day')` : sql``}
+      ${r.buId ? sql` and po.business_unit_id = ${r.buId}` : sql``}`;
     const totalRow = await db.execute<{ total: string }>(sql`
       select coalesce(sum(poi.total_cost_minor), 0)::text as total
       from production_order_items poi
@@ -412,13 +466,16 @@ router.get(
   "/reports/store-kpis",
   requirePermission("reports", "read"),
   async (req, res) => {
+    const r = await resolveActiveBuId(req, res);
+    if (!r.ok) return;
     const fromDate =
       typeof req.query.fromDate === "string" ? req.query.fromDate : undefined;
     const toDate =
       typeof req.query.toDate === "string" ? req.query.toDate : undefined;
     const where = sql`status not in ('cancelled', 'refunded')
       ${fromDate ? sql` and placed_at >= ${fromDate}::date` : sql``}
-      ${toDate ? sql` and placed_at < (${toDate}::date + interval '1 day')` : sql``}`;
+      ${toDate ? sql` and placed_at < (${toDate}::date + interval '1 day')` : sql``}
+      ${r.buId ? sql` and business_unit_id = ${r.buId}` : sql``}`;
     const channels = await db.execute<{
       channel: string;
       orders: string;
