@@ -1,4 +1,4 @@
-import { Router, type IRouter } from "express";
+import { Router, type IRouter, type Request, type Response, type NextFunction } from "express";
 import healthRouter from "./health";
 import bootstrapRouter from "./bootstrap";
 import storageRouter from "./storage";
@@ -29,6 +29,44 @@ import paymentsRouter from "./payments";
 import businessUnitsRouter from "./businessUnits";
 
 const router: IRouter = Router();
+
+/**
+ * Dev-only guard: warn when a known BU-scoped admin route returns success
+ * without ever consulting `getActiveBusinessUnit`. Catches regressions where
+ * a new handler silently reads global data instead of filtering by the
+ * active business unit. No-op in production.
+ */
+const BU_SCOPED_PATTERNS: RegExp[] = [
+  /^\/reports(\/|$)/,
+  /^\/dashboard\/(kpis|recent-activity)$/,
+  /^\/financial-entries(\/|$)/,
+  /^\/sales-orders(\/|$)/,
+  /^\/production(\/|$)/,
+  /^\/transfers(\/|$)/,
+  /^\/employees(\/|$)/,
+  /^\/inventory(\/|$)/,
+  /^\/pos(\/|$)/,
+  /^\/daily-closings(\/|$)/,
+  /^\/wholesale-orders(\/|$)/,
+];
+
+if (process.env.NODE_ENV !== "production") {
+  router.use((req: Request, res: Response, next: NextFunction) => {
+    if (req.method !== "GET" && req.method !== "HEAD") return next();
+    const path = req.path;
+    if (!BU_SCOPED_PATTERNS.some((p) => p.test(path))) return next();
+    res.on("finish", () => {
+      const r = req as Request & { __buResolved?: boolean };
+      if (res.statusCode < 400 && !r.__buResolved) {
+        // eslint-disable-next-line no-console
+        console.warn(
+          `[bu-scope-guard] ${req.method} ${path} returned ${res.statusCode} without consulting getActiveBusinessUnit() — this looks like a silent-global read.`,
+        );
+      }
+    });
+    next();
+  });
+}
 
 router.use(healthRouter);
 router.use(bootstrapRouter);

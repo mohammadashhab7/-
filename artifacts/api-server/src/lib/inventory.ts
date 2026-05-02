@@ -203,3 +203,26 @@ export async function getLocationByCode(code: string) {
     .limit(1);
   return rows[0] ?? null;
 }
+
+/**
+ * Resolve the store-kind inventory location for a given business unit.
+ * Used by sales (POS + online) so multi-showroom installations route stock
+ * decrements to the correct showroom rather than the legacy hardcoded STORE.
+ */
+export async function getActiveStoreLocation(businessUnitId: string | null) {
+  if (businessUnitId) {
+    const rows = await db
+      .select()
+      .from(inventoryLocations)
+      .where(
+        and(
+          eq(inventoryLocations.businessUnitId, businessUnitId),
+          eq(inventoryLocations.kind, "store"),
+          eq(inventoryLocations.isActive, true),
+        ),
+      )
+      .limit(1);
+    if (rows[0]) return rows[0];
+  }
+  return getLocationByCode("STORE");
+}

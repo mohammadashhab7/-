@@ -25,6 +25,10 @@ const QUERY_NAMES = ["bu", "businessUnitId"] as const;
 export async function getActiveBusinessUnit(
   req: Request,
 ): Promise<BusinessUnit | null> {
+  // Mark this request as having consulted the active BU. The dev-mode guard
+  // in routes/index.ts uses this flag to warn when a known BU-scoped route
+  // forgot to call us — preventing the silent-global-data regression.
+  (req as Request & { __buResolved?: boolean }).__buResolved = true;
   const role = req.appUser?.role ?? null;
   const isPrivileged = role === "owner" || role === "admin";
 

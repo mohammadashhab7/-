@@ -27,6 +27,11 @@ const C = {
   dim: "\x1b[2m",
 };
 
+// Transfers/sales rows pre-dating the wholesale-required check (2026-04-30)
+// can be intentionally excluded from the cross-BU audit by tagging notes_ar
+// with this marker. See lib/db/backfills/2026-05-02-legacy-cross-bu-transfers.sql.
+const LEGACY_MARKER = "[LEGACY_CROSS_BU_PRE_WHOLESALE]";
+
 async function countAndSample(
   query: ReturnType<typeof sql>,
   sampleQuery?: ReturnType<typeof sql>,
@@ -70,26 +75,30 @@ const CHECKS: Check[] = [
       ),
   },
   {
-    name: "sales-orders-bu-matches-source-loc",
+    name: "sales-orders-ledger-bu-matches",
     description:
-      "sales_orders.business_unit_id must equal source_location_id's business_unit_id (mismatch = wrong attribution).",
+      "Every sales_order's inventory_ledger stock-out entries must be at a location whose business_unit_id matches the order's BU. Mismatch = wrong division attribution.",
     query: () =>
       countAndSample(
-        sql`select count(*)::text as count
+        sql`select count(distinct so.id)::text as count
             from sales_orders so
-            join inventory_locations il on il.id = so.source_location_id
+            join inventory_ledger il on il.reference_type = 'sales_order'
+                                    and il.reference_id = so.id::text
+            join inventory_locations loc on loc.id = il.location_id
             where so.business_unit_id is not null
-              and il.business_unit_id is not null
-              and so.business_unit_id <> il.business_unit_id`,
+              and loc.business_unit_id is not null
+              and so.business_unit_id <> loc.business_unit_id`,
         sql`select so.id, so.order_number,
                    so.business_unit_id as order_bu,
-                   il.business_unit_id as loc_bu,
-                   il.code as loc_code
+                   loc.business_unit_id as ledger_loc_bu,
+                   loc.code as loc_code
             from sales_orders so
-            join inventory_locations il on il.id = so.source_location_id
+            join inventory_ledger il on il.reference_type = 'sales_order'
+                                    and il.reference_id = so.id::text
+            join inventory_locations loc on loc.id = il.location_id
             where so.business_unit_id is not null
-              and il.business_unit_id is not null
-              and so.business_unit_id <> il.business_unit_id
+              and loc.business_unit_id is not null
+              and so.business_unit_id <> loc.business_unit_id
             limit 5`,
       ),
   },
@@ -114,8 +123,7 @@ const CHECKS: Check[] = [
   },
   {
     name: "transfers-locations-same-bu",
-    description:
-      "transfers source/destination locations must belong to the same BU as the transfer (cross-BU should be wholesale orders, not transfers).",
+    description: `transfers source/destination locations must belong to the same BU as the transfer (cross-BU should be wholesale orders, not transfers). Cancelled transfers and rows tagged ${LEGACY_MARKER} are exempt.`,
     query: () =>
       countAndSample(
         sql`select count(*)::text as count
@@ -123,9 +131,11 @@ const CHECKS: Check[] = [
             join inventory_locations from_l on from_l.id = t.from_location_id
             join inventory_locations to_l on to_l.id = t.to_location_id
             where t.business_unit_id is not null
+              and t.status <> 'cancelled'
+              and (t.notes_ar is null or t.notes_ar not like ${"%" + LEGACY_MARKER + "%"})
               and (from_l.business_unit_id <> t.business_unit_id
                    or to_l.business_unit_id <> t.business_unit_id)`,
-        sql`select t.id, t.transfer_number,
+        sql`select t.id, t.transfer_number, t.status,
                    t.business_unit_id as transfer_bu,
                    from_l.business_unit_id as from_bu,
                    to_l.business_unit_id as to_bu
@@ -133,6 +143,8 @@ const CHECKS: Check[] = [
             join inventory_locations from_l on from_l.id = t.from_location_id
             join inventory_locations to_l on to_l.id = t.to_location_id
             where t.business_unit_id is not null
+              and t.status <> 'cancelled'
+              and (t.notes_ar is null or t.notes_ar not like ${"%" + LEGACY_MARKER + "%"})
               and (from_l.business_unit_id <> t.business_unit_id
                    or to_l.business_unit_id <> t.business_unit_id)
             limit 5`,

@@ -14,7 +14,7 @@ import {
 import { requirePermission } from "../lib/auth";
 import {
   applyLedgerEntry,
-  getLocationByCode,
+  getActiveStoreLocation,
   getStockQuantity,
   InsufficientStockError,
 } from "../lib/inventory";
@@ -202,15 +202,23 @@ export async function createSalesOrderInternal(args: {
   notesAr?: string | null;
   cashReceivedMinor?: number | null;
   cashierUserId?: string | null;
+  /**
+   * Active business unit for this sale. POS routes pass the cashier's active
+   * BU here; online checkout currently passes null (single online channel).
+   * `getActiveStoreLocation` resolves the showroom-specific store location
+   * for this BU, falling back to the legacy "STORE" code when null.
+   */
+  activeBusinessUnitId?: string | null;
 }) {
   if (args.items.length === 0) throw new Error("EMPTY_ORDER");
-  // Sales (POS + online) always reduce STORE stock per architecture.
-  const sourceLoc = await getLocationByCode("STORE");
+  // Sales (POS + online) reduce store stock at the showroom that owns the
+  // active BU. Falls back to the legacy STORE location for back-compat.
+  const sourceLoc = await getActiveStoreLocation(
+    args.activeBusinessUnitId ?? null,
+  );
   if (!sourceLoc) throw new Error("LOCATIONS_NOT_SEEDED");
 
-  // The legacy single-store model maps every sale to the source location's
-  // business unit. For Task 24 this is always Showroom A (STORE). Task 25
-  // introduces multi-showroom POS routing.
+  // The order's BU is the BU of the source location actually charged.
   const orderBusinessUnitId = sourceLoc.businessUnitId;
 
   // POS closing lock: once a day has been closed, no further POS sales for
@@ -369,6 +377,18 @@ export async function createSalesOrderInternal(args: {
 router.post("/sales-orders", requirePermission("orders", "write"), async (req, res) => {
   const b = req.body ?? {};
   try {
+    let activeBuId: string | null = null;
+    try {
+      const bu = await getActiveBusinessUnit(req);
+      activeBuId = bu?.id ?? null;
+    } catch (err) {
+      const code = (err as Error & { code?: string }).code;
+      if (code === "BU_REQUIRED" || code === "INVALID_BUSINESS_UNIT") {
+        res.status(400).json({ error: code });
+        return;
+      }
+      throw err;
+    }
     const order = await createSalesOrderInternal({
       channel: b.channel || "pos",
       customerName: b.customerName ?? null,
@@ -383,6 +403,7 @@ router.post("/sales-orders", requirePermission("orders", "write"), async (req, r
       notesAr: b.notesAr ?? null,
       cashReceivedMinor: b.cashReceivedMinor ?? null,
       cashierUserId: req.appUser?.id ?? null,
+      activeBusinessUnitId: activeBuId,
     });
     res.status(201).json(serialize(order));
   } catch (err) {
@@ -526,7 +547,9 @@ router.patch("/sales-orders/:id/status", requirePermission("orders", "write"), a
       }
 
       if (status === "cancelled" || status === "refunded") {
-        const sourceLoc = await getLocationByCode("STORE");
+        // Restore stock to the showroom the sale originally drew from,
+        // resolved from the order's own business unit.
+        const sourceLoc = await getActiveStoreLocation(cur.businessUnitId);
         if (!sourceLoc) throw new Error("LOCATIONS_NOT_SEEDED");
         const items = await tx
           .select()

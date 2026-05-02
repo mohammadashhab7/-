@@ -74,6 +74,10 @@ router.post("/checkout", async (req, res) => {
       deliveryFeeMinor: delivery,
       taxMinor: tax,
       notesAr: b.notesAr ?? null,
+      // Online checkout always routes to the legacy "STORE" showroom for
+      // back-compat (single online channel; multi-showroom online routing
+      // is a deliberate follow-up).
+      activeBusinessUnitId: null,
     });
     await db.delete(cartItems).where(eq(cartItems.cartId, cart.id));
     const provider =
