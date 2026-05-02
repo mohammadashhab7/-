@@ -104,7 +104,7 @@ function Router() {
               <Route path="/raw-materials"><DivisionRoute kind="factory"><PermissionRoute module="raw_materials"><AdminRawMaterialsPage /></PermissionRoute></DivisionRoute></Route>
               <Route path="/recipes"><DivisionRoute kind="factory"><PermissionRoute module="recipes"><AdminRecipesPage /></PermissionRoute></DivisionRoute></Route>
               <Route path="/production"><DivisionRoute kind="factory"><PermissionRoute module="production"><AdminProductionPage /></PermissionRoute></DivisionRoute></Route>
-              <Route path="/wholesale-orders"><PermissionRoute module="transfers"><AdminWholesalePage /></PermissionRoute></Route>
+              <Route path="/wholesale-orders"><DivisionRoute kind="factory"><PermissionRoute module="transfers"><AdminWholesalePage /></PermissionRoute></DivisionRoute></Route>
 
               {/* Shared inventory + transfers — both factory and showroom use them. */}
               <Route path="/inventory"><PermissionRoute module="inventory"><AdminInventoryPage /></PermissionRoute></Route>

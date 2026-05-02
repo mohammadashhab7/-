@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { and, desc, eq, isNull, or, sql, type SQL } from "drizzle-orm";
+import { desc, eq, sql, type SQL } from "drizzle-orm";
 import { db, activityLog } from "@workspace/db";
 import { requirePermission } from "../lib/auth";
 import { CURRENCY_CODE } from "../lib/region";
@@ -175,20 +175,17 @@ router.get(
       }
       throw err;
     }
-    // When a BU is active, show activities tagged with that BU OR untagged
-    // (NULL — for legacy rows or cross-BU events that should surface
-    // everywhere). Privileged users on the global view see everything.
+    // Strict per-BU scope when a BU is active — no leakage of other-BU or
+    // legacy untagged rows. Privileged users on the global view see all.
+    // Cross-BU events (e.g. wholesale invoices) tag activities with the
+    // seller's BU so the seller's feed shows them; a buyer follow-up will
+    // mirror those events into the buyer's feed if needed.
     const buFilter =
-      activeBu === null
-        ? undefined
-        : or(
-            eq(activityLog.businessUnitId, activeBu.id),
-            isNull(activityLog.businessUnitId),
-          );
+      activeBu === null ? undefined : eq(activityLog.businessUnitId, activeBu.id);
     const rows = await db
       .select()
       .from(activityLog)
-      .where(buFilter ? and(buFilter) : undefined)
+      .where(buFilter)
       .orderBy(desc(activityLog.createdAt))
       .limit(20);
     res.json(

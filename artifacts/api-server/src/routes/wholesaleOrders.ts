@@ -391,6 +391,7 @@ router.post(
         descriptionAr: `${seller.nameAr} ← ${buyer.nameAr} (مسودة)`,
         referenceType: "wholesale_order",
         referenceId: created.id,
+        businessUnitId: created.sellerBusinessUnitId,
         actor: req.appUser,
       });
 
@@ -461,6 +462,7 @@ router.post(
       titleAr: `تأكيد فاتورة ${updated[0]!.orderNumber}`,
       referenceType: "wholesale_order",
       referenceId: id,
+      businessUnitId: updated[0]!.sellerBusinessUnitId,
       actor: req.appUser,
     });
     res.json({ id, status: updated[0]!.status });
@@ -623,6 +625,7 @@ router.post(
         descriptionAr: `إيراد ${result.totalRevenue} | تكلفة ${result.totalCost}`,
         referenceType: "wholesale_order",
         referenceId: id,
+        businessUnitId: result.row.sellerBusinessUnitId,
         actor: req.appUser,
       });
       res.json({ id, status: result.row.status });
@@ -675,6 +678,7 @@ router.post(
       titleAr: `إلغاء فاتورة ${updated[0]!.orderNumber}`,
       referenceType: "wholesale_order",
       referenceId: id,
+      businessUnitId: updated[0]!.sellerBusinessUnitId,
       actor: req.appUser,
     });
     res.json({ id, status: updated[0]!.status });
