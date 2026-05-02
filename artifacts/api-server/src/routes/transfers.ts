@@ -5,6 +5,7 @@ import {
   transfers,
   transferItems,
   inventoryLocations,
+  businessUnits,
   products,
 } from "@workspace/db";
 import { requirePermission } from "../lib/auth";
@@ -107,6 +108,34 @@ router.post("/transfers", requirePermission("transfers", "write"), async (req, r
     res.status(400).json({ error: "SAME_LOCATION" });
     return;
   }
+
+  // Block factory→showroom transfers — these must now go through the wholesale
+  // invoice flow (POST /wholesale-orders) so revenue/expense are recorded
+  // across BUs. Same-unit transfers and other cross-BU pairs stay allowed.
+  {
+    const locRows = await db
+      .select({
+        id: inventoryLocations.id,
+        buKind: businessUnits.kind,
+      })
+      .from(inventoryLocations)
+      .leftJoin(
+        businessUnits,
+        eq(inventoryLocations.businessUnitId, businessUnits.id),
+      )
+      .where(inArray(inventoryLocations.id, [b.fromLocationId, b.toLocationId]));
+    const fromKind = locRows.find((r) => r.id === b.fromLocationId)?.buKind ?? null;
+    const toKind = locRows.find((r) => r.id === b.toLocationId)?.buKind ?? null;
+    if (fromKind === "factory" && toKind === "showroom") {
+      res.status(409).json({
+        error: "USE_WHOLESALE_INVOICE",
+        detail:
+          "تحويلات المعمل إلى المعرض يجب أن تتم عبر فاتورة جملة (POST /wholesale-orders).",
+      });
+      return;
+    }
+  }
+
   if (activeBu) {
     // Scoped users may only transfer FROM a location they own. The destination
     // can be any location (cross-BU shipments are allowed and visible to both
@@ -330,6 +359,45 @@ router.post(
     if (!(await ensureTransferInBu(req, res, id))) return;
     try {
       const result = await db.transaction(async (tx) => {
+        // Defense in depth: also block factory→showroom completion at this
+        // step in case a legacy/pending row was created before the wholesale
+        // requirement landed.
+        const tRow0 = (
+          await tx
+            .select({
+              fromLocationId: transfers.fromLocationId,
+              toLocationId: transfers.toLocationId,
+            })
+            .from(transfers)
+            .where(eq(transfers.id, id))
+            .limit(1)
+        )[0];
+        if (tRow0) {
+          const locRows = await tx
+            .select({
+              id: inventoryLocations.id,
+              buKind: businessUnits.kind,
+            })
+            .from(inventoryLocations)
+            .leftJoin(
+              businessUnits,
+              eq(inventoryLocations.businessUnitId, businessUnits.id),
+            )
+            .where(
+              inArray(inventoryLocations.id, [
+                tRow0.fromLocationId,
+                tRow0.toLocationId,
+              ]),
+            );
+          const fromKind =
+            locRows.find((r) => r.id === tRow0.fromLocationId)?.buKind ?? null;
+          const toKind =
+            locRows.find((r) => r.id === tRow0.toLocationId)?.buKind ?? null;
+          if (fromKind === "factory" && toKind === "showroom") {
+            return { useWholesale: true as const };
+          }
+        }
+
         // Atomic conditional state transition: claim the row by flipping the status
         // FIRST inside the transaction. Concurrent calls will return 0 rows on the
         // second attempt, guaranteeing only one transaction writes ledger entries.
@@ -417,6 +485,14 @@ router.post(
         return { row: t, transferNumber: t.transferNumber };
       });
 
+      if ("useWholesale" in result) {
+        res.status(409).json({
+          error: "USE_WHOLESALE_INVOICE",
+          detail:
+            "هذا التحويل من المعمل إلى المعرض ويجب إكماله عبر فاتورة جملة. يرجى إلغاؤه وإنشاء فاتورة جملة بدلاً منه.",
+        });
+        return;
+      }
       if ("notFound" in result) {
         res.status(404).json({ error: "NOT_FOUND" });
         return;
