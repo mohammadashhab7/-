@@ -3,27 +3,30 @@ import { Link, useLocation } from "wouter";
 import { useClerk, useUser } from "@clerk/react";
 import { useGetMe, useGetSettings } from "@workspace/api-client-react";
 import { hasModulePerm, type ModuleName } from "@/components/PermissionRoute";
-import { 
-  LayoutDashboard, 
-  Package, 
-  Tags, 
-  FlaskConical, 
-  ChefHat, 
-  Warehouse, 
-  Factory, 
-  ArrowRightLeft, 
+import { useBusinessUnit } from "@/contexts/BusinessUnitContext";
+import DivisionSwitcher from "@/components/admin/DivisionSwitcher";
+import {
+  LayoutDashboard,
+  Package,
+  Tags,
+  FlaskConical,
+  ChefHat,
+  Warehouse,
+  Factory,
+  ArrowRightLeft,
   Receipt,
-  MonitorSmartphone, 
-  ShoppingCart, 
-  Wallet, 
-  BarChart3, 
-  Users, 
-  ShieldCheck, 
-  FileText, 
-  Image as ImageIcon, 
+  MonitorSmartphone,
+  ShoppingCart,
+  Wallet,
+  BarChart3,
+  Users,
+  ShieldCheck,
+  FileText,
+  Image as ImageIcon,
   Settings,
   LogOut,
-  Menu
+  Menu,
+  CalendarCheck,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -42,28 +45,71 @@ interface AdminLayoutProps {
   children: ReactNode;
 }
 
-type NavItem = { title: string; href: string; icon: typeof LayoutDashboard; module: ModuleName | null };
+type Scope = "factory" | "showroom" | "common";
+type NavItem = {
+  title: string;
+  href: string;
+  icon: typeof LayoutDashboard;
+  module: ModuleName | null;
+  scope: Scope;
+};
 
-const SIDEBAR_NAV: NavItem[] = [
-  { title: "الرئيسية", href: "/", icon: LayoutDashboard, module: null },
-  { title: "نقطة البيع (POS)", href: "/pos", icon: MonitorSmartphone, module: "pos" },
-  { title: "الطلبات", href: "/orders", icon: ShoppingCart, module: "orders" },
-  { title: "المنتجات", href: "/products", icon: Package, module: "products" },
-  { title: "التصنيفات", href: "/categories", icon: Tags, module: "categories" },
-  { title: "المواد الأولية", href: "/raw-materials", icon: FlaskConical, module: "raw_materials" },
-  { title: "الوصفات", href: "/recipes", icon: ChefHat, module: "recipes" },
-  { title: "المخزون", href: "/inventory", icon: Warehouse, module: "inventory" },
-  { title: "التصنيع", href: "/production", icon: Factory, module: "production" },
-  { title: "التحويلات", href: "/transfers", icon: ArrowRightLeft, module: "transfers" },
-  { title: "فواتير الجملة", href: "/wholesale-orders", icon: Receipt, module: "transfers" },
-  { title: "المالية", href: "/financials", icon: Wallet, module: "financial" },
-  { title: "التقارير", href: "/reports", icon: BarChart3, module: "reports" },
-  { title: "الموظفين", href: "/employees", icon: Users, module: "employees" },
-  { title: "المستخدمين", href: "/users", icon: ShieldCheck, module: "users" },
-  { title: "المحتوى (CMS)", href: "/cms", icon: FileText, module: "cms" },
-  { title: "الوسائط", href: "/media", icon: ImageIcon, module: "media" },
-  { title: "الإعدادات", href: "/settings", icon: Settings, module: "settings" },
+// Cross-cutting (admin-wide) items always shown to anyone with permission.
+const COMMON_NAV: NavItem[] = [
+  { title: "الرئيسية", href: "/", icon: LayoutDashboard, module: null, scope: "common" },
+  { title: "المنتجات", href: "/products", icon: Package, module: "products", scope: "common" },
+  { title: "التصنيفات", href: "/categories", icon: Tags, module: "categories", scope: "common" },
+  { title: "المستخدمين", href: "/users", icon: ShieldCheck, module: "users", scope: "common" },
+  { title: "المحتوى (CMS)", href: "/cms", icon: FileText, module: "cms", scope: "common" },
+  { title: "الوسائط", href: "/media", icon: ImageIcon, module: "media", scope: "common" },
+  { title: "الإعدادات", href: "/settings", icon: Settings, module: "settings", scope: "common" },
 ];
+
+// Factory ("المصنع") section: production / wholesale-out side.
+const FACTORY_NAV: NavItem[] = [
+  { title: "المواد الأولية", href: "/raw-materials", icon: FlaskConical, module: "raw_materials", scope: "factory" },
+  { title: "الوصفات", href: "/recipes", icon: ChefHat, module: "recipes", scope: "factory" },
+  { title: "أوامر التصنيع", href: "/production", icon: Factory, module: "production", scope: "factory" },
+  { title: "المخزون", href: "/inventory", icon: Warehouse, module: "inventory", scope: "factory" },
+  { title: "التحويلات", href: "/transfers", icon: ArrowRightLeft, module: "transfers", scope: "factory" },
+  { title: "البيع للمعارض", href: "/wholesale-orders", icon: Receipt, module: "transfers", scope: "factory" },
+  { title: "المالية", href: "/financials", icon: Wallet, module: "financial", scope: "factory" },
+  { title: "الموظفون", href: "/employees", icon: Users, module: "employees", scope: "factory" },
+  { title: "التقارير", href: "/reports", icon: BarChart3, module: "reports", scope: "factory" },
+];
+
+// Showroom ("المعرض") section: storefront / POS / wholesale-in side.
+const SHOWROOM_NAV: NavItem[] = [
+  { title: "نقطة البيع (POS)", href: "/pos", icon: MonitorSmartphone, module: "pos", scope: "showroom" },
+  { title: "الطلبات", href: "/orders", icon: ShoppingCart, module: "orders", scope: "showroom" },
+  { title: "إغلاق اليوم", href: "/daily-closing", icon: CalendarCheck, module: "pos", scope: "showroom" },
+  { title: "المخزون", href: "/inventory", icon: Warehouse, module: "inventory", scope: "showroom" },
+  { title: "المشتريات من المصنع", href: "/wholesale-orders", icon: Receipt, module: "transfers", scope: "showroom" },
+  { title: "التحويلات", href: "/transfers", icon: ArrowRightLeft, module: "transfers", scope: "showroom" },
+  { title: "المالية", href: "/financials", icon: Wallet, module: "financial", scope: "showroom" },
+  { title: "الموظفون", href: "/employees", icon: Users, module: "employees", scope: "showroom" },
+  { title: "التقارير", href: "/reports", icon: BarChart3, module: "reports", scope: "showroom" },
+];
+
+// All routes — used to look up the current page's title for the breadcrumb.
+const ALL_ROUTES: NavItem[] = [...COMMON_NAV, ...FACTORY_NAV, ...SHOWROOM_NAV];
+
+function findPageTitle(pathname: string): string | null {
+  // Strip trailing slash and admin prefix is already stripped by wouter base.
+  const path = pathname.replace(/\/+$/, "") || "/";
+  // Exact match first.
+  const exact = ALL_ROUTES.find((r) => r.href === path);
+  if (exact) return exact.title;
+  // Then prefix match for nested routes.
+  const candidates = ALL_ROUTES.filter(
+    (r) => r.href !== "/" && path.startsWith(r.href),
+  );
+  if (candidates.length === 0) return null;
+  // Pick the longest matching href.
+  return candidates.reduce((a, b) =>
+    a.href.length >= b.href.length ? a : b,
+  ).title;
+}
 
 export default function AdminLayout({ children }: AdminLayoutProps) {
   const [location] = useLocation();
@@ -75,38 +121,85 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
     (settings as { storeNameAr?: string } | undefined)?.storeNameAr ?? "";
   const settingsLoaded = !settingsPending;
 
+  const { activeBu, isPrivileged } = useBusinessUnit();
+
   const isPos = location.startsWith("/pos");
 
-  const visibleNav = SIDEBAR_NAV.filter((item) => {
-    if (item.module === null) return true;
-    return hasModulePerm(
-      me?.permissions as string[] | undefined,
-      me?.role,
-      item.module,
-      "read",
+  const canSee = (item: NavItem) =>
+    item.module === null
+      ? true
+      : hasModulePerm(
+          me?.permissions as string[] | undefined,
+          me?.role,
+          item.module,
+          "read",
+        );
+
+  // Decide which scoped sections to render. When admin/owner is on
+  // "all divisions" view (activeBu = null) we show both sections so they can
+  // navigate freely. Non-privileged users always see exactly the section that
+  // matches their assigned BU's kind.
+  const showFactory =
+    activeBu?.kind === "factory" || (isPrivileged && !activeBu);
+  const showShowroom =
+    activeBu?.kind === "showroom" || (isPrivileged && !activeBu);
+
+  const visibleCommon = COMMON_NAV.filter(canSee);
+  const visibleFactory = showFactory ? FACTORY_NAV.filter(canSee) : [];
+  const visibleShowroom = showShowroom ? SHOWROOM_NAV.filter(canSee) : [];
+
+  const renderItem = (item: NavItem, sectionKey: string) => {
+    const isActive =
+      location === item.href ||
+      (item.href !== "/" && location.startsWith(item.href));
+    return (
+      <Link
+        key={`${sectionKey}-${item.href}`}
+        href={item.href}
+        className={`flex items-center gap-3 rounded-md px-3 py-2.5 text-sm font-medium transition-colors ${
+          isActive
+            ? "bg-primary text-primary-foreground"
+            : "text-muted-foreground hover:bg-muted hover:text-foreground"
+        }`}
+        data-testid={`admin-nav-${sectionKey}-${item.href === "/" ? "home" : item.href.slice(1)}`}
+      >
+        <item.icon className="h-4 w-4" />
+        {item.title}
+      </Link>
     );
-  });
+  };
 
   const NavItems = () => (
-    <nav className="flex flex-col gap-1 p-4">
-      {visibleNav.map((item) => {
-        const isActive = location === item.href || (item.href !== "/" && location.startsWith(item.href));
-        return (
-          <Link 
-            key={item.href} 
-            href={item.href}
-            className={`flex items-center gap-3 rounded-md px-3 py-2.5 text-sm font-medium transition-colors ${
-              isActive 
-                ? "bg-primary text-primary-foreground" 
-                : "text-muted-foreground hover:bg-muted hover:text-foreground"
-            }`}
-            data-testid={`admin-nav-${item.href === "/" ? "home" : item.href.slice(1)}`}
+    <nav className="flex flex-col gap-4 p-4">
+      {visibleCommon.length > 0 && (
+        <div className="flex flex-col gap-1">
+          {visibleCommon.map((it) => renderItem(it, "common"))}
+        </div>
+      )}
+
+      {visibleFactory.length > 0 && (
+        <div className="flex flex-col gap-1">
+          <div
+            className="px-3 pt-2 pb-1 text-xs font-semibold uppercase tracking-wider text-muted-foreground/70"
+            data-testid="admin-nav-section-factory"
           >
-            <item.icon className="h-4 w-4" />
-            {item.title}
-          </Link>
-        );
-      })}
+            المصنع
+          </div>
+          {visibleFactory.map((it) => renderItem(it, "factory"))}
+        </div>
+      )}
+
+      {visibleShowroom.length > 0 && (
+        <div className="flex flex-col gap-1">
+          <div
+            className="px-3 pt-2 pb-1 text-xs font-semibold uppercase tracking-wider text-muted-foreground/70"
+            data-testid="admin-nav-section-showroom"
+          >
+            {activeBu?.kind === "showroom" ? activeBu.nameAr : "المعارض"}
+          </div>
+          {visibleShowroom.map((it) => renderItem(it, "showroom"))}
+        </div>
+      )}
     </nav>
   );
 
@@ -118,6 +211,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
             <span className="font-serif text-xl font-bold text-primary">
               نقطة البيع
               {settingsLoaded && storeName ? ` - ${storeName}` : ""}
+              {activeBu ? ` — ${activeBu.nameAr}` : ""}
             </span>
           </div>
           <div className="flex items-center gap-4">
@@ -133,6 +227,13 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
     );
   }
 
+  const pageTitle = findPageTitle(location);
+  const headerLabel = activeBu
+    ? pageTitle
+      ? `${activeBu.nameAr} — ${pageTitle}`
+      : activeBu.nameAr
+    : pageTitle ?? "كل الأقسام";
+
   return (
     <div className="min-h-screen flex bg-muted/40 font-sans text-foreground">
       {/* Desktop Sidebar */}
@@ -146,6 +247,11 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
             )}
           </Link>
         </div>
+        {isPrivileged && (
+          <div className="px-4 py-3 border-b border-border">
+            <DivisionSwitcher />
+          </div>
+        )}
         <ScrollArea className="flex-1">
           <NavItems />
         </ScrollArea>
@@ -200,6 +306,11 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                   )}
                 </span>
               </div>
+              {isPrivileged && (
+                <div className="px-4 py-3 border-b border-border">
+                  <DivisionSwitcher />
+                </div>
+              )}
               <ScrollArea className="flex-1">
                 <NavItems />
               </ScrollArea>
@@ -212,6 +323,17 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
           </Avatar>
         </header>
 
+        {/* Active-BU breadcrumb (desktop only) */}
+        <div
+          className="hidden md:flex items-center justify-between px-8 py-3 border-b border-border/60 bg-card/40 text-sm text-muted-foreground"
+          data-testid="admin-page-breadcrumb"
+        >
+          <div className="flex items-center gap-2">
+            <Building2Like />
+            <span data-testid="admin-page-breadcrumb-text">{headerLabel}</span>
+          </div>
+        </div>
+
         {/* Main Content */}
         <main className="flex-1 overflow-auto bg-background p-4 md:p-8">
           <div className="max-w-6xl mx-auto h-full flex flex-col">
@@ -221,4 +343,9 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
       </div>
     </div>
   );
+}
+
+// Tiny inline icon — keep imports terse.
+function Building2Like() {
+  return <Factory className="h-4 w-4 text-muted-foreground/70" aria-hidden />;
 }

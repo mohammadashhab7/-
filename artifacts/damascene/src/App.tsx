@@ -13,6 +13,7 @@ import AdminLayout from "@/components/layouts/AdminLayout";
 import AccountLayout from "@/components/layouts/AccountLayout";
 import { useGetMe } from "@workspace/api-client-react";
 import { PermissionRoute } from "@/components/PermissionRoute";
+import { BusinessUnitProvider } from "@/contexts/BusinessUnitContext";
 
 import HomePage from "@/pages/public/Home";
 import ShopPage from "@/pages/public/Shop";
@@ -89,6 +90,7 @@ function Router() {
     <Switch>
       <Route path="/admin" nest>
         <StaffRoute>
+          <BusinessUnitProvider>
           <AdminLayout>
             <Switch>
               <Route path="/" component={DashboardPage} />
@@ -133,6 +135,7 @@ function Router() {
               <Route component={NotFound} />
             </Switch>
           </AdminLayout>
+          </BusinessUnitProvider>
         </StaffRoute>
       </Route>
 

@@ -9,11 +9,7 @@ import {
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import {
-  DIVISION_LABEL_AR,
-  type DivisionFilter,
-} from "@/lib/division";
+import { useBusinessUnit } from "@/contexts/BusinessUnitContext";
 import { 
   TrendingUp, 
   TrendingDown,

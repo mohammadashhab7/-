@@ -7,6 +7,7 @@ export type ErrorType<T = unknown> = ApiError<T>;
 export type BodyType<T> = T;
 
 export type AuthTokenGetter = () => Promise<string | null> | string | null;
+export type BusinessUnitIdGetter = () => string | null;
 
 const NO_BODY_STATUS = new Set([204, 205, 304]);
 const DEFAULT_JSON_ACCEPT = "application/json, application/problem+json";
@@ -17,6 +18,7 @@ const DEFAULT_JSON_ACCEPT = "application/json, application/problem+json";
 
 let _baseUrl: string | null = null;
 let _authTokenGetter: AuthTokenGetter | null = null;
+let _businessUnitIdGetter: BusinessUnitIdGetter | null = null;
 
 /**
  * Set a base URL that is prepended to every relative request URL
@@ -42,6 +44,17 @@ export function setBaseUrl(url: string | null): void {
  */
 export function setAuthTokenGetter(getter: AuthTokenGetter | null): void {
   _authTokenGetter = getter;
+}
+
+/**
+ * Register a getter that returns the active business unit ID. When set, every
+ * request automatically receives an `X-Business-Unit-Id` header (unless the
+ * caller already supplied one). Pass `null` to clear.
+ */
+export function setBusinessUnitIdGetter(
+  getter: BusinessUnitIdGetter | null,
+): void {
+  _businessUnitIdGetter = getter;
 }
 
 function isRequest(input: RequestInfo | URL): input is Request {
@@ -355,6 +368,15 @@ export async function customFetch<T = unknown>(
     const token = await _authTokenGetter();
     if (token) {
       headers.set("authorization", `Bearer ${token}`);
+    }
+  }
+
+  // Attach the active business unit ID header when configured and not already
+  // provided by the caller.
+  if (_businessUnitIdGetter && !headers.has("x-business-unit-id")) {
+    const buId = _businessUnitIdGetter();
+    if (buId) {
+      headers.set("x-business-unit-id", buId);
     }
   }
 
