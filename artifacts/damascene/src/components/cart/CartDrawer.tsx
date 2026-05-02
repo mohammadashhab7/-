@@ -1,6 +1,6 @@
 import React from "react";
 import { Link } from "wouter";
-import { X, Minus, Plus, Trash2 } from "lucide-react";
+import { X, Minus, Plus, Trash2, ShoppingBag, Image as ImageIcon } from "lucide-react";
 import {
   useGetCart,
   useUpdateCartItem,
@@ -181,6 +181,3 @@ export default function CartDrawer({ children }: { children: React.ReactNode }) 
     </Sheet>
   );
 }
-
-// Ensure icons used above are imported. Since they weren't in the initial import block:
-import { ShoppingBag, Image as ImageIcon } from "lucide-react";
