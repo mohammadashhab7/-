@@ -5,14 +5,14 @@ import { db, businessUnits } from "@workspace/db";
 export type BusinessUnit = typeof businessUnits.$inferSelect;
 
 const HEADER_NAME = "x-business-unit-id";
-const QUERY_NAME = "businessUnitId";
+const QUERY_NAMES = ["bu", "businessUnitId"] as const;
 
 /**
  * Resolve the active business unit for the request.
  *
  * Resolution order:
- *   1. Owner / admin overrides via `X-Business-Unit-Id` header or `?businessUnitId=`
- *      query string (admin / owner can browse any unit).
+ *   1. Owner / admin overrides via `X-Business-Unit-Id` header or `?bu=`
+ *      (alias `?businessUnitId=`) query string. Admin/owner can browse any unit.
  *   2. Non-admin users fall back to their `assignedBusinessUnitId`.
  *
  * Returns the BusinessUnit row when one was selected, or `null` when the caller
@@ -29,10 +29,14 @@ export async function getActiveBusinessUnit(
   const isPrivileged = role === "owner" || role === "admin";
 
   const headerVal = req.header(HEADER_NAME);
-  const queryVal =
-    typeof req.query[QUERY_NAME] === "string"
-      ? (req.query[QUERY_NAME] as string)
-      : undefined;
+  let queryVal: string | undefined;
+  for (const name of QUERY_NAMES) {
+    const v = req.query[name];
+    if (typeof v === "string" && v.length > 0) {
+      queryVal = v;
+      break;
+    }
+  }
   const requested = (headerVal || queryVal || "").trim();
 
   if (requested) {

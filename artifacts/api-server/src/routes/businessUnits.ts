@@ -1,15 +1,16 @@
 import { Router, type IRouter } from "express";
-import { asc } from "drizzle-orm";
+import { asc, eq } from "drizzle-orm";
 import { db, businessUnits } from "@workspace/db";
-import { requireAuth } from "../lib/auth";
+import { requireStaff } from "../lib/auth";
 import { serializeBusinessUnit } from "../lib/businessUnit";
 
 const router: IRouter = Router();
 
-router.get("/business-units", requireAuth(), async (_req, res) => {
+router.get("/business-units", requireStaff(), async (_req, res) => {
   const rows = await db
     .select()
     .from(businessUnits)
+    .where(eq(businessUnits.isActive, true))
     .orderBy(asc(businessUnits.displayOrder), asc(businessUnits.nameAr));
   res.json(rows.map(serializeBusinessUnit));
 });

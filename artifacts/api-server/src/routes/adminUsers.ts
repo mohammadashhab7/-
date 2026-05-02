@@ -38,8 +38,25 @@ const ALLOWED_ROLES = [
 ] as const;
 type AllowedRole = (typeof ALLOWED_ROLES)[number];
 
+// Roles that operate within a single business unit and therefore MUST have
+// `assignedBusinessUnitId` set. Owner/admin are explicitly cross-BU and MUST
+// leave it null. Customer is an end-user account, also null.
+const SCOPED_ROLES = new Set<AllowedRole>([
+  "manager",
+  "production_lead",
+  "store_clerk",
+  "cashier",
+  "accountant",
+]);
+const GLOBAL_ROLES = new Set<AllowedRole>(["owner", "admin", "customer"]);
+
 router.patch("/admin/users/:id", requireOwnerOrAdmin(), async (req, res) => {
   const id = String(req.params.id);
+  const existing = (await db.select().from(users).where(eq(users.id, id)).limit(1))[0];
+  if (!existing) {
+    res.status(404).json({ error: "NOT_FOUND" });
+    return;
+  }
   const { role, permissions, isActive, assignedBusinessUnitId } = req.body ?? {};
   const updates: Partial<typeof users.$inferInsert> = { updatedAt: new Date() };
   if (assignedBusinessUnitId !== undefined) {
@@ -66,6 +83,25 @@ router.patch("/admin/users/:id", requireOwnerOrAdmin(), async (req, res) => {
   }
   if (Array.isArray(permissions)) updates.permissions = permissions as string[];
   if (typeof isActive === "boolean") updates.isActive = isActive;
+
+  // Enforce BU-assignment policy across the merged final state. Scoped staff
+  // roles must have an assigned BU; global roles must have none. This prevents
+  // a staff user from ending up cross-BU after a partial update, which would
+  // otherwise let getActiveBusinessUnit's privileged-only branch leak data.
+  const finalRole = (updates.role ?? existing.role) as AllowedRole;
+  const finalBu =
+    updates.assignedBusinessUnitId !== undefined
+      ? updates.assignedBusinessUnitId
+      : existing.assignedBusinessUnitId;
+  if (SCOPED_ROLES.has(finalRole) && !finalBu) {
+    res.status(400).json({ error: "BUSINESS_UNIT_REQUIRED_FOR_ROLE" });
+    return;
+  }
+  if (GLOBAL_ROLES.has(finalRole) && finalBu) {
+    res.status(400).json({ error: "BUSINESS_UNIT_NOT_ALLOWED_FOR_ROLE" });
+    return;
+  }
+
   const updated = await db
     .update(users)
     .set(updates)
